@@ -4,6 +4,10 @@ KAIST 2021 Spring Capstone Design 1
 
 This is a repository for capstone design 1 codes. All the codes are just for your reference, so change the code as necessary (e.g. topic name, ball size and color).
 
+To download the package, write the command below in ~/catkin_ws/src terminal.
+```console
+git clone https://github.com/kaistcapstone/Capstone1_2021Spring.git
+```
 
 
 ## ball_detection
@@ -14,7 +18,7 @@ It publishes the information of ball position and color by calculating geometry 
 
 #### Usage
 
-```bash
+```console
 rosrun ball_detection ball_detection_node
 ```
 
@@ -48,7 +52,7 @@ ex) /scan -> /laser_scan, sensor_msgs::laser_scan -> sensor_msgs::PointCloud
 
 #### Usage
 
-```bash
+```console
 # data integrate
 rosrun data_integrate data_integrate_node
 # data show
@@ -63,7 +67,7 @@ Nodes for manually manipulating the gripper and robot wheels.
 
 #### Usage
 
-```bash
+```console
 # gripper
 rosrun robot_teleop prismatic_teleop_key
 # wheel
