@@ -110,7 +110,7 @@ https://git-scm.com/book/ko/v1/%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0-Git-%EC%84%A
 ## 파일 복사하기
 터미널에 다음과 같은 커맨드를 입력합니다.
 ```
-git clone https://github.com/Jong2/VRX19_lecture.git
+git clone https://github.com/yominx/Capstone1_2021Spring
 ```
 유저네임과 패스워드를 입력하면 커맨드를 실행한 폴더에 **Capstone1_2021spring**폴더가 생겨있는 것을 볼 수 있습니다.
 
