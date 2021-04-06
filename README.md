@@ -112,12 +112,12 @@ https://git-scm.com/book/ko/v1/%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0-Git-%EC%84%A
 ```
 git clone https://github.com/Jong2/VRX19_lecture.git
 ```
-유저네임과 패스워드를 입력하면 커맨드를 실행한 폴더에 **VRX19_lecture**폴더가 생겨있는 것을 볼 수 있습니다.
+유저네임과 패스워드를 입력하면 커맨드를 실행한 폴더에 **Capstone1_2021spring**폴더가 생겨있는 것을 볼 수 있습니다.
 
 ## 파일 최신 버전으로 업데이트하기
 다른 사람이 github에 새파일을 업로드하거나 내용을 수정할 수 있습니다.
 이를 '커밋'이라고합니다. 새로운 커밋이 등록되면 내 디스크에 있는 파일도 업데이트 해주어야합니다.
-다음과 같은 커맨드를 VRX19_lecture에서 실행합니다.
+다음과 같은 커맨드를 Capstone1_2021spring 폴더에서 실행합니다.
 ```
 git pull
 ```
@@ -146,13 +146,7 @@ git commit -m "<하고 싶은 말>"
 git commit -m "Updated schedule"
 ```
 
-과 같이 써주시면 됩니다. 현재 github에서 commit창 들어가보시면 Add files via upload라고 되어있으므로,
-
-```
-git commit -m "Add files via upload"
-```
-
-라고 입력하면 같은 효과입니다.
+과 같이 써주시면 됩니다. 
 
 업로드는 내 컴퓨터에서 만든 버전을 깃헙에 올려 공유하는 것입니다. 다음과 같은 커맨드로 실행할 수 있습니다.
 
@@ -163,6 +157,8 @@ git push
 ```
 git push origin master
 ```
+
+이 push를 해주지 않으면 혼자만 저장하고 github에는 올라가지 않습니다.
 
 만약에 실패했다고 나온다면, 두가지 정도 이유가 있을 수 있습니다.
 
