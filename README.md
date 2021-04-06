@@ -6,7 +6,7 @@ This is a repository for capstone design 1 codes. All the codes are just for you
 
 To download the package, write the command below in ~/catkin_ws/src terminal.
 ```console
-git clone https://github.com/kaistcapstone/Capstone1_2021Spring.git
+git clone https://github.com/yominx/Capstone1_2021Spring.git
 ```
 
 
