@@ -32,6 +32,8 @@ Map and my_robot can be updated later, so please check the notice board on klms 
 
 Just drag and drop files to coppeliasim window.
 
+For reference, urdf file for my_robot is uploaded.
+
 
 
 ## core_msgs
