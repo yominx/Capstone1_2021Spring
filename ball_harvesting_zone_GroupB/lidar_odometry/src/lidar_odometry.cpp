@@ -21,6 +21,8 @@
 using namespace cv;
 using namespace std;
 
+//Map의 역할은??
+
 float MAP_CX = 350.5; //MAP의 최대 X좌표 크기->MAP의 정중앙을 원점으로 치는듯?
 float MAP_CY = 350.5;
 float MAP_RESOL = 0.01; //MAP의 최소 격자 크기
@@ -92,26 +94,28 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
 
   if(l[2]-l[0] == 0){ //선분이 수직일 때(0으로 나눌 수 없으니 따로 처리)
     slope = 2*atan(1);
-    perp = (l[2]+l[0]-MAP_WIDTH)/2.0;
-    perp_x = perp;
-    perp_y = 0;
+    perp = (l[2]+l[0]-MAP_WIDTH)/2.0; //맵 중앙을 원점으로 했을 때 선분의 x좌표
+    perp_x = perp; // 
+    perp_y = 0; //
   }
-  else{ 
-    slope = (l[3]-l[1])/(float)(l[2]-l[0]);
-    perp_x = (slope*(l[0]-MAP_WIDTH/2)-(l[1]-MAP_HEIGHT/2))*slope/(slope*slope+1);
-    perp_y = (-slope*(l[0]-MAP_WIDTH/2)+(l[1]-MAP_HEIGHT/2))/(slope*slope+1);
-    perp = sqrt(pow(perp_x,2)+pow(perp_y,2));
+  else{ //맵 중앙 좌표계 기준 y=ax+b이라 하면
+    slope = (l[3]-l[1])/(float)(l[2]-l[0]); //slope=a
+    perp_x = (slope*(l[0]-MAP_WIDTH/2)-(l[1]-MAP_HEIGHT/2))*slope/(slope*slope+1); //=-ab/(a^2+1) -> 맵 중앙 원점 기준 수직발의 x좌표
+    perp_y = (-slope*(l[0]-MAP_WIDTH/2)+(l[1]-MAP_HEIGHT/2))/(slope*slope+1); //=b/(a^2+1) -> 맵 중앙 원점 기준 수직발의 y좌표
+    perp = sqrt(pow(perp_x,2)+pow(perp_y,2)); // -> 맵 중앙 원점 기준 수직발 길이
     slope = atanf(slope);
   }
   length = sqrt(pow(l[3]-l[1],2)+pow(l[2]-l[0],2));
 
-  line_info.push_back(slope);
+  line_info.push_back(slope);//선분의 경사(rad단위 각도값)
   line_info.push_back(perp_x);
   line_info.push_back(perp_y);
   line_info.push_back(perp);
-  line_info.push_back(length);
-  return line_info; //경사, 길이
+  line_info.push_back(length);//선분의 길이
+  return line_info; 
 }
+
+
 
 vector<float> cylinderOdometry(vector<float> cyl_rel_x_gAP, vector<float> cyl_rel_y_gAP){
 
@@ -205,6 +209,17 @@ void line_Callback(const std_msgs::Int8::ConstPtr& entrance) //entrance.data는 
   }
 }
 
+
+
+
+
+
+
+
+
+
+
+
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "data_show_node");
@@ -216,7 +231,7 @@ int main(int argc, char **argv)
     while(ros::ok){
         cv::Mat map = cv::Mat::zeros(MAP_WIDTH, MAP_HEIGHT, CV_8UC3);
         
-//cv::Mat 이 뭐지??
+        //CV_8UC3는 RGB 3채널 컬러 이미지를 위한 데이터 방식이다. 일단 zero로 initialize 하여 map 객체 만듦
         
         float obstacle_x, obstacle_y;
         int cx, cy;
@@ -323,15 +338,17 @@ int main(int argc, char **argv)
           }
         }
 
-        cv::Mat gray;
-        cvtColor(map,gray,COLOR_BGR2GRAY);
+        cv::Mat gray; //행렬 클래스. 영상/이미지 저장에도 쓰임.
+        cvtColor(map,gray,COLOR_BGR2GRAY); //map을 회색으로 칠해(?) gray라는 MAT 클래스로 변환
 
         cv::Mat edges;
         Canny(gray,edges,50,150);
-        //??
-        vector<Vec4i> lines;
+        //gray로부터 경곗값 50, 150을 기준으로 이미지의 경계선만을 검출하여 edge라는 행렬로 출력. 
+        vector<Vec4i> lines; //lines는 밑의 Hough 변환 결과를 받아올 array. 선분의 시작점 좌표 x,y와 끝점좌표 x,y를 받아옴.
+
         HoughLinesP(edges, lines, 1, CV_PI/180, 30, 15, 5 );
-        //???
+        //주어진 이미지 gray로부터 직선 검출. 1 과 CV_PI/180는 모델링할 직선 방정식 r=xcos(th)+ysin(th)의 파라미터 r과 th의 해상도 개념.
+        //30은 선으로 치려면 최소 몇 개 데이터 이상이어야 하는지, 15는 선으로 검출하기 위한 최소 길이, 5는 다른 선으로 간주되지 않기 위한 점 데이터 사이 최대 허용 길이이다.
 
         float major_slope;
         float minor_slope;
@@ -360,11 +377,12 @@ int main(int argc, char **argv)
         {
           l = lines[i];
           vector<float> lA;
-          lA = lineAnalysis(l);
+          lA = lineAnalysis(l); //검출하여 저장한 lines의 각 선분 l에 대해 분석
           slope = lA[0];
           perp_x = lA[1];
           perp_y = lA[2];
           perp = lA[3];
+
 
           if(num_a == 0){
             slope_a = slope;
@@ -372,23 +390,33 @@ int main(int argc, char **argv)
             sin_a = sinf(slope);
             perp_a = perp;
             line(map, Point(l[0], l[1]), Point(MAP_WIDTH/2+perp_x, MAP_HEIGHT/2+perp_y), Scalar(0,255,0), 1);
-            cv::circle(map,Point(MAP_WIDTH/2+perp_x, MAP_HEIGHT/2+perp_y),2, cv::Scalar(0,255,0), -1);
+
+
+            cv::circle(map,Point(MAP_WIDTH/2+perp_x, MAP_HEIGHT/2+perp_y),2, cv::Scalar(0,255,0), -1); //수직발을 중심으로 반지름 2 원
+//왜 그리지?
             num_a++;
           }
           else{
-            if(abs(slope-slope_a) < atan(0.05)){
-              slope_a = (slope_a*num_a + slope)/(float)(num_a+1);
+            if(abs(slope-slope_a) < atan(0.05)){ //새 선분의 slope가 이전 slope와 차이가 거의 없으면
+              slope_a = (slope_a*num_a + slope)/(float)(num_a+1); //이전 slope와 num_a:1로 내분점을 새 slope로 한다.
+//왜?? 이 파트는 왜 있는 걸까
+
               line(map, Point(l[0], l[1]), Point(MAP_WIDTH/2+perp_x, MAP_HEIGHT/2+perp_y), Scalar(0,255,0), 1);
               cv::circle(map,Point(MAP_WIDTH/2+perp_x, MAP_HEIGHT/2+perp_y),2, cv::Scalar(0,255,0), -1);
+
               if(abs(abs(perp-perp_a)*MAP_RESOL - 3) < 0.2){
+  //새 perp와 이전 perp의 차이가 300 정도이면
                 major = 1;
               }
               else if(abs(abs(perp-perp_a)*MAP_RESOL - 5) < 0.2 || abs(abs(perp-perp_a)*MAP_RESOL - 1.0) < 0.2){
+  //새 perp와 전 perp 차이가 500 정도거나 100 정도면 
                 major = 2;
               }
               num_a++;
             }
             else if(abs(abs(slope-slope_a)-2*atan(1))<atan(0.05)){
+              //새 선분의 slope와 이전 slope 차이가 대충 90도면
+              //밑에는 비슷함
               if(num_b == 0){
                 slope_b = slope;
                 cos_b = cosf(slope);
@@ -396,6 +424,7 @@ int main(int argc, char **argv)
                 perp_b = perp;
                 line(map, Point(l[0], l[1]), Point(MAP_WIDTH/2+perp_x, MAP_HEIGHT/2+perp_y), Scalar(0,0,255), 1);
                 cv::circle(map,Point(MAP_WIDTH/2+perp_x, MAP_HEIGHT/2+perp_y),2, cv::Scalar(0,0,255), -1);
+//여긴 num_b가 없음. 왜??
               }
               else{
                 slope_b = (slope_b*num_b + slope)/(float)(num_b+1);
@@ -413,22 +442,28 @@ int main(int argc, char **argv)
           }
         }
 
+
+        //여기부터 orientation 잡기
         float cand_o1;
         float cand_o2;
         float cand_o3;
         float cand_o4;
         if(num_a <= 1){
+//위에서 맨 처음 부분만 실행된 경우?
+//major의 의미는?
           major = 0;
         }
-        else if(major == 1){
-          major_slope = slope_a;
-          minor_slope = slope_b;
-          cand_o1 = major_slope + 2*atan(1);
-          cand_o2 = major_slope - 2*atan(1);
+        else if(major == 1){ //
+          major_slope = slope_a; //네 벽면 중 한 벽면
+          minor_slope = slope_b; // 위의 벽면과 수직한 면
+          cand_o1 = major_slope + 2*atan(1); 
+//왜 major slope?
+          cand_o2 = major_slope - 2*atan(1); //두 가지 가능성(+180도 -180도)
 
-          if(cosf(cand_o1-pos_o)>0.5){
+          if(cosf(cand_o1-pos_o)>0.5){ //여기서 일단 pos_o는 0인듯?
             pos_o = cand_o1;
           }
+//??
           else if(cosf(cand_o2-pos_o)>0.5){
             pos_o = cand_o2;
           }
@@ -466,6 +501,9 @@ int main(int argc, char **argv)
           }
         }
 
+
+
+      //여기부터 robot x,y 좌표 잡기
         vector<float> lx_perp, lxo_perp, sx_perp, sxo_perp;
         vector<float> lx_x, lxo_x, sx_x, sxo_x;
         vector<float> lx_y, lxo_y, sx_y, sxo_y;
