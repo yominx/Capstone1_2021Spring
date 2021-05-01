@@ -83,6 +83,12 @@ float vectorVariance(float mean, std::vector<float> numbers)
     return sqrt(result/(float)numbers.size());
 }
 
+
+
+
+
+
+
 vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line의 slope 등 수학적 특징 추출
 //Vec4i는 어떤 선분의 양 끝점의 x,y 좌표를 포함하는 int형 4개 x1, y1, x2, y2 로 이루어진 vector
   vector<float> line_info;
@@ -107,13 +113,27 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
   }
   length = sqrt(pow(l[3]-l[1],2)+pow(l[2]-l[0],2));
 
-  line_info.push_back(slope);//선분의 경사(rad단위 각도값)
+  line_info.push_back(slope);//선분의 경사(rad단위 각도값).
+//그러나 범위는 -90도에서 +90도까지만
+
   line_info.push_back(perp_x);
   line_info.push_back(perp_y);
   line_info.push_back(perp);
   line_info.push_back(length);//선분의 길이
   return line_info; 
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -181,6 +201,16 @@ vector<float> cylinderOdometry(vector<float> cyl_rel_x_gAP, vector<float> cyl_re
   return abs;
   }
 
+
+
+
+
+
+
+
+
+
+
 void lidar_Callback(const sensor_msgs::LaserScan::ConstPtr& scan) //LiDAR scan으로부터 lidar 각도에 따른 거리 배정
 {
     map_mutex.lock();
@@ -194,21 +224,21 @@ void lidar_Callback(const sensor_msgs::LaserScan::ConstPtr& scan) //LiDAR scan�
     map_mutex.unlock();
 }
 
-void line_Callback(const std_msgs::Int8::ConstPtr& entrance) //entrance.data는 1이면 entrance zone이라는 뜻이고, 0이면 harvesting zone이라는 의미.
-// entrance zone에서는 init_odom을 0으로 하고, harvesting zone에 들어선 순간부터 init_odom 을 1로 한다.
-{
-  cout<<"line called back"<<endl;
-  if(entrance != NULL){
-    int ent = entrance -> data;
-    if(ent == 1){
-      init_odom = 0;
-    }
-    else if(init_odom == 0 && ent == 0){
-      init_odom = 1;
-    }
-  }
-}
-
+// void line_Callback(const std_msgs::Int8::ConstPtr& entrance) //entrance.data는 1이면 entrance zone이라는 뜻이고, 0이면 harvesting zone이라는 의미.
+// // entrance zone에서는 init_odom을 0으로 하고, harvesting zone에 들어선 순간부터 init_odom 을 1로 한다.
+// {
+//   cout<<"line called back"<<endl;
+//   if(entrance != NULL){
+//     int ent = entrance -> data;
+//     if(ent == 1){
+//       init_odom = 0;
+//     }
+//     else if(init_odom == 0 && ent == 0){
+//       init_odom = 1;
+//     }
+//   }
+// }
+init_odom=1;
 
 
 
@@ -225,7 +255,9 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "data_show_node");
     ros::NodeHandle nh; //NodeHandle 클래스의 nh 객체 선언
     ros::Subscriber sub = nh.subscribe<sensor_msgs::LaserScan>("/scan", 1000, lidar_Callback); //LiDAR 데이터 받아오기
-    ros::Subscriber sub1 = nh.subscribe<std_msgs::Int8>("/entrance", 1, line_Callback); //Entrance zone 들어갔는지 여부 받아오기
+
+    //ros::Subscriber sub1 = nh.subscribe<std_msgs::Int8>("/entrance", 1, line_Callback); //Entrance zone 들어갔는지 여부 받아오기
+    
     pub = nh.advertise<geometry_msgs::Vector3>("/odometry", 1); //odometry, 즉 robot의 위치를 Vector3로 발행한다.
 
     while(ros::ok){
@@ -517,7 +549,7 @@ int main(int argc, char **argv)
           perp_y = lA[2];
           perp = lA[3];
 
-          if(cosf(atan2f(perp_x, perp_y)+pos_o)>0.96){
+          if(cosf(atan2f(perp_x, perp_y)+pos_o)>0.96){//
             lx_perp.push_back(perp);
             lx_x.push_back(l[0]);
             lx_x.push_back(l[2]);
@@ -528,7 +560,7 @@ int main(int argc, char **argv)
             sx_perp.push_back(perp);
             sx_x.push_back(l[0]);
             sx_x.push_back(l[2]);
-            sx_y.push_back(l[1]);
+            sx_y.push_back(l[1]); 
             sx_y.push_back(l[3]);
           }
           else if(cosf(atan2f(perp_x, perp_y)+pos_o)<-0.96){
@@ -552,37 +584,51 @@ int main(int argc, char **argv)
         float sx_cos = 0;
         float sx_sin = 0;
         float sx_len = 0;
-        if(sx_x.size() > 1){
-          int x1 = *min_element(sx_x.begin(), sx_x.end());
-          int x2 = *max_element(sx_x.begin(), sx_x.end());
+        if(sx_x.size() > 1){ //sx 케이스에 해당하면
+          int x1 = *min_element(sx_x.begin(), sx_x.end()); // x1은 벽 선분 중 x좌표 작은거
+          //begin(), end() 함수는 iterator(포인터와 비슷)을 반환한다
+          //min_element와 max_element도 iterator(포인터와 비슷)을 반환하므로 *으로 값을 내줘야 한다
+
+          
+
+          int x2 = *max_element(sx_x.begin(), sx_x.end()); // x2는 벽면선분 양끝점 중 x좌표 큰거
+
           int y1, y2;
-          if(abs(x2-x1)<10){
+
+          if(abs(x2-x1)<10){ // x좌표 별 차이 안나면 : 선분이 수직에 가까우면
             y1 = *min_element(sx_y.begin(), sx_y.end());
             y2 = *max_element(sx_y.begin(), sx_y.end());
+            //y1은 작은거, y2는 큰거
+
             x1 = sx_x[min_element(sx_y.begin(), sx_y.end())-sx_y.begin()];
+                        //y1(작은거)이 원래 시작점 좌표였으면 x1도 시작점의 좌표로 한다. y1 작은게 끝점 좌표였으면 x1은 끝점 좌표로 한다
             x2 = sx_x[max_element(sx_y.begin(), sx_y.end())-sx_y.begin()];
+                        //y2(큰거)가 벽면선분의 시작점 좌표였으면 x2를 시작점의 좌표로
           }
           else{
-            y1 = sx_y[min_element(sx_x.begin(), sx_x.end())-sx_x.begin()];
+            y1 = sx_y[min_element(sx_x.begin(), sx_x.end())-sx_x.begin()]; 
             y2 = sx_y[max_element(sx_x.begin(), sx_x.end())-sx_x.begin()];
           }
 
-          Vec4i l1 = {x1,y1,x2,y2};
+          //결국 위 함수는 벽면선분의 양 끝점 좌표를 정방향으로 정렬하는 역할이다. x2-x1값이 10보다 작은 경우는 y좌표가 증가하는 것을 정방향으로 삼고, 그 외에는 x좌표가 증가하는 것을 정방향으로 삼는다.
+
+          Vec4i l1 = {x1,y1,x2,y2}; //
           vector<float> line_ref = lineAnalysis(l1);
 
           line(map, Point(x1, y1), Point(x2, y2), Scalar(255,255,0), 2);
           circle(map,Point(MAP_WIDTH/2+line_ref[1], MAP_HEIGHT/2+line_ref[2]),4, cv::Scalar(255,255,0), -1);
 
-          if(pos_o >= 0){
-            sx_o = 2*atan(1) + line_ref[0];
-            if(pos_o < 2*atan(1) && line_ref[0] > 0){
-              sx_o = 2*atan(1) - line_ref[0];
+
+          if(pos_o >= 0){ //로봇 방향이 앞을 보고 있을 때
+            sx_o = 2*atan(1) + line_ref[0]; //일단 sx_o는 90도 더하기 x1y1x2y2 선분의 경사각=
+            if(pos_o < 2*atan(1) && line_ref[0] > 0){ //각도 0도에서 90도 사이이고 경사각이 양수일 때
+              sx_o = 2*atan(1) - line_ref[0]; //
             }
             if(pos_o > 2*atan(1) && line_ref[0] < 0){
               sx_o = -2*atan(1) + line_ref[0];
             }
           }
-          else{
+          else{ //방향이 뒤를 보고 있을 때
             sx_o = -2*atan(1) + line_ref[0];
             if(pos_o > -2*atan(1) && line_ref[0] < 0){
               sx_o = -2*atan(1) - line_ref[0];
@@ -591,6 +637,8 @@ int main(int argc, char **argv)
               sx_o = 2*atan(1) + line_ref[0];
             }
           }
+
+
           if(cosf(sx_o-pos_o)>0.75){
             sx_cos = cosf(sx_o);
             sx_sin = sinf(sx_o);
@@ -598,9 +646,17 @@ int main(int argc, char **argv)
           else{
             sx_o = 0;
           }
-          sx_len = line_ref[4];
-          sx = line_ref[3];
+
+          sx_len = line_ref[4]; //선분의 길이
+          sx = line_ref[3]; //선분까지의 수직발길이
         }
+
+
+
+
+
+
+
 
         float sxo = 0;
         float sxo_o = 0;
@@ -646,7 +702,7 @@ int main(int argc, char **argv)
               sxo_o = 2*atan(1) + line_ref[0];
             }
           }
-          if(cosf(sx_o-pos_o)>0.75){
+          if(cosf(sx_o-pos_o)>0.75){ //sxo_o 아님?
             sxo_cos = cosf(sxo_o);
             sxo_sin = sinf(sxo_o);
           }
@@ -785,7 +841,12 @@ int main(int argc, char **argv)
           }
         }
 
-        if(pos_x == 0 && pos_y == 0){
+
+
+
+
+
+        if(pos_x == 0 && pos_y == 0){ //이전에 설정한 적 없어서 무조건 이거 통과
           vector<float> cyl_pos;
           cyl_pos = cylinderOdometry(cyl_rel_x, cyl_rel_y);
           pos_o = cyl_pos[2];
@@ -806,6 +867,7 @@ int main(int argc, char **argv)
           else{
             pos_x = (11.0 + lxo*MAP_RESOL - lx*MAP_RESOL)/2.0;
           }
+
           if(sx_len < 30){
             pos_y = sxo*MAP_RESOL;
           }
