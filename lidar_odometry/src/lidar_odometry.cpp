@@ -30,7 +30,7 @@ int MAP_WIDTH = 700; //MAP의 가로방향 전체 크기
 int MAP_HEIGHT = 700; //MAP의 세로방향 전체 크기
 int MAP_CENTER = 50;
 //???
-int OBSTACLE_PADDING = 2; 
+int OBSTACLE_PADDING = 2;
 //장애물 크기->왜 2?
 int OBSTACLE_CONNECT_MAX = 15;
 //???
@@ -38,7 +38,7 @@ int OBSTACLE_CONNECT_MAX = 15;
 geometry_msgs::Vector3 odometry;
 ros::Publisher pub;
 
-int init_odom = -1; // Entrance node도 켰으면, 0으로 초기화!!
+int init_odom = 1; // Entrance node도 켰으면, 0으로 초기화!!
 
 int lidar_size;//lidar callback에서 사용되는 lidar point 개수
 float lidar_degree[400]; //넉넉하게 400ㅇ로 한듯?
@@ -101,7 +101,7 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
   if(l[2]-l[0] == 0){ //선분이 수직일 때(0으로 나눌 수 없으니 따로 처리)
     slope = 2*atan(1);
     perp = (l[2]+l[0]-MAP_WIDTH)/2.0; //맵 중앙을 원점으로 했을 때 선분의 x좌표
-    perp_x = perp; // 
+    perp_x = perp; //
     perp_y = 0; //
   }
   else{ //맵 중앙 좌표계 기준 y=ax+b이라 하면
@@ -120,7 +120,7 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
   line_info.push_back(perp_y);
   line_info.push_back(perp);
   line_info.push_back(length);//선분의 길이
-  return line_info; 
+  return line_info;
 }
 
 
@@ -238,7 +238,7 @@ void lidar_Callback(const sensor_msgs::LaserScan::ConstPtr& scan) //LiDAR scan�
 //     }
 //   }
 // }
-init_odom=1;
+// init_odom=1;
 
 
 
@@ -252,19 +252,19 @@ init_odom=1;
 
 int main(int argc, char **argv)
 {
-    ros::init(argc, argv, "data_show_node");
+    ros::init(argc, argv, "lidar_odometry_node");
     ros::NodeHandle nh; //NodeHandle 클래스의 nh 객체 선언
     ros::Subscriber sub = nh.subscribe<sensor_msgs::LaserScan>("/scan", 1000, lidar_Callback); //LiDAR 데이터 받아오기
 
     //ros::Subscriber sub1 = nh.subscribe<std_msgs::Int8>("/entrance", 1, line_Callback); //Entrance zone 들어갔는지 여부 받아오기
-    
+
     pub = nh.advertise<geometry_msgs::Vector3>("/odometry", 1); //odometry, 즉 robot의 위치를 Vector3로 발행한다.
 
     while(ros::ok){
         cv::Mat map = cv::Mat::zeros(MAP_WIDTH, MAP_HEIGHT, CV_8UC3);
-        
+
         //CV_8UC3는 RGB 3채널 컬러 이미지를 위한 데이터 방식이다. 일단 zero로 initialize 하여 map 객체 만듦
-        
+
         float obstacle_x, obstacle_y;
         int cx, cy;
         int cx1, cx2, cy1, cy2;
@@ -322,7 +322,7 @@ int main(int argc, char **argv)
                 cyl_distance = sqrtf(pow(right_end_distance,2)+0.0049-0.14*right_end_distance*cos(angle2));
                 cyl_degree = acos((pow(right_end_distance,2)+pow(cyl_distance,2)-0.0049)/(2*right_end_distance*cyl_distance)) + right_end_degree;
 
-          //cyl은 기둥을 말함. cyl_dist는 
+          //cyl은 기둥을 말함. cyl_dist는
                 obstacle_x = cyl_distance*cos(cyl_degree);
                 obstacle_y = cyl_distance*sin(cyl_degree);
 
@@ -375,7 +375,7 @@ int main(int argc, char **argv)
 
         cv::Mat edges;
         Canny(gray,edges,50,150);
-        //gray로부터 경곗값 50, 150을 기준으로 이미지의 경계선만을 검출하여 edge라는 행렬로 출력. 
+        //gray로부터 경곗값 50, 150을 기준으로 이미지의 경계선만을 검출하여 edge라는 행렬로 출력.
         vector<Vec4i> lines; //lines는 밑의 Hough 변환 결과를 받아올 array. 선분의 시작점 좌표 x,y와 끝점좌표 x,y를 받아옴.
 
         HoughLinesP(edges, lines, 1, CV_PI/180, 30, 15, 5 );
@@ -441,7 +441,7 @@ int main(int argc, char **argv)
                 major = 1;
               }
               else if(abs(abs(perp-perp_a)*MAP_RESOL - 5) < 0.2 || abs(abs(perp-perp_a)*MAP_RESOL - 1.0) < 0.2){
-  //새 perp와 전 perp 차이가 500 정도거나 100 정도면 
+  //새 perp와 전 perp 차이가 500 정도거나 100 정도면
                 major = 2;
               }
               num_a++;
@@ -488,7 +488,7 @@ int main(int argc, char **argv)
         else if(major == 1){ //
           major_slope = slope_a; //네 벽면 중 한 벽면
           minor_slope = slope_b; // 위의 벽면과 수직한 면
-          cand_o1 = major_slope + 2*atan(1); 
+          cand_o1 = major_slope + 2*atan(1);
 //왜 major slope?
           cand_o2 = major_slope - 2*atan(1); //두 가지 가능성(+180도 -180도)
 
@@ -560,7 +560,7 @@ int main(int argc, char **argv)
             sx_perp.push_back(perp);
             sx_x.push_back(l[0]);
             sx_x.push_back(l[2]);
-            sx_y.push_back(l[1]); 
+            sx_y.push_back(l[1]);
             sx_y.push_back(l[3]);
           }
           else if(cosf(atan2f(perp_x, perp_y)+pos_o)<-0.96){
@@ -589,7 +589,7 @@ int main(int argc, char **argv)
           //begin(), end() 함수는 iterator(포인터와 비슷)을 반환한다
           //min_element와 max_element도 iterator(포인터와 비슷)을 반환하므로 *으로 값을 내줘야 한다
 
-          
+
 
           int x2 = *max_element(sx_x.begin(), sx_x.end()); // x2는 벽면선분 양끝점 중 x좌표 큰거
 
@@ -606,7 +606,7 @@ int main(int argc, char **argv)
                         //y2(큰거)가 벽면선분의 시작점 좌표였으면 x2를 시작점의 좌표로
           }
           else{
-            y1 = sx_y[min_element(sx_x.begin(), sx_x.end())-sx_x.begin()]; 
+            y1 = sx_y[min_element(sx_x.begin(), sx_x.end())-sx_x.begin()];
             y2 = sx_y[max_element(sx_x.begin(), sx_x.end())-sx_x.begin()];
           }
 
