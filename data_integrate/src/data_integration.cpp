@@ -24,7 +24,7 @@
 #include "std_msgs/Int8.h"
 #include "std_msgs/String.h"
 #include "std_msgs/Float64.h"
-
+#include "geometry_msgs/Twist.h"
 
 #include "opencv2/opencv.hpp"
 
@@ -49,15 +49,15 @@ int action;
 int len;
 int n;
 
-#define RAD2DEG(x) ((x)*180./M_PI)
-
+#define ENTRANCE 1
+#define BALLHARVESTING 2
 
 
 void lidar_Callback(const sensor_msgs::LaserScan::ConstPtr& scan)
 {
-		map_mutex.lock();
+	map_mutex.lock();
 
-		int count = scan->angle_max / scan->angle_increment;
+	int count = scan->angle_max / scan->angle_increment;
     lidar_size=count;
     for(int i = 0; i < count; i++)
     {
@@ -84,6 +84,25 @@ void camera_Callback(const core_msgs::ball_position::ConstPtr& position)
 
 }
 
+void control_entrance(geometry_msgs::Twist *targetVel)
+{
+	std::cout << "Entrance Zone Control" << std::endl;
+	targetVel->linear.x  = 100;
+	targetVel->angular.z = 0;
+
+}
+
+void control_ballharvesting(geometry_msgs::Twist *targetVel)
+{
+	std::cout << "Ball Harvesting Control" << std::endl;
+	targetVel->linear.x  = 100;
+	targetVel->angular.z = 0;
+}
+
+int select_control_method(){
+	if (true) return ENTRANCE;
+	else return BALLHARVESTING;
+}
 
 int main(int argc, char **argv)
 {
@@ -92,35 +111,44 @@ int main(int argc, char **argv)
 
     ros::Subscriber sub = n.subscribe<sensor_msgs::LaserScan>("/scan", 1000, lidar_Callback);
     ros::Subscriber sub1 = n.subscribe<core_msgs::ball_position>("/position", 1000, camera_Callback);
-	ros::Publisher pub_left_wheel= n.advertise<std_msgs::Float64>("/turtlebot3_waffle_sim/left_wheel_velocity_controller/command", 10);
-	ros::Publisher pub_right_wheel= n.advertise<std_msgs::Float64>("/turtlebot3_waffle_sim/right_wheel_velocity_controller/command", 10);
+	ros::Publisher commandVel = n.advertise<geometry_msgs::Twist>("/command_vel", 10);
 
+	// ros::Publisher pub_left_wheel= n.advertise<std_msgs::Float64>("/turtlebot3_waffle_sim/left_wheel_velocity_controller/command", 10);
+	// ros::Publisher pub_right_wheel= n.advertise<std_msgs::Float64>("/turtlebot3_waffle_sim/right_wheel_velocity_controller/command", 10);
 
+	int control_method = ENTRANCE;
 
     while(ros::ok){
-			std_msgs::Float64 left_wheel_msg;
-			std_msgs::Float64 right_wheel_msg;
+    	geometry_msgs::Twist targetVel;
 
-			left_wheel_msg.data=1;   // set left_wheel velocity
-			right_wheel_msg.data=1;  // set right_wheel velocity
+    	if (control_method == ENTRANCE) {
+    		control_entrance(&targetVel);
+    	} else if (control_method == BALLHARVESTING) {
+    		control_ballharvesting(&targetVel);
+    	} else {
+    		std::cout << "ERROR: NO CONTROL METHOD" << std::endl; // Unreachable statement
+    	}
+		commandVel.publish(targetVel);
+		
+
+		// std_msgs::Float64 left_wheel_msg;
+		// std_msgs::Float64 right_wheel_msg;
+
+		// left_wheel_msg.data=1;   // set left_wheel velocity
+		// right_wheel_msg.data=1;  // set right_wheel velocity
 		/////////////////////////////////////////////////////////////////////////////////////////////////
 		// // 각노드에서 받아오는 센서 테이터가 잘 받아 왔는지 확인하는 코드 (ctrl + /)을 눌러 주석을 추가/제거할수 있다.///
 		/////////////////////////////////////////////////////////////////////////////////////////////////
 
-	 //  for(int i = 0; i < lidar_size; i++
-   // {
-	 //    std::cout << "degree : "<< lidar_degree[i];
-	 //    std::cout << "   distance : "<< lidar_distance[i]<<std::endl;
-	 //  }
-		// for(int i = 0; i < ball_number; i++)
-		// {
-		// 	std::cout << "ball_X : "<< ball_X[i];
-		// 	std::cout << "ball_Y : "<< ball_Y[i]<<std::endl;
-   //
+		// for(int i = 0; i < lidar_size; i++) {
+		//     std::cout << "degree : " << lidar_degree[i] << "  distance : " << lidar_distance[i] << std::endl;
+		// }
+		// for(int i = 0; i < ball_number; i++) {
+		// 	std::cout << "ball_X : " << ball_X[i] << "  ball_Y : " << ball_Y[i] << std::endl;
 		// }
 
-		  pub_left_wheel.publish(left_wheel_msg);   // publish left_wheel velocity
-		  pub_right_wheel.publish(right_wheel_msg);  // publish right_wheel velocity
+		// pub_left_wheel.publish(left_wheel_msg);   // publish left_wheel velocity
+		// pub_right_wheel.publish(right_wheel_msg);  // publish right_wheel velocity
 
 	    ros::Duration(0.025).sleep();
 	    ros::spinOnce();

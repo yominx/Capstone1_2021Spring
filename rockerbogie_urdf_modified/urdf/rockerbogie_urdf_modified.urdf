@@ -1,0 +1,534 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
+     Commit Version: 1.6.0-1-g15f4949  Build Version: 1.6.7594.29634
+     For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
+<robot
+  name="rockerbogie_urdf_modified">
+  <link
+    name="base_link">
+    <inertial>
+      <origin
+        xyz="-0.0118358388008823 -9.8542609147656E-07 0.156569924779582"
+        rpy="0 0 0" />
+      <mass
+        value="2.47556235264343" />
+      <inertia
+        ixx="0.0033305673628084"
+        ixy="1.27251014235594E-06"
+        ixz="-3.10947731589501E-05"
+        iyy="0.00593147232902395"
+        iyz="1.03891627054019E-07"
+        izz="0.00841295540740798" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://rockerbogie_urdf_modified/meshes/base_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://rockerbogie_urdf_modified/meshes/base_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <link
+    name="body_link">
+    <inertial>
+      <origin
+        xyz="-0.0118358388008823 -9.85426091421049E-07 0.036580460556831"
+        rpy="0 0 0" />
+      <mass
+        value="2.47556235264343" />
+      <inertia
+        ixx="0.0033305673628084"
+        ixy="1.27251014235594E-06"
+        ixz="-3.10947731589501E-05"
+        iyy="0.00593147232902395"
+        iyz="1.03891627054022E-07"
+        izz="0.00841295540740798" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://rockerbogie_urdf_modified/meshes/body_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://rockerbogie_urdf_modified/meshes/body_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="body_joint"
+    type="fixed">
+    <origin
+      xyz="0 0 0.119989464222751"
+      rpy="0 0 0" />
+    <parent
+      link="base_link" />
+    <child
+      link="body_link" />
+    <axis
+      xyz="0 0 0" />
+  </joint>
+  <link
+    name="leg1_link">
+    <inertial>
+      <origin
+        xyz="-0.00545596256305897 -0.0180000000000001 -0.0239335095394691"
+        rpy="0 0 0" />
+      <mass
+        value="0.0837983492960037" />
+      <inertia
+        ixx="6.79563222066731E-05"
+        ixy="-1.11485158774801E-19"
+        ixz="4.1605414393665E-05"
+        iyy="0.000279469531497121"
+        iyz="5.20756959867287E-20"
+        izz="0.000240981053606066" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://rockerbogie_urdf_modified/meshes/leg1_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://rockerbogie_urdf_modified/meshes/leg1_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="leg1_joint"
+    type="continuous">
+    <origin
+      xyz="0.0999999999999999 0.139 -0.0099978167969167"
+      rpy="0 0 0" />
+    <parent
+      link="body_link" />
+    <child
+      link="leg1_link" />
+    <axis
+      xyz="0 1 0" />
+    <limit
+      lower="0"
+      upper="0"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="11_link">
+    <inertial>
+      <origin
+        xyz="6.66133814775094E-16 0.01225 -4.16333634234434E-17"
+        rpy="0 0 0" />
+      <mass
+        value="0.344407191683159" />
+      <inertia
+        ixx="0.000336046122038097"
+        ixy="-1.97510250366014E-19"
+        ixz="4.18610807918571E-20"
+        iyy="0.000620610570997954"
+        iyz="-5.39983504407256E-23"
+        izz="0.000336046122038097" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://rockerbogie_urdf_modified/meshes/11_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://rockerbogie_urdf_modified/meshes/11_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="11_joint"
+    type="continuous">
+    <origin
+      xyz="0.073323 0.00475 -0.067998"
+      rpy="0 0 0" />
+    <parent
+      link="leg1_link" />
+    <child
+      link="11_link" />
+    <axis
+      xyz="0 1 0" />
+  </joint>
+  <link
+    name="12_link">
+    <inertial>
+      <origin
+        xyz="0 0.01225 9.0205620750794E-17"
+        rpy="0 0 0" />
+      <mass
+        value="0.344407191683159" />
+      <inertia
+        ixx="0.000336046122038096"
+        ixy="-1.97611497272991E-19"
+        ixz="-3.87287348324854E-20"
+        iyy="0.000620610570997954"
+        iyz="1.88994226302792E-22"
+        izz="0.000336046122038096" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://rockerbogie_urdf_modified/meshes/12_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://rockerbogie_urdf_modified/meshes/12_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="12_joint"
+    type="continuous">
+    <origin
+      xyz="-0.095549 0.00475 -0.029501"
+      rpy="0 0 0" />
+    <parent
+      link="leg1_link" />
+    <child
+      link="12_link" />
+    <axis
+      xyz="0 1 0" />
+  </joint>
+  <link
+    name="leg2_link">
+    <inertial>
+      <origin
+        xyz="-0.0046258540709096 0.0180000000000002 -0.0241077141280547"
+        rpy="0 0 0" />
+      <mass
+        value="0.0837983492960036" />
+      <inertia
+        ixx="6.52897967480928E-05"
+        ixy="8.86085270551766E-18"
+        ixz="3.55320319937771E-05"
+        iyy="0.000279469531497121"
+        iyz="-1.49938998508397E-18"
+        izz="0.000243647579064646" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://rockerbogie_urdf_modified/meshes/leg2_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://rockerbogie_urdf_modified/meshes/leg2_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="leg2_joint"
+    type="continuous">
+    <origin
+      xyz="0.0999999999999941 -0.139000000000004 -0.0099978167969167"
+      rpy="0 0 0" />
+    <parent
+      link="body_link" />
+    <child
+      link="leg2_link" />
+    <axis
+      xyz="0 -1 0" />
+    <limit
+      lower="0"
+      upper="0"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="21_link">
+    <inertial>
+      <origin
+        xyz="4.44089209850063E-16 -0.01225 -8.04911692853238E-16"
+        rpy="0 0 0" />
+      <mass
+        value="0.344407191683159" />
+      <inertia
+        ixx="0.000336046122038096"
+        ixy="1.16380553020743E-17"
+        ixz="3.51149848785042E-20"
+        iyy="0.000620610570997954"
+        iyz="7.83804194481339E-20"
+        izz="0.000336046122038096" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://rockerbogie_urdf_modified/meshes/21_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://rockerbogie_urdf_modified/meshes/21_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="21_joint"
+    type="continuous">
+    <origin
+      xyz="0.075629 -0.00475 -0.065424"
+      rpy="0 0 0" />
+    <parent
+      link="leg2_link" />
+    <child
+      link="21_link" />
+    <axis
+      xyz="0 1 0" />
+  </joint>
+  <link
+    name="22_link">
+    <inertial>
+      <origin
+        xyz="-4.9960036108132E-16 -0.01225 -4.85722573273506E-17"
+        rpy="0 0 0" />
+      <mass
+        value="0.344407191683159" />
+      <inertia
+        ixx="0.000336046122038096"
+        ixy="1.17058196548046E-17"
+        ixz="3.34734613931062E-20"
+        iyy="0.000620610570997954"
+        iyz="1.78560626036173E-21"
+        izz="0.000336046122038097" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://rockerbogie_urdf_modified/meshes/22_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://rockerbogie_urdf_modified/meshes/22_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="22_joint"
+    type="continuous">
+    <origin
+      xyz="-0.094473 -0.00475 -0.032784"
+      rpy="0 0 0" />
+    <parent
+      link="leg2_link" />
+    <child
+      link="22_link" />
+    <axis
+      xyz="0 1 0" />
+  </joint>
+  <link
+    name="13_link">
+    <inertial>
+      <origin
+        xyz="0 0.01225 -6.93889390390723E-18"
+        rpy="0 0 0" />
+      <mass
+        value="0.344407191683159" />
+      <inertia
+        ixx="0.000336046122038097"
+        ixy="-1.97456252015627E-19"
+        ixz="-4.16105803878318E-20"
+        iyy="0.000620610570997954"
+        iyz="-5.33256280878563E-32"
+        izz="0.000336046122038096" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://rockerbogie_urdf_modified/meshes/13_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://rockerbogie_urdf_modified/meshes/13_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="13_joint"
+    type="continuous">
+    <origin
+      xyz="-0.1592 0.14075 -0.059989"
+      rpy="0 0 0" />
+    <parent
+      link="body_link" />
+    <child
+      link="13_link" />
+    <axis
+      xyz="0 1 0" />
+  </joint>
+  <link
+    name="23_link">
+    <inertial>
+      <origin
+        xyz="5.55111512312578E-17 -0.01225 -6.24500451351651E-17"
+        rpy="0 0 0" />
+      <mass
+        value="0.34440719168316" />
+      <inertia
+        ixx="0.000336046122038097"
+        ixy="-1.66381129941372E-19"
+        ixz="2.08069512759835E-20"
+        iyy="0.000620610570997954"
+        iyz="9.26198944431243E-21"
+        izz="0.000336046122038097" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://rockerbogie_urdf_modified/meshes/23_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://rockerbogie_urdf_modified/meshes/23_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="23_joint"
+    type="continuous">
+    <origin
+      xyz="-0.1592 -0.14075 -0.059989"
+      rpy="0 0 0" />
+    <parent
+      link="body_link" />
+    <child
+      link="23_link" />
+    <axis
+      xyz="0 1 0" />
+  </joint>
+</robot>
