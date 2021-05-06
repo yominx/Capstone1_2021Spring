@@ -48,6 +48,7 @@ int action;
 
 int len;
 int n;
+int left_points,right_points;
 
 #define ENTRANCE 1
 #define BALLHARVESTING 2
@@ -59,13 +60,19 @@ void lidar_Callback(const sensor_msgs::LaserScan::ConstPtr& scan)
 
 	int count = scan->angle_max / scan->angle_increment;
     lidar_size=count;
+    left_points=0; right_points=0;
     for(int i = 0; i < count; i++)
     {
         lidar_degree[i] = RAD2DEG(scan->angle_min + scan->angle_increment * i);
         lidar_distance[i]=scan->ranges[i];
-
+        if (lidar_distance[i]< 0.7 && lidar_degree[i]<90 && lidar_degree[i]>0){
+			left_points++;
+        } else if ( lidar_distance[i] < 0.7 && lidar_degree[i]>270){
+			right_points++;
+        }
     }
-		map_mutex.unlock();
+
+	map_mutex.unlock();
 
 }
 void camera_Callback(const core_msgs::ball_position::ConstPtr& position)
@@ -89,6 +96,21 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 	std::cout << "Entrance Zone Control" << std::endl;
 	targetVel->linear.x  = 100;
 	targetVel->angular.z = 0;
+	map_mutex.lock();
+	int threshold = 10;
+	diff = left_points - right_points;
+	map_mutex.unlock();
+	
+	if (diff < -threshold) { // control to leftside
+		targetVel->linear.x  = 2;
+		targetVel->angular.z = diff*0.1;  // TODO: change to PID control (Now P control)
+	} else if (diff > threshold) { // control to rightside
+		targetVel->linear.x  = 2;
+		targetVel->angular.z = -diff*0.1;  // TODO: change to PID control (Now P control)
+	} else { // Just move forward
+		targetVel->linear.x  = 2;
+		targetVel->angular.z = 0;
+	}
 
 }
 
@@ -97,6 +119,9 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 	std::cout << "Ball Harvesting Control" << std::endl;
 	targetVel->linear.x  = 100;
 	targetVel->angular.z = 0;
+	while (harversed < 5){
+
+	}
 }
 
 int select_control_method(){
@@ -133,12 +158,10 @@ int main(int argc, char **argv)
 
 		// std_msgs::Float64 left_wheel_msg;
 		// std_msgs::Float64 right_wheel_msg;
-
 		// left_wheel_msg.data=1;   // set left_wheel velocity
 		// right_wheel_msg.data=1;  // set right_wheel velocity
-		/////////////////////////////////////////////////////////////////////////////////////////////////
-		// // 각노드에서 받아오는 센서 테이터가 잘 받아 왔는지 확인하는 코드 (ctrl + /)을 눌러 주석을 추가/제거할수 있다.///
-		/////////////////////////////////////////////////////////////////////////////////////////////////
+		// pub_left_wheel.publish(left_wheel_msg);   // publish left_wheel velocity
+		// pub_right_wheel.publish(right_wheel_msg);  // publish right_wheel velocity
 
 		// for(int i = 0; i < lidar_size; i++) {
 		//     std::cout << "degree : " << lidar_degree[i] << "  distance : " << lidar_distance[i] << std::endl;
@@ -147,8 +170,6 @@ int main(int argc, char **argv)
 		// 	std::cout << "ball_X : " << ball_X[i] << "  ball_Y : " << ball_Y[i] << std::endl;
 		// }
 
-		// pub_left_wheel.publish(left_wheel_msg);   // publish left_wheel velocity
-		// pub_right_wheel.publish(right_wheel_msg);  // publish right_wheel velocity
 
 	    ros::Duration(0.025).sleep();
 	    ros::spinOnce();
