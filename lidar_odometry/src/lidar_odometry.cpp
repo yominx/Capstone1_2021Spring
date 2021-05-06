@@ -33,11 +33,17 @@ int MAP_CENTER = 50;
 geometry_msgs::Vector3 odometry;
 ros::Publisher pub;
 
-int init_odom = 1; // Entrance node도 켰으면, 0으로 초기화!!
+
 
 int lidar_size;//lidar callback에서 사용되는 lidar point 개수
 float lidar_degree[400]; //넉넉하게 400ㅇ로 한듯?
 float lidar_distance[400];
+
+int init_odom = 1; // Entrance node도 켰으면, 0으로 초기화!!
+
+float control_x;
+float control_y;
+float control_o;
 
 
 struct pos{
@@ -45,108 +51,17 @@ struct pos{
   float y=50;
   float o=0.19;
 };
+struct pos robot_pos;
 
 float pos_x;
 float pos_y;
 float pos_o;
 
-float ref_x = 0.0;
-float ref_y = 0.0;
-float ref_o = 0.0;
-
-struct pos robot_pos;
-//??
 
 boost::mutex map_mutex;
 
 float pi=2*atanf(1);
-
 #define RAD2DEG(x) ((x)*180./M_PI)
-
-
-
-
-
-
-// vector<Vec3f> arrange(vector<Vec3f> set, ){
-//   int N=set.size();
-//   int i;
-
-//   arranging(set, N);
-
-//     return 0;
-// }
-
-// vector<Vec3f> arranging(float* set_array, int size){
-//     float standard=*set_array;
-    
-	 
-//     int i=0, j=0, k=0, same=1;
-//     float subset_smaller[size];
-//     float subset_larger[size];
-    
-// 	switch (size){
-		
-// 		case 0:
-// 			return 0;
-		
-// 		case 1:
-// 			return 0;
-			
-// 		default:
-						
-// 		    for(i=1;i<size;i++){
-// 		        if(set_array[i]>standard){
-// 		            subset_larger[j]=set_array[i];
-// 		            j++;
-// 		        }else if(set_array[i]<standard){
-// 		            subset_smaller[k]=set_array[i];
-// 		            k++;
-// 		    	}else{
-// 		    		same++;
-// 				}
-// 		    }
-		
-		
-// 		    float Sized_subset_larger[j];
-// 		    float Sized_subset_smaller[k];
-
-		    
-// 		    for(i=0;i<j;i++){
-// 		        Sized_subset_larger[i]=subset_larger[i];
-// 		    }
-// 		    for(i=0;i<k;i++){
-// 		        Sized_subset_smaller[i]=subset_smaller[i];
-// 		    }
-
-		
-// 		    arranging(Sized_subset_larger, j);
-// 		    arranging(Sized_subset_smaller, k);
-		
-		
-// 		    for(i=0;i<size;i++){
-// 		        if(i<k){
-// 		            set_array[i]=Sized_subset_smaller[i];
-		            
-// 		        }else if(i>=k && i<k+same){
-// 		            set_array[i]=standard;
-// 		        }else{
-// 		        	set_array[i]=Sized_subset_larger[i-k-same];
-// 		        }
-		
-// 		    }
-		    
-		
-// 		    return 0;
-// 	}
-
-// }
-
-
-
-
-
-
 
 
 
@@ -164,8 +79,6 @@ float vectorMean(std::vector<float> V){
     }
     return (total /(float)V.size());
 }
-
-
 
 
 
@@ -405,20 +318,20 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
       //oridata 사이즈의 기준 크기가 작을수록 밑의 기준은 커야한다. 반대로 기준 크기가 클수록 밑 기준은 작아야한다.
       //+빨리 회전할수록 밑의 기준이 커야 한다
         if(abs(pos_o-M_PI/2)<0.1){//이 크기가 클수록 angle_theshold도 커야 한다.
-          pos_o=M_PI+(M_PI-pos_o)/2; // 
+          pos_o=M_PI/2+(M_PI/2-pos_o); // 
           //pos_y=vectorMean(ydata);
         }else if(abs(pos_o-M_PI)<0.1){//0.05가 크면 엄한 녀석을 잡아넣을 수 있다. 그러나 0.05가 작으면 0.05보다 살짝 벗어나는 곳에서 멈추면 잡을수가 없다.
         //angle_threshold의 1/2
-          pos_o=2*M_PI+(2*M_PI-pos_o)/2;
+          pos_o=M_PI+(M_PI-pos_o);
           //pos_x=vectorMean(xdata);
         } else if(abs(pos_o-1.5*M_PI)<0.1){
-          pos_o=3*M_PI+(3*M_PI-pos_o)/2;
+          pos_o=1.5*M_PI+(1.5*M_PI-pos_o);
           //pos_y=vectorMean(ydata);
         } else if(abs(pos_o)<0.1){
-          pos_o=2*M_PI-pos_o/2;
+          pos_o=2*M_PI-pos_o;
           button=0;
         } else if(abs(pos_o-2*M_PI)<0.1&& button){
-          pos_o=(2*M_PI-pos_o)/2;
+          pos_o=(2*M_PI-pos_o);
         }
 
 
@@ -438,7 +351,8 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
       }
     }
 
-//Debugging: cout<<"output xyo is "<<pos_x<<"/"<<pos_y<<"/"<<pos_o<<endl;
+//Debugging:
+cout<<"output xyo is "<<pos_x<<"/"<<pos_y<<"/"<<pos_o<<endl;
 
     robot_pos.x=pos_x;
     robot_pos.y=pos_y;
@@ -478,7 +392,20 @@ void lidar_Callback(const sensor_msgs::LaserScan::ConstPtr& scan) //LiDAR scan�
 // init_odom=1;
 
 
+// void control_Callback(const geometry_msgs::Vector3::ConstPtr& control) //Reflecting control input into the expeted current robot position, instead of the old position
+// {
+//   robot_pos.x=robot_pos.x+control_x;
+//   robot_pos.y=robot_pos.y+control_y;
 
+//   if (robot_pos.o<1 && robot_pos.o+control_o<0){
+//     robot_pos.o=2*M_PI+(robot_pos.o+control_o);
+//   }else if (robot_pos.o>2*M_PI-1 && robot_pos.o+control_o>2*M_PI){
+//     robot_pos.o=robot_pos.o+control_o - 2*M_PI;
+//   }else{
+//     robot_pos.o=robot_pos.o+control_o;
+//   }
+  
+// }
 
 
 
@@ -493,7 +420,7 @@ int main(int argc, char **argv)
     ros::NodeHandle nh; //NodeHandle 클래스의 nh 객체 선언
     ros::Subscriber sub = nh.subscribe<sensor_msgs::LaserScan>("/scan", 1000, lidar_Callback); //LiDAR 데이터 받아오기
     //ros::Subscriber sub1 = nh.subscribe<std_msgs::Int8>("/entrance", 1, line_Callback); //Entrance zone 들어갔는지 여부 받아오기
-    //ros::Subscriber sub2 = nh.subscribe<sensor_msgs::LaserScan>("/control", 1000, control_callback); //getting control input
+    //ros::Subscriber sub2 = nh.subscribe<geometry_msgs::Vector3>("/control", 1000, control_callback); //getting control input
 
     pub = nh.advertise<geometry_msgs::Vector3>("/odometry", 1); //odometry, 즉 robot의 위치를 Vector3로 발행한다.
 
@@ -503,7 +430,9 @@ int main(int argc, char **argv)
         //CV_8UC3는 RGB 3채널 컬러 이미지를 위한 데이터 방식이다. 일단 zero로 initialize 하여 map 객체 만듦
 
 
-        vector<float> wall_distance, wall_degree; //외벽 거리 및 위치 저장
+
+        //Substracting the obstacle data from laser scan, and Drawing remaining wall data on the virtual map
+        vector<float> wall_distance, wall_degree;
 
         wall_distance.push_back(lidar_distance[0]);
         wall_degree.push_back(lidar_degree[0]);
@@ -521,7 +450,7 @@ int main(int argc, char **argv)
           if(abs(lidar_distance[i] - lidar_distance[i-1]) > 2){
           //distance changed abruptly -> outermost wall or an another distant obstacle is detected.
 
-            if(is_difference_small < 15){//threshold should be larger than the maximum view angle of the obstacle
+            if(is_difference_small < 20){//threshold should be larger than the maximum view angle of the obstacle
               //this means that formerly detected object has small view angle, which means it is likely to be an obstacle
               for(int j=0; j<is_difference_small; j++){
                 wall_distance.pop_back();
@@ -534,9 +463,8 @@ int main(int argc, char **argv)
           }
         }
         
-
-
-        for(int i = 1; i<wall_distance.size(); i++){ //wall 정보로 추가된 포인트 개수만큼 실행
+        //Drawing
+        for(int i = 1; i<wall_distance.size(); i++){
           int cxi = MAP_WIDTH/2 + (int)(wall_distance[i]*sin(wall_degree[i])/MAP_RESOL);
           int cyi = MAP_HEIGHT/2 + (int)(wall_distance[i]*cos(wall_degree[i])/MAP_RESOL);
           int cxi0 = MAP_WIDTH/2 + (int)(wall_distance[i-1]*sin(wall_degree[i-1])/MAP_RESOL);
@@ -561,14 +489,13 @@ int main(int argc, char **argv)
         //30은 선으로 치려면 최소 몇 개 데이터 이상이어야 하는지, 15는 선으로 검출하기 위한 최소 길이, 5는 다른 선으로 간주되지 않기 위한 점 데이터 사이 최대 허용 길이이다.
 
 
-        
         rectangular_map(lines, 20, 0.2); //angle_threshold는 최대 0.7보다는 작아야 한다.
 
 
         
 //Debugging: circle(map,Point(MAP_WIDTH/2,MAP_HEIGHT/2),10, cv::Scalar(0,0,255), -1);   
-//cv::imshow("Frame",map);
-//cv::waitKey(50);
+cv::imshow("Frame",map);
+cv::waitKey(50);
 
 
         // if(init_odom == 0){
@@ -578,9 +505,9 @@ int main(int argc, char **argv)
         // } 각도가 제일 문제. 1. 허용오차 작게 하고 예상포인트 세트를 다 돌려봐서 그 중 맞는걸로, 2. 처음 시행시에는 허용오차 크게, 3. 들어오기 꽤 전부터 먼저 돌리면서 허용오차는 빡세게 하면서 기다리기
         //이 노드는 아무리 빨라도 |x좌표|+초기 허용오차 <50일 때만 쓸수있다. 
 
-      	odometry.x=pos_x;
-      	odometry.y=pos_y;
-      	odometry.z=pos_o;
+      	odometry.x=robot_pos.x;
+      	odometry.y=robot_pos.y;
+      	odometry.z=robot_pos.o;
       	pub.publish(odometry);
 
         ros::spinOnce();
