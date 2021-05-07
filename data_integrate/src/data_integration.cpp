@@ -82,8 +82,8 @@ void camera_Callback(const core_msgs::ball_position::ConstPtr& position)
     ball_number=count;
     for(int i = 0; i < count; i++)
     {
-        ball_X[i] = position->img_x[i];
-        ball_Y[i] = position->img_y[i];
+        ball_X[i] = position->angle[i];
+        ball_Y[i] = position->dist[i];
         // std::cout << "degree : "<< ball_degree[i];
         // std::cout << "   distance : "<< ball_distance[i]<<std::endl;
 		ball_distance[i] = ball_X[i]*ball_X[i]+ball_Y[i]*ball_X[i];
@@ -100,7 +100,7 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 	int threshold = 10;
 	int diff = left_points - right_points;
 	map_mutex.unlock();
-	
+
 	if (diff < -threshold) { // control to leftside
 		targetVel->linear.x  = 2;
 		targetVel->angular.z = diff*0.1;  // TODO: change to PID control (Now P control)
@@ -154,7 +154,7 @@ int main(int argc, char **argv)
     		std::cout << "ERROR: NO CONTROL METHOD" << std::endl; // Unreachable statement
     	}
 		commandVel.publish(targetVel);
-		
+
 
 		// std_msgs::Float64 left_wheel_msg;
 		// std_msgs::Float64 right_wheel_msg;

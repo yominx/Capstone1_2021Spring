@@ -12,21 +12,26 @@
 using namespace cv;
 using namespace std;
 
-Mat buffer, buffer_bottom_part, buffer_bottem_padding, buffer_top_part;
+Mat buffer;
 ros::Publisher pub;
-int stage=-1;
+int stage=-1; // 0 : ball_harvesting, 1 : line_tracing, 2 : climbing_uphill(or step_obstacle)
 
 void line_detect(){
   int col = buffer.cols;
   int row = buffer.rows;
   int kernel = 5;
   vector<Vec4i> linesP;
-  buffer_bottom_part = buffer(Rect(Point(0,(int)row/2),Point(col,row)));
+
+  // 하늘이 보이면 오르막
+  Mat buffer_top_part = buffer(Rect(Point(0,0), Point(col,(int)row/2-1)));
+  float topPart = mean(buffer_top_part)[0];
+
+  Mat buffer_bottom_part = buffer(Rect(Point(0,(int)row/2),Point(col,row)));
   threshold(buffer_bottom_part, buffer_bottom_part, 30, 255, THRESH_BINARY_INV);
   GaussianBlur(buffer_bottom_part, buffer_bottom_part, Size(kernel,kernel), 9, 9, BORDER_REFLECT);
-  imshow("line detect blurred", buffer_bottom_part);
-  waitKey(10);
-  buffer_bottem_padding = buffer(Rect(Point(0,(int)row/2),Point(col,(int)row/2+(kernel-1)/2)));
+  // imshow("line detect blurred", buffer_bottom_part);
+  // waitKey(10);
+  Mat buffer_bottem_padding = buffer(Rect(Point(0,(int)row/2),Point(col,(int)row/2+(kernel-1)/2)));
   buffer_bottem_padding = Scalar(0);
   threshold(buffer_bottom_part, buffer_bottom_part, 3, 255, THRESH_BINARY);
   imshow("line detect threshold", buffer_bottom_part);
