@@ -98,7 +98,7 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 	targetVel->angular.z = 0;
 	map_mutex.lock();
 	int threshold = 10;
-	diff = left_points - right_points;
+	int diff = left_points - right_points;
 	map_mutex.unlock();
 	
 	if (diff < -threshold) { // control to leftside
@@ -119,8 +119,8 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 	std::cout << "Ball Harvesting Control" << std::endl;
 	targetVel->linear.x  = 100;
 	targetVel->angular.z = 0;
-	while (harversed < 5){
-
+	while (true){
+		break;
 	}
 }
 
