@@ -66,11 +66,6 @@ void lidar_Callback(const sensor_msgs::LaserScan::ConstPtr& scan)
     {
         lidar_degree[i] = RAD2DEG(scan->angle_min + scan->angle_increment * i);
         lidar_distance[i]=scan->ranges[i];
-        if (lidar_distance[i]< 0.7 && lidar_degree[i]<90 && lidar_degree[i]>0){
-			left_points++;
-        } else if ( lidar_distance[i] < 0.7 && lidar_degree[i]>270){
-			right_points++;
-        }
     }
 
 	map_mutex.unlock();
@@ -83,10 +78,10 @@ void camera_Callback(const core_msgs::ball_position::ConstPtr& position)
     ball_number=count;
     for(int i = 0; i < count; i++)
     {
-        ball_X[i] = position->img_x[i];
-        ball_Y[i] = position->img_y[i];
-        // cout << "degree : "<< ball_degree[i];
-        // cout << "   distance : "<< ball_distance[i]<<endl;
+        ball_X[i] = position->angle[i];
+        ball_Y[i] = position->dist[i];
+        // std::cout << "degree : "<< ball_degree[i];
+        // std::cout << "   distance : "<< ball_distance[i]<<std::endl;
 		ball_distance[i] = ball_X[i]*ball_X[i]+ball_Y[i]*ball_X[i];
     }
 
@@ -99,9 +94,16 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 	targetVel->angular.z = 0;
 	map_mutex.lock();
 	int threshold = 10;
+	for (int i = 0; i < lidar_size; i++) {
+        if (lidar_distance[i]< 0.7 && lidar_degree[i]<90 && lidar_degree[i]>0){
+			left_points++;
+        } else if ( lidar_distance[i] < 0.7 && lidar_degree[i]>270){
+			right_points++;
+        }
+	}
 	int diff = left_points - right_points;
 	map_mutex.unlock();
-	
+
 	if (diff < -threshold) { // control to leftside
 		targetVel->linear.x  = 2;
 		targetVel->angular.z = diff*0.1;  // TODO: change to PID control (Now P control)
@@ -155,7 +157,7 @@ int main(int argc, char **argv)
     		cout << "ERROR: NO CONTROL METHOD" << endl; // Unreachable statement
     	}
 		commandVel.publish(targetVel);
-		
+
 
 		// std_msgs::Float64 left_wheel_msg;
 		// std_msgs::Float64 right_wheel_msg;

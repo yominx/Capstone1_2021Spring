@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(ball_detection)
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_compile_options(-std=c++11)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
@@ -15,6 +17,8 @@ find_package(catkin REQUIRED COMPONENTS
   image_transport
   message_generation
   visualization_msgs
+  pcl_conversions
+  pcl_ros
 )
 
 find_package( OpenCV REQUIRED )
@@ -22,11 +26,11 @@ find_package( cv_bridge REQUIRED )
 
 catkin_package(
 #  INCLUDE_DIRS include
-#  CATKIN_DEPENDS roscpp
+  CATKIN_DEPENDS roscpp
 #  sensor_msgs
 #  std_msgs
-#  core_msgs
-#  image_transport
+  core_msgs
+  image_transport
 #  visualization_msgs
 #  DEPENDS system_lib
 )
