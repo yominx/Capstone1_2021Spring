@@ -59,13 +59,14 @@ void lidar_Callback(const sensor_msgs::LaserScan::ConstPtr& scan)
 {
 	map_mutex.lock();
 	cout << "LIDAR CALLBACK" << endl;
-	int count = scan->angle_max / scan->angle_increment;
+	int count = (scan->angle_max - scan->angle_min) / scan->angle_increment + 1;
     lidar_size=count;
-    left_points=0; right_points=0;
     for(int i = 0; i < count; i++)
     {
         lidar_degree[i] = RAD2DEG(scan->angle_min + scan->angle_increment * i);
         lidar_distance[i]=scan->ranges[i];
+        std::cout << "(dist, deg): "<< lidar_degree[i] << ", " << lidar_distance[i] << endl;
+
     }
 
 	map_mutex.unlock();
@@ -89,21 +90,25 @@ void camera_Callback(const core_msgs::ball_position::ConstPtr& position)
 
 void control_entrance(geometry_msgs::Twist *targetVel)
 {
-	cout << "Entrance Zone Control" << endl;
-	targetVel->linear.x  = 100;
-	targetVel->angular.z = 0;
+	//cout << "Entrance Zone Control" << endl;
+	
+	int threshold = 10, MIN_DIST_THRESHOLD = 0.05;
+
 	map_mutex.lock();
-	int threshold = 10;
+	left_points=0; right_points=0;
 	for (int i = 0; i < lidar_size; i++) {
-        if (lidar_distance[i]< 0.7 && lidar_degree[i]<90 && lidar_degree[i]>0){
+        if (MIN_DIST_THRESHOLD < lidar_distance[i] && lidar_distance[i]< 0.7 
+        	&& 0 < lidar_degree[i] && lidar_degree[i] < 90){
 			left_points++;
-        } else if ( lidar_distance[i] < 0.7 && lidar_degree[i]>270){
+        } else if (MIN_DIST_THRESHOLD < lidar_distance[i] && lidar_distance[i] < 0.7 
+        			&& 90 < lidar_degree[i] && lidar_degree[i] < 180){
 			right_points++;
         }
 	}
-	int diff = left_points - right_points;
 	map_mutex.unlock();
 
+	cout << "LEFT " << left_points << " RIGHT " << right_points << endl; 
+	int diff = left_points - right_points;
 	if (diff < -threshold) { // control to leftside
 		targetVel->linear.x  = 2;
 		targetVel->angular.z = diff*0.1;  // TODO: change to PID control (Now P control)
