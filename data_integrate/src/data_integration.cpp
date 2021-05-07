@@ -53,11 +53,12 @@ int left_points,right_points;
 #define ENTRANCE 1
 #define BALLHARVESTING 2
 
+using namespace std;
 
 void lidar_Callback(const sensor_msgs::LaserScan::ConstPtr& scan)
 {
 	map_mutex.lock();
-
+	cout << "LIDAR CALLBACK" << endl;
 	int count = scan->angle_max / scan->angle_increment;
     lidar_size=count;
     left_points=0; right_points=0;
@@ -84,8 +85,8 @@ void camera_Callback(const core_msgs::ball_position::ConstPtr& position)
     {
         ball_X[i] = position->img_x[i];
         ball_Y[i] = position->img_y[i];
-        // std::cout << "degree : "<< ball_degree[i];
-        // std::cout << "   distance : "<< ball_distance[i]<<std::endl;
+        // cout << "degree : "<< ball_degree[i];
+        // cout << "   distance : "<< ball_distance[i]<<endl;
 		ball_distance[i] = ball_X[i]*ball_X[i]+ball_Y[i]*ball_X[i];
     }
 
@@ -93,7 +94,7 @@ void camera_Callback(const core_msgs::ball_position::ConstPtr& position)
 
 void control_entrance(geometry_msgs::Twist *targetVel)
 {
-	std::cout << "Entrance Zone Control" << std::endl;
+	cout << "Entrance Zone Control" << endl;
 	targetVel->linear.x  = 100;
 	targetVel->angular.z = 0;
 	map_mutex.lock();
@@ -116,7 +117,7 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 
 void control_ballharvesting(geometry_msgs::Twist *targetVel)
 {
-	std::cout << "Ball Harvesting Control" << std::endl;
+	cout << "Ball Harvesting Control" << endl;
 	targetVel->linear.x  = 100;
 	targetVel->angular.z = 0;
 	while (true){
@@ -151,7 +152,7 @@ int main(int argc, char **argv)
     	} else if (control_method == BALLHARVESTING) {
     		control_ballharvesting(&targetVel);
     	} else {
-    		std::cout << "ERROR: NO CONTROL METHOD" << std::endl; // Unreachable statement
+    		cout << "ERROR: NO CONTROL METHOD" << endl; // Unreachable statement
     	}
 		commandVel.publish(targetVel);
 		
@@ -164,10 +165,10 @@ int main(int argc, char **argv)
 		// pub_right_wheel.publish(right_wheel_msg);  // publish right_wheel velocity
 
 		// for(int i = 0; i < lidar_size; i++) {
-		//     std::cout << "degree : " << lidar_degree[i] << "  distance : " << lidar_distance[i] << std::endl;
+		//     cout << "degree : " << lidar_degree[i] << "  distance : " << lidar_distance[i] << endl;
 		// }
 		// for(int i = 0; i < ball_number; i++) {
-		// 	std::cout << "ball_X : " << ball_X[i] << "  ball_Y : " << ball_Y[i] << std::endl;
+		// 	cout << "ball_X : " << ball_X[i] << "  ball_Y : " << ball_Y[i] << endl;
 		// }
 
 
