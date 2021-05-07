@@ -65,11 +65,6 @@ void lidar_Callback(const sensor_msgs::LaserScan::ConstPtr& scan)
     {
         lidar_degree[i] = RAD2DEG(scan->angle_min + scan->angle_increment * i);
         lidar_distance[i]=scan->ranges[i];
-        if (lidar_distance[i]< 0.7 && lidar_degree[i]<90 && lidar_degree[i]>0){
-			left_points++;
-        } else if ( lidar_distance[i] < 0.7 && lidar_degree[i]>270){
-			right_points++;
-        }
     }
 
 	map_mutex.unlock();
@@ -98,6 +93,13 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 	targetVel->angular.z = 0;
 	map_mutex.lock();
 	int threshold = 10;
+	for (int i = 0; i < lidar_size; i++) {
+        if (lidar_distance[i]< 0.7 && lidar_degree[i]<90 && lidar_degree[i]>0){
+			left_points++;
+        } else if ( lidar_distance[i] < 0.7 && lidar_degree[i]>270){
+			right_points++;
+        }
+	}
 	int diff = left_points - right_points;
 	map_mutex.unlock();
 	
