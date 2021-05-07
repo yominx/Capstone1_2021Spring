@@ -56,8 +56,8 @@ void camera_Callback(const core_msgs::ball_position::ConstPtr& position)
     ball_number=count;
     for(int i = 0; i < count; i++)
     {
-        ball_X[i] = position->img_x[i];
-        ball_Y[i]=position->img_y[i];
+        ball_X[i] = position->angle[i];
+        ball_Y[i]=position->dist[i];
       	std::cout << "ball_X : "<< ball_X[i];
       	std::cout << "ball_Y : "<< ball_Y[i]<<std::endl;
     }
