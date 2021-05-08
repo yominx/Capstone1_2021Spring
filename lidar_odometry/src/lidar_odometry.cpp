@@ -47,9 +47,9 @@ float control_o;
 
 
 struct pos{
-  float x=0.5;
-  float y=50;
-  float o=0.19;
+  float x=-5;
+  float y=70;
+  float o=0.1;
 };
 struct pos robot_pos;
 
