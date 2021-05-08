@@ -92,7 +92,7 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 {
 	//cout << "Entrance Zone Control" << endl;
 	
-	int threshold = 5, MIN_DIST_THRESHOLD = 0.05, RADIUS = 0.8;
+	float threshold = 8, MIN_DIST_THRESHOLD = 0.05, RADIUS = 0.8;
 
 	map_mutex.lock();
 	left_points=0; right_points=0;
@@ -109,13 +109,13 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 	cout << "LEFT " << left_points << " RIGHT " << right_points << endl; 
 	int diff = left_points - right_points;
 	if (diff < -threshold) { // control to leftside
-		targetVel->linear.x  = 2;
+		targetVel->linear.x  = 4;
 		targetVel->angular.z = -(diff+threshold)*0.05;  // TODO: change to PID control (Now P control)
 	} else if (diff > threshold) { // control to rightside
-		targetVel->linear.x  = 2;
+		targetVel->linear.x  = 4;
 		targetVel->angular.z = -(diff-threshold)*0.05;  // TODO: change to PID control (Now P control)
 	} else { // Just move forward
-		targetVel->linear.x  = 2;
+		targetVel->linear.x  = 4;
 		targetVel->angular.z = 0;
 	}
 	map_mutex.unlock();
