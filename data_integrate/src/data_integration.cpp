@@ -65,7 +65,7 @@ void lidar_Callback(const sensor_msgs::LaserScan::ConstPtr& scan)
     {
         lidar_degree[i] = RAD2DEG(scan->angle_min + scan->angle_increment * i);
         lidar_distance[i]=scan->ranges[i];
-        // std::cout << "(deg, dist): "<< lidar_degree[i] << ", " << lidar_distance[i] << endl;
+        std::cout << "(deg, dist): "<< lidar_degree[i] << ", " << lidar_distance[i] << endl;
 
     }
 
@@ -92,33 +92,33 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 {
 	//cout << "Entrance Zone Control" << endl;
 	
-	int threshold = 10, MIN_DIST_THRESHOLD = 0.05;
+	int threshold = 5, MIN_DIST_THRESHOLD = 0.05, RADIUS = 0.8;
 
 	map_mutex.lock();
 	left_points=0; right_points=0;
 	for (int i = 0; i < lidar_size; i++) {
-        if (MIN_DIST_THRESHOLD < lidar_distance[i] && lidar_distance[i]< 0.7 
+        if (MIN_DIST_THRESHOLD < lidar_distance[i] && lidar_distance[i]< RADIUS
         	&& 0 < lidar_degree[i] && lidar_degree[i] < 90){
 			right_points++;
-        } else if (MIN_DIST_THRESHOLD < lidar_distance[i] && lidar_distance[i] < 0.7 
+        } else if (MIN_DIST_THRESHOLD < lidar_distance[i] && lidar_distance[i] < RADIUS
         			&& 90 < lidar_degree[i] && lidar_degree[i] < 180){
 			left_points++;
         }
 	}
-	map_mutex.unlock();
 
 	cout << "LEFT " << left_points << " RIGHT " << right_points << endl; 
 	int diff = left_points - right_points;
 	if (diff < -threshold) { // control to leftside
 		targetVel->linear.x  = 2;
-		targetVel->angular.z = -diff*0.05;  // TODO: change to PID control (Now P control)
+		targetVel->angular.z = -(diff+threshold)*0.05;  // TODO: change to PID control (Now P control)
 	} else if (diff > threshold) { // control to rightside
 		targetVel->linear.x  = 2;
-		targetVel->angular.z = -diff*0.05;  // TODO: change to PID control (Now P control)
+		targetVel->angular.z = -(diff-threshold)*0.05;  // TODO: change to PID control (Now P control)
 	} else { // Just move forward
 		targetVel->linear.x  = 2;
 		targetVel->angular.z = 0;
 	}
+	map_mutex.unlock();
 
 }
 
