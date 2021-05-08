@@ -111,7 +111,7 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 	int diff = left_points - right_points;
 	if (diff < -threshold) { // control to leftside
 		targetVel->linear.x  = 2;
-		targetVel->angular.z = diff*0.05;  // TODO: change to PID control (Now P control)
+		targetVel->angular.z = -diff*0.05;  // TODO: change to PID control (Now P control)
 	} else if (diff > threshold) { // control to rightside
 		targetVel->linear.x  = 2;
 		targetVel->angular.z = -diff*0.05;  // TODO: change to PID control (Now P control)
