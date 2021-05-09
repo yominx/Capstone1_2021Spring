@@ -58,11 +58,18 @@ void ball_detect(){
      Mat hsvCh[3];
      Mat frame;  //assign a memory to save the images
      //Mat mask,mask1, mask2;
+     // cv::imshow("raw_rgb", buffer);
+     // waitKey(10);
      cvtColor(buffer, hsv, CV_RGB2HSV);
      split(hsv, hsvCh);
+     // cv::imshow("h", hsvCh[0]);
+     // waitKey(10);
      GaussianBlur(hsvCh[0],hsvCh[0], Size(5,5), 2.5, 2.5);
+     // cv::imshow("Gaussian Blurred", hsvCh[0]);
+     // waitKey(10);
      threshold(hsvCh[0], gray, 50, 255, THRESH_BINARY);
-     cv::imshow("h", gray);
+     // cv::imshow("Binary", gray);
+     // waitKey(10);
      vector<Vec3f> circles; //assign a memory to save the result of circle detection
      HoughCircles(gray,circles,HOUGH_GRADIENT, 1, gray.rows/20, 100, 15, 0,0); //proceed circle detection
      //Circles (Cx, Cy, r)
@@ -114,7 +121,6 @@ void ball_detect(){
          c_c=cvRound(params[0]);  //x position of k-th circle
          c_r=cvRound(params[1]);  //y position
          r=cvRound(params[2]); //radius
-         cout << k <<"/" << circles.size() << " circle : (" <<c_r <<", " << c_c << "),dist= " << buffer_depth.at<float>(c_r,c_c) << endl;
 
          // 원 출력을 위한 원 중심 생성
          Point center(c_c,c_r);  //declare a Point Point(coloum, row)
@@ -122,17 +128,18 @@ void ball_detect(){
          // cy = 3.839*(exp(-0.03284*cy))+1.245*(exp(-0.00554*cy));   //convert the position of the ball in camera coordinate to the position in base coordinate. It is related to the calibration process. You shoould modify this.
          // cx = (0.002667*cy+0.0003)*cx-(0.9275*cy+0.114);
          if (k == goalIndex){
-           msgGoal.angle = atanf((2.5*(c_c-319.5)/320)/4.6621); // [rad]
+           msgGoal.angle = atan((2.5*(c_c-319.5)/320)/4.6621); // [rad]
            //camera : |theta|=atac( (2.5*{pixel}/{width/2}) / 4.6621 )  // [m]
            msgGoal.dist = buffer_depth.at<float>(c_r,c_c);
            pubGoal.publish(msgGoal);
-           cout << "goal position : (" << c_r << ", " << c_c << "), length : " << msgGoal.dist << ", angle : " << msgGoal.angle << endl;
+           cout << "Goal(row,col) : (" << c_r << ", " << c_c << "), dist= " << msgGoal.dist << ", angle= " << msgGoal.angle << endl;
            continue;
          }
 
-         msgBall.angle[i]=atanf((2.5*(c_c-319.5)/320)/4.6621);  //[rad]
-         msgBall.dist[i++]=buffer_depth.at<float>(c_r,c_c);   //[m]
-
+         msgBall.angle[i]=atan((2.5*(c_c-319.5)/320)/4.6621);  //[rad]
+         msgBall.dist[i]=buffer_depth.at<float>(c_r,c_c);   //[m]
+         cout << i <<"/" << nBalls << " Ball(row,col) : (" <<c_r <<", " << c_c << "),dist= " << msgBall.dist[i] << ", angle= " << msgBall.angle[i] << endl;
+         i++;
          // geometry_msgs::Point p;
 	       // p.x = cx;   //p.x, p.y, p.z are the position of the balls. it should be computed with camera's intrinstic parameters
 	       // p.y = cy;
@@ -145,6 +152,7 @@ void ball_detect(){
 	       // c.a = 1.0;
 	       // ball_list.colors.push_back(c);
      }
+     cout << endl;
      cv::imshow("view", buffer);  //show the image with a window
      cv::waitKey(1);
      pubBall.publish(msgBall);  //publish a message
