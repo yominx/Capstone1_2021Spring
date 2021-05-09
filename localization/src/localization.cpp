@@ -22,6 +22,7 @@ using namespace cv;
 using namespace std;
 
 
+
 float MAP_CX = 600; 
 float MAP_CY = 600;
 float MAP_RESOL = 0.01; 
@@ -47,9 +48,9 @@ float control_o;
 
 
 struct pos{
-  float x=0.5;
-  float y=50;
-  float o=0.19;
+  float x=-5;
+  float y=70;
+  float o=0.1;
 };
 struct pos robot_pos;
 
@@ -352,7 +353,7 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
     }
 
 //Debugging:
-cout<<"output xyo is "<<pos_x<<"/"<<pos_y<<"/"<<pos_o<<endl;
+cout<<"output xyo is "<<int(pos_x)<<"/"<<int(pos_y)<<"/"<<int(pos_o)<<endl;
 
     robot_pos.x=pos_x;
     robot_pos.y=pos_y;
@@ -424,6 +425,19 @@ int main(int argc, char **argv)
 
     pub = nh.advertise<geometry_msgs::Vector3>("/odometry", 1); //odometry, 즉 robot의 위치를 Vector3로 발행한다.
 
+
+    cv::Mat zone = cv::Mat::zeros(600, 600, CV_8UC3);
+line(zone, Point(50, 50), Point(550, 50), Scalar(255,255,255), 1);
+line(zone, Point(50, 50), Point(50, 250), Scalar(255,255,255), 1);
+line(zone, Point(550, 50), Point(550, 350), Scalar(255,255,255), 1);
+line(zone, Point(50, 350), Point(550, 350), Scalar(255,255,255), 1);
+
+circle(zone, Point(270, 130), 10, cv::Scalar(255,255,255), -1);
+circle(zone, Point(230, 270), 10, cv::Scalar(255,255,255), -1);
+circle(zone, Point(400, 260), 10, cv::Scalar(255,255,255), -1);
+
+circle(zone, Point(550, 200), 10, cv::Scalar(0,255,0), -1);
+
     while(ros::ok){
         cv::Mat map = cv::Mat::zeros(MAP_WIDTH, MAP_HEIGHT, CV_8UC3);
 
@@ -494,7 +508,10 @@ int main(int argc, char **argv)
 
         
 //Debugging: circle(map,Point(MAP_WIDTH/2,MAP_HEIGHT/2),10, cv::Scalar(0,0,255), -1);   
-cv::imshow("Frame",map);
+
+
+circle(zone, Point(50+int(robot_pos.x), 350-int(robot_pos.y)), 3, cv::Scalar(255,0,0), -1);
+cv::imshow("Harvesting zone map",zone);
 cv::waitKey(50);
 
 

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(lidar_odometry)
+project(localization)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11)
@@ -36,9 +36,9 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
   include
 )
-add_executable(lidar_odometry_node src/lidar_odometry.cpp)
-add_dependencies(lidar_odometry_node core_msgs_generate_messages_cpp)
+add_executable(localization_node src/localization.cpp)
+add_dependencies(localization_node core_msgs_generate_messages_cpp)
 
-target_link_libraries(lidar_odometry_node
+target_link_libraries(localization_node
   ${catkin_LIBRARIES} ${OpenCV_LIBS}
 )
