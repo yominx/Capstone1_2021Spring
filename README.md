@@ -41,6 +41,7 @@ For reference, urdf file for my_robot is uploaded.
 frame : base_scan
 
 topic : /scan
+
 msg type : sensor_msgs::LaserScan
 
 - Lidar specs
