@@ -35,25 +35,29 @@ Just drag and drop files to coppeliasim window.
 For reference, urdf file for my_robot is uploaded.
 
 - mylidar_hokuyo.ttm
-* ROS
+**ROS**
 frame : base_scan
 topic : /scan
 msg type : sensor_msgs::LaserScan
 
-* Lidar specs
+**Lidar specs**
 rate : 5Hz
 resolution : 1 deg -> 360 points per 1 scan
 min range : 0.12 m
 max range : 3.5 m
 
 - myimu.ttm
-* ROS
+**ROS**
 frame : imu
 topic : /imu
 msg type : sensor_msgs::Imu
 
 - mykinect.ttm
-
+**Camera parameters**
+FOV (field of view) : 57 deg
+W : 640 pixels
+H : 480 pixels
+f : 589.37 pixels
 
 
 ## core_msgs
