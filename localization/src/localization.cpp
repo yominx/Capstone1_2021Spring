@@ -15,19 +15,23 @@
 #include "std_msgs/Int8.h"
 #include "sensor_msgs/LaserScan.h"
 #include "geometry_msgs/Vector3.h"
+#include "core_msgs/ball_position.h"
 
 #include "opencv2/opencv.hpp"
+#include <opencv2/highgui.hpp>
+#include <opencv2/plot.hpp>
+#include <opencv2/highgui/highgui.hpp>
 
 using namespace cv;
 using namespace std;
 
 
 
-float MAP_CX = 600; 
+float MAP_CX = 600;
 float MAP_CY = 600;
-float MAP_RESOL = 0.01; 
-int MAP_WIDTH = 1200; 
-int MAP_HEIGHT = 1200; 
+float MAP_RESOL = 0.01;
+int MAP_WIDTH = 1200;
+int MAP_HEIGHT = 1200;
 int MAP_CENTER = 50;
 
 
@@ -64,8 +68,10 @@ boost::mutex map_mutex;
 float pi=2*atanf(1);
 #define RAD2DEG(x) ((x)*180./M_PI)
 
-
-
+// ball pos instances
+int nBalls;
+float ball_dist[20];
+float ball_angle[20];
 
 
 bool check_point_range(int cx, int cy) //어떤 input 위치가 MAP 안에 있는지 검사
@@ -126,10 +132,8 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
 
 
 
+void rectangular_map(vector<Vec4i> lines, float length_threshold, float angle_threshold){
 
-
-  void rectangular_map(vector<Vec4i> lines, float length_threshold, float angle_threshold){
-    
     float slope;
     float length;
     float perp;
@@ -143,7 +147,7 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
 
     int oricaseNo, linecaseNo;
     vector<float> oridata, xdata, ydata;
-    
+
 
 
 //Debugging: cout<<"input xyo is "<<pos_x<<"/"<<pos_y<<"/"<<pos_o<<endl;
@@ -186,25 +190,25 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
 
         case 1:
           switch (linecaseNo){
-            case 1:              
+            case 1:
               if ( (abs(slope-pos_o)<angle_threshold) && (abs(perp-(300-pos_y))<length_threshold) ){
                 oridata.push_back(slope);
                 ydata.push_back(300-perp);
               }
               break;
-            case 2:              
+            case 2:
               if ( (abs(slope-(M_PI/2-pos_o))<angle_threshold )&&( abs(perp-(pos_x))<length_threshold )){
                 oridata.push_back(M_PI/2-slope);
                 xdata.push_back(perp);
               }
               break;
-            case 3:              
+            case 3:
               if ( abs(slope-pos_o)<angle_threshold && (abs(perp-(pos_y))<length_threshold)  ){
                 oridata.push_back(slope);
                 ydata.push_back(perp);
               }
               break;
-            case 4:              
+            case 4:
               if ( abs(slope-(M_PI/2-pos_o))<angle_threshold && (abs(perp-(500-pos_x))<length_threshold) ){
                 oridata.push_back(M_PI/2-slope);
                 xdata.push_back(500-perp);
@@ -220,19 +224,19 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
                 xdata.push_back(perp);
               }
               break;
-            case 2:              
+            case 2:
               if ( abs(slope-(M_PI-pos_o))<angle_threshold && abs(perp-(pos_y))<length_threshold  ){
                 oridata.push_back(M_PI-slope);
                 ydata.push_back(perp);
               }
               break;
-            case 3:              
+            case 3:
               if ( abs(slope-(pos_o-M_PI/2))<angle_threshold && abs(perp-(500-pos_x))<length_threshold  ){
                 oridata.push_back(slope+M_PI/2);
                 xdata.push_back(500-perp);
               }
               break;
-            case 4:              
+            case 4:
               if ( abs(slope-(M_PI-pos_o))<angle_threshold && abs(perp-(300-pos_y))<length_threshold  ){
                 oridata.push_back(M_PI-slope);
                 ydata.push_back(300-perp);
@@ -246,31 +250,31 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
               //pos_o가 실제보다 작을 경우
               //큰 오차 없으면 아무것도 추가 안되고
               //
-            
-              
+
+
           break;
 
         case 3:
           switch (linecaseNo){
-            case 1:              
+            case 1:
               if ( abs(slope-(pos_o-M_PI))<angle_threshold && abs(pos_y-perp)<length_threshold  ){
                 oridata.push_back(slope+M_PI);
                 ydata.push_back(perp);
               }
               break;
-            case 2:              
+            case 2:
               if ( abs(slope-(1.5*M_PI-pos_o))<angle_threshold && abs(pos_x-(500-perp))<length_threshold  ){
                 oridata.push_back(1.5*M_PI-slope);
                 xdata.push_back(500-perp);
               }
               break;
-            case 3:              
+            case 3:
               if ( abs(slope-(pos_o-M_PI))<angle_threshold && abs(pos_y-(300-perp))<length_threshold  ){
                 oridata.push_back(slope+M_PI);
                 ydata.push_back(300-perp);
               }
               break;
-            case 4:              
+            case 4:
               if ( abs(slope- (1.5*M_PI-pos_o))<angle_threshold && abs(perp-pos_x)<length_threshold  ){
                 oridata.push_back(1.5*M_PI-slope);
                 xdata.push_back(perp);
@@ -281,25 +285,25 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
 
         case 4:
           switch (linecaseNo){
-            case 1:              
+            case 1:
               if ( abs(slope-(pos_o-1.5*M_PI))<angle_threshold && abs(pos_x-(500-perp) )<length_threshold ){
                 oridata.push_back(slope+1.5*M_PI);
                 xdata.push_back(500-perp);
               }
               break;
-            case 2:              
+            case 2:
               if ( abs(slope-(2*M_PI-pos_o))<angle_threshold && abs(pos_y-(300-perp))<length_threshold  ){
                 oridata.push_back(2*M_PI-slope);
                 ydata.push_back(300-perp);
               }
               break;
-            case 3:              
+            case 3:
               if ( abs(slope-(pos_o-1.5*M_PI))<angle_threshold && abs(pos_x-perp)<length_threshold  ){
                 oridata.push_back(slope+1.5*M_PI);
                 xdata.push_back(perp);
               }
               break;
-            case 4:              
+            case 4:
               if ( abs(slope- (2*M_PI-pos_o))<angle_threshold && abs(perp-pos_y)<length_threshold ){
                 oridata.push_back(2*M_PI-slope);
                 ydata.push_back(perp);
@@ -314,12 +318,12 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
     int button=1;
     if(lines.size()>0){
 
-      
+
       if(oridata.size()<lines.size()/5){//pos_o가 잘못된 경우.
       //oridata 사이즈의 기준 크기가 작을수록 밑의 기준은 커야한다. 반대로 기준 크기가 클수록 밑 기준은 작아야한다.
       //+빨리 회전할수록 밑의 기준이 커야 한다
         if(abs(pos_o-M_PI/2)<0.1){//이 크기가 클수록 angle_theshold도 커야 한다.
-          pos_o=M_PI/2+(M_PI/2-pos_o); // 
+          pos_o=M_PI/2+(M_PI/2-pos_o); //
           //pos_y=vectorMean(ydata);
         }else if(abs(pos_o-M_PI)<0.1){//0.05가 크면 엄한 녀석을 잡아넣을 수 있다. 그러나 0.05가 작으면 0.05보다 살짝 벗어나는 곳에서 멈추면 잡을수가 없다.
         //angle_threshold의 1/2
@@ -336,7 +340,7 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
         }
 
 
-        
+
 //Debugging: cout<<"Oops"<<endl;
 
       }else if(xdata.size()<lines.size()/5){
@@ -353,12 +357,12 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
     }
 
 //Debugging:
-cout<<"output xyo is "<<int(pos_x)<<"/"<<int(pos_y)<<"/"<<int(pos_o)<<endl;
+    cout<<"output xyo is "<<int(pos_x)<<"/"<<int(pos_y)<<"/"<<int(pos_o)<<endl;
 
     robot_pos.x=pos_x;
     robot_pos.y=pos_y;
     robot_pos.o=pos_o;
-    
+
 }
 
 
@@ -405,12 +409,22 @@ void lidar_Callback(const sensor_msgs::LaserScan::ConstPtr& scan) //LiDAR scan�
 //   }else{
 //     robot_pos.o=robot_pos.o+control_o;
 //   }
-  
+
 // }
 
 
 
-
+void ballPos_Callback(const core_msgs::ball_position::ConstPtr& position)
+{
+    nBalls = position->size;
+    for(int i = 0; i < nBalls; i++)
+    {
+        ball_dist[i] = position->dist[i];
+        ball_angle[i] = position->angle[i];
+        // std::cout << "degree : "<< ball_degree[i];
+        // std::cout << "   distance : "<< ball_distance[i]<<std::endl;
+		}
+}
 
 
 
@@ -420,23 +434,23 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "lidar_odometry_node");
     ros::NodeHandle nh; //NodeHandle 클래스의 nh 객체 선언
     ros::Subscriber sub = nh.subscribe<sensor_msgs::LaserScan>("/scan", 1000, lidar_Callback); //LiDAR 데이터 받아오기
+    ros::Subscriber subBallPos = nh.subscribe<core_msgs::ball_position>("/position", 1000, ballPos_Callback);
     //ros::Subscriber sub1 = nh.subscribe<std_msgs::Int8>("/entrance", 1, line_Callback); //Entrance zone 들어갔는지 여부 받아오기
     //ros::Subscriber sub2 = nh.subscribe<geometry_msgs::Vector3>("/control", 1000, control_callback); //getting control input
 
     pub = nh.advertise<geometry_msgs::Vector3>("/odometry", 1); //odometry, 즉 robot의 위치를 Vector3로 발행한다.
 
 
-    cv::Mat zone = cv::Mat::zeros(600, 600, CV_8UC3);
-line(zone, Point(50, 50), Point(550, 50), Scalar(255,255,255), 1);
-line(zone, Point(50, 50), Point(50, 250), Scalar(255,255,255), 1);
-line(zone, Point(550, 50), Point(550, 350), Scalar(255,255,255), 1);
-line(zone, Point(50, 350), Point(550, 350), Scalar(255,255,255), 1);
+    cv::Mat zone = cv::Mat::zeros(400, 600, CV_8UC3);
+    line(zone, Point(50, 50), Point(550, 50), Scalar(255,255,255), 1);
+    line(zone, Point(50, 50), Point(50, 250), Scalar(255,255,255), 1);
+    line(zone, Point(550, 50), Point(550, 350), Scalar(255,255,255), 1);
+    line(zone, Point(50, 350), Point(550, 350), Scalar(255,255,255), 1);
 
-circle(zone, Point(270, 130), 10, cv::Scalar(255,255,255), -1);
-circle(zone, Point(230, 270), 10, cv::Scalar(255,255,255), -1);
-circle(zone, Point(400, 260), 10, cv::Scalar(255,255,255), -1);
-
-circle(zone, Point(550, 200), 10, cv::Scalar(0,255,0), -1);
+    circle(zone, Point(270, 130), 10, cv::Scalar(255,255,255), -1);
+    circle(zone, Point(230, 270), 10, cv::Scalar(255,255,255), -1);
+    circle(zone, Point(400, 260), 10, cv::Scalar(255,255,255), -1);
+    circle(zone, Point(550, 200), 10, cv::Scalar(0,255,0), -1);
 
     while(ros::ok){
         cv::Mat map = cv::Mat::zeros(MAP_WIDTH, MAP_HEIGHT, CV_8UC3);
@@ -472,11 +486,11 @@ circle(zone, Point(550, 200), 10, cv::Scalar(0,255,0), -1);
               } //remove the added lidar data as much as the view angle of the obstacle
             }
             //If not, the former object was not obstacle, but wall.
-            
+
             is_difference_small=1; //Initiallization
           }
         }
-        
+
         //Drawing
         for(int i = 1; i<wall_distance.size(); i++){
           int cxi = MAP_WIDTH/2 + (int)(wall_distance[i]*sin(wall_degree[i])/MAP_RESOL);
@@ -506,13 +520,20 @@ circle(zone, Point(550, 200), 10, cv::Scalar(0,255,0), -1);
         rectangular_map(lines, 20, 0.2); //angle_threshold는 최대 0.7보다는 작아야 한다.
 
 
-        
-//Debugging: circle(map,Point(MAP_WIDTH/2,MAP_HEIGHT/2),10, cv::Scalar(0,0,255), -1);   
+
+//Debugging: circle(map,Point(MAP_WIDTH/2,MAP_HEIGHT/2),10, cv::Scalar(0,0,255), -1);
 
 
-circle(zone, Point(50+int(robot_pos.x), 350-int(robot_pos.y)), 3, cv::Scalar(255,0,0), -1);
-cv::imshow("Harvesting zone map",zone);
-cv::waitKey(50);
+        circle(zone, Point(50+int(robot_pos.x), 350-int(robot_pos.y)), 3, cv::Scalar(255,0,0), -1);
+        for (int i=0; i<nBalls; i++){ //ball_dist[i], ball_angle[i]
+          int ball_x = 50 + (int)(robot_pos.x + ball_dist[i]*cos(ball_angle[i]+robot_pos.o)*100);
+          int ball_y = 350 - (int)(robot_pos.y + ball_dist[i]*sin(ball_angle[i]+robot_pos.o)*100);
+          if (ball_x>50 && ball_x<550 && ball_y>50 && ball_y<350){
+            circle(zone, Point(ball_x, ball_y),2,cv::Scalar(0,0,255), -1);
+          }
+        }
+        cv::imshow("Harvesting zone map",zone);
+        cv::waitKey(50);
 
 
         // if(init_odom == 0){
@@ -520,7 +541,7 @@ cv::waitKey(50);
         //   pos_y = 0.0;
         //   pos_o = 0.0;
         // } 각도가 제일 문제. 1. 허용오차 작게 하고 예상포인트 세트를 다 돌려봐서 그 중 맞는걸로, 2. 처음 시행시에는 허용오차 크게, 3. 들어오기 꽤 전부터 먼저 돌리면서 허용오차는 빡세게 하면서 기다리기
-        //이 노드는 아무리 빨라도 |x좌표|+초기 허용오차 <50일 때만 쓸수있다. 
+        //이 노드는 아무리 빨라도 |x좌표|+초기 허용오차 <50일 때만 쓸수있다.
 
       	odometry.x=robot_pos.x;
       	odometry.y=robot_pos.y;
