@@ -1,0 +1,133 @@
+
+
+function callback_cmdvel_sub(msg)
+    local Vl = msg.linear.x * 5
+    local Vr = msg.angular.z * 5
+    
+    sim.setJointMaxForce(joint11, 3.1)
+    sim.setJointMaxForce(joint21, 3.1)
+    sim.setJointMaxForce(joint12, 3.1)
+    sim.setJointMaxForce(joint22, 3.1)
+    sim.setJointMaxForce(joint13, 3.1)
+    sim.setJointMaxForce(joint23, 3.1)
+
+    sim.setJointTargetVelocity(joint11,Vl - Vr)
+    sim.setJointTargetVelocity(joint21,Vl + Vr)
+    sim.setJointTargetVelocity(joint12,Vl - 1.5*Vr)
+    sim.setJointTargetVelocity(joint22,Vl + 1.5*Vr)
+    sim.setJointTargetVelocity(joint13,Vl - 2*Vr)
+    sim.setJointTargetVelocity(joint23,Vl + x2*Vr)
+    
+
+    sim.addStatusbarMessage(string.format("Vl:%f Vr:%f",Vl, Vr))
+end
+
+
+
+function callback_ball_delivery_sub(msg)
+    local velocity=10
+    local velocity2=50
+    local th1=0.8
+    local th12=1.8
+    local delivery_mode=msg.data
+        
+    sim.addStatusbarMessage(string.format("del in %f", delivery_mode) )
+
+        sim.setJointMaxForce(joint00, 3.1)
+        sim.setJointMaxForce(joint01, 3.1)
+        
+        if (delivery_mode==1)then
+            angle=sim.getJointPosition(joint00)
+            if (count<=60) then
+                if(math.abs(angle)<th1) then
+                    sim.setJointTargetVelocity(joint00, -velocity)
+                elseif ( math.abs(angle)<1.74 ) then
+                    sim.setJointTargetVelocity(joint00, -velocity*(th12-math.abs(angle))/(th12-th1))
+                elseif ( math.abs(angle)>1.73 ) then
+                    count=count+1
+                    sim.setJointTargetVelocity(joint00,0)
+                end
+            end
+
+            if( count > 60 ) then
+                if ( math.abs(angle)>th1) then
+                    sim.setJointTargetVelocity(joint00, velocity*(th12-math.abs(angle))/(th12-th1))
+                elseif ( math.abs(angle)<th1) then
+                    sim.setJointTargetVelocity(joint00, velocity*(math.abs(angle))/(th1) )
+                    if (math.abs(angle)<0.01 ) then
+                        sim.setJointTargetVelocity(joint00,0)
+                    end
+                end
+            end
+            
+        elseif delivery_mode==2 then
+            angle=sim.getJointPosition(joint01)
+            if(math.abs(angle)<1.5) then
+                sim.setJointTargetVelocity(joint01, -velocity2)
+            else 
+                sim.setJointTargetVelocity(joint01, 0)
+                count=count+1
+            end
+            
+            if( count>10 ) then
+                if( angle>-0.01) then
+                    sim.setJointTargetVelocity(joint01, 0)
+                elseif( angle>-1.8) then
+                    sim.setJointTargetVelocity(joint01, velocity)
+                end
+            end
+        elseif delivery_mode==0 then
+            sim.setJointTargetVelocity(joint00, 0)
+            sim.setJointTargetVelocity(joint01, 0)
+            count=0
+        end
+
+end
+
+
+
+
+
+    
+
+
+
+function sysCall_init()
+    -- do some initialization here
+    joint00 = sim.getObjectHandle("collector_joint")
+    joint01 = sim.getObjectHandle("door_joint")
+
+    joint11 = sim.getObjectHandle("11_joint")
+    joint21 = sim.getObjectHandle("21_joint")
+    joint12 = sim.getObjectHandle("12_joint")
+    joint22 = sim.getObjectHandle("22_joint")
+    joint13 = sim.getObjectHandle("13_joint")
+    joint23 = sim.getObjectHandle("23_joint")
+
+    count=0
+        
+    
+    cmdvelSub=simROS.subscribe('/command_vel','geometry_msgs/Twist','callback_cmdvel_sub')
+    delvelSub=simROS.subscribe('/ball_delivery','std_msgs/Int8','callback_ball_delivery_sub')
+
+    
+    transform={header={stamp=simROS.getTime(), frame_id='map'}, child_frame_id='velodyneVPL', transform={translation={x=0, y=0, z=0}, rotation={x=0, y=0, z=0, w=1}}}
+    simROS.sendTransform(transform)
+     
+end
+
+
+
+function sysCall_sensing()
+end
+
+
+
+
+
+function sysCall_cleanup()
+    -- do some clean-up here
+    simROS.shutdownSubscriber(cmdvelSub)
+    simROS.shutdownSubscriber(delvelSub)
+        
+end
