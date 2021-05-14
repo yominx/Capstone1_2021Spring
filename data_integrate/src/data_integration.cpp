@@ -137,6 +137,13 @@ int select_control_method(){
 	else return BALLHARVESTING;
 }
 
+
+//ball pickup&dumping part started
+int delivery=0;
+int delivery_count=0;
+int mode_input;
+//ball pickup&dumping part ended
+
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "data_integation");
@@ -145,6 +152,8 @@ int main(int argc, char **argv)
     ros::Subscriber sub = n.subscribe<sensor_msgs::LaserScan>("/scan", 1000, lidar_Callback);
     ros::Subscriber sub1 = n.subscribe<core_msgs::ball_position>("/position", 1000, camera_Callback);
 	ros::Publisher commandVel = n.advertise<geometry_msgs::Twist>("/command_vel", 10);
+	
+	ros::Publisher ball_delivery = n.advertise<std_msgs::Int8>("/ball_delivery", 10);//pickup & dumping
 
 	// ros::Publisher pub_left_wheel= n.advertise<std_msgs::Float64>("/turtlebot3_waffle_sim/left_wheel_velocity_controller/command", 10);
 	// ros::Publisher pub_right_wheel= n.advertise<std_msgs::Float64>("/turtlebot3_waffle_sim/right_wheel_velocity_controller/command", 10);
@@ -177,8 +186,30 @@ int main(int argc, char **argv)
 		// for(int i = 0; i < ball_number; i++) {
 		// 	cout << "ball_X : " << ball_X[i] << "  ball_Y : " << ball_Y[i] << endl;
 		// }
+	    
+	//Ball pickup/dumping part started
+	delivery=1;
+		
+	if(delivery!=0){
+		delivery_count++;
+	}
 
+	int th1=600;
+	int th2=600;
+	if(delivery_count>th1 && delivery==1){
+		delivery=0;
+		delivery_count=0;
+	}else if(delivery_count>th2 && delivery==2){
+		delivery=0;
+		delivery_count=0;
+	}
 
+	std_msgs::Int8 delivery_mode;
+	delivery_mode.data=delivery;
+	ball_delivery.publish(delivery_mode);
+	//Ball pickup/dumping part ended
+
+	    
 	    ros::Duration(0.025).sleep();
 	    ros::spinOnce();
     }
