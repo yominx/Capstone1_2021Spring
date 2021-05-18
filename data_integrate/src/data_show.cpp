@@ -6,140 +6,170 @@
 #include <string>
 #include <signal.h>
 #include <math.h>
-
+#include <boost/thread.hpp>
+#include <vector>
 #include <ros/ros.h>
 #include <ros/package.h>
-#include <boost/thread.hpp>
-
-#include "ros/ros.h"
 #include "sensor_msgs/LaserScan.h"
 #include "core_msgs/ball_position.h"
+#include "core_msgs/goal_position.h"
+#include "geometry_msgs/Vector3.h"
 
 #include "opencv2/opencv.hpp"
+#include <opencv2/highgui.hpp>
+#include <opencv2/plot.hpp>
+#include <opencv2/highgui/highgui.hpp>
 
-float MAP_CX = 200.5;
-float MAP_CY = 200.5;
-float MAP_RESOL = 0.015;             // Map resoultion [cm]
-int MAP_WIDTH = 400;
+using namespace std;
+using namespace cv;
+
+int MAP_WIDTH = 600;
 int MAP_HEIGHT = 400;
 int MAP_CENTER = 50;
-int OBSTACLE_PADDING = 2;           // Obstacle Size
+int ZONE_SIZE = 5;           // Obstacle Size
 int OBSTACLE_CONNECT_MAX = 15;      // Range to connect obstacles
 
-int init_ball;
-int init_lidar;
+int nBalls;
+float ballDist[20];
+float ballAngle[20];         // Ball position info
 
-int lidar_size;
-float lidar_degree[400];
-float lidar_distance[400];
+float goalDist, goalAngle;   // Goal position info
 
-int ball_number;
-float ball_X[20];
-float ball_Y[20];
+float X, Y, O;               // Odometry info
 
-boost::mutex map_mutex;
+class Zones
+{
+  class Zone
+  {
+  public:
+    int nPoints;
+    float cenRow; //(row,col)
+    float cenCol;
+    bool harvested = false;
+    Zone(int _row, int _col);
+    ~Zone();
+    bool insideZone(int r, int c);
+    void add(int r, int c);
+  };
 
+public:
+  vector<Zone> zoneList;
+  Zones();
+  ~Zones();
+  int size();
+  void addZone(int r, int c);
+  void deleteZone(int i);
+};
+
+Zones::Zones(){}
+Zones::~Zones(){}
+
+int Zones::size()
+{
+  return zoneList.size();
+}
+
+void Zones::addZone(int r, int c)
+{
+  int n = zoneList.size();
+  for (int i=0;i<n;i++){
+    if (zoneList[i].insideZone(r,c)){
+      zoneList[i].add(r,c);
+      return;
+    }
+  }
+  zoneList.push_back(Zone(r,c));
+}
+
+Zones::Zone::Zone(int r, int c):nPoints(1),cenRow(r),cenCol(c),harvested(false){}
+Zones::Zone::~Zone(){}
+
+bool Zones::Zone::insideZone(int r, int c)
+{
+  return (r >= cenRow-ZONE_SIZE && r <= cenRow+ZONE_SIZE && c >= cenCol-ZONE_SIZE && c <= cenCol+ZONE_SIZE);
+}
+
+void Zones::Zone::add(int r, int c)
+{
+  cenRow = (nPoints*cenRow + r)/(nPoints+1);
+  cenCol = (nPoints*cenCol + c)/(nPoints+1);
+  ++nPoints;
+}
+
+Mat mapBall = cv::Mat::zeros(MAP_HEIGHT,MAP_WIDTH, CV_16U);
+Mat mapGoal = cv::Mat::zeros(MAP_HEIGHT,MAP_WIDTH, CV_16U);
+Mat mapPillar = cv::Mat::zeros(MAP_HEIGHT,MAP_WIDTH, CV_16U);
+Mat MAP = cv::Mat::zeros(MAP_HEIGHT,MAP_WIDTH, CV_8UC3);     // final map
+
+Zones ballZones;
+Zones pillarZones;
 
 #define RAD2DEG(x) ((x)*180./M_PI)
 
-bool check_point_range(int cx, int cy)
+
+void ballPos_Callback(const core_msgs::ball_position::ConstPtr& pos)
 {
-    return (cx<MAP_WIDTH-1)&&(cx>0)&&(cy<MAP_HEIGHT-1)&&(cy>0);
-}
-
-
-
-void camera_Callback(const core_msgs::ball_position::ConstPtr& position)
-{
-    map_mutex.lock();
-    int count = position->size;
-    ball_number=count;
-    for(int i = 0; i < count; i++)
+    nBalls = pos->size;
+    for(int i = 0; i < nBalls; i++)
     {
-        ball_X[i] = position->angle[i];
-        ball_Y[i]=position->dist[i];
-      	std::cout << "ball_X : "<< ball_X[i];
-      	std::cout << "ball_Y : "<< ball_Y[i]<<std::endl;
+        ballAngle[i] = pos->angle[i];
+        ballDist[i] = pos->dist[i];
     }
-    map_mutex.unlock();
 }
-void lidar_Callback(const sensor_msgs::LaserScan::ConstPtr& scan)
+void goalPos_Callback(const core_msgs::goal_position::ConstPtr& pos)
 {
-    map_mutex.lock();
-    int count = scan->angle_max / scan->angle_increment;
-    lidar_size=count;
-    for(int i = 0; i < count; i++)
-    {
-        lidar_degree[i] = scan->angle_min + scan->angle_increment * i;
-        lidar_distance[i]=scan->ranges[i];
-        // std::cout << "degree : "<< lidar_degree[i];
-        // std::cout << "   distance : "<< lidar_distance[i]<<std::endl;
-    }
-    map_mutex.unlock();
-
+    goalAngle = pos->angle;
+    goalDist = pos->dist;
 }
 
-
+void odometry_Callback(const geometry_msgs::Vector3 odometry){
+    X = odometry.x;
+    Y = odometry.y;
+    O = odometry.z;
+}
 
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "data_show_node");
     ros::NodeHandle n;
 
-    ros::Subscriber sub = n.subscribe<sensor_msgs::LaserScan>("/scan", 1000, lidar_Callback);
-    ros::Subscriber sub1 = n.subscribe<core_msgs::ball_position>("/position", 1000, camera_Callback);
-
+    ros::Subscriber subOdo = n.subscribe<geometry_msgs::Vector3>("/odometry", 1000, odometry_Callback);
+    ros::Subscriber subBall = n.subscribe<core_msgs::goal_position>("/goal_position", 1000, goalPos_Callback);
+    ros::Subscriber subGoal = n.subscribe<core_msgs::ball_position>("/ball_position", 1000, ballPos_Callback);
+    line(MAP, Point(50, 50), Point(550, 50), Scalar(255,255,255), 1);
+    line(MAP, Point(50, 50), Point(50, 250), Scalar(255,255,255), 1);
+    line(MAP, Point(550, 50), Point(550, 350), Scalar(255,255,255), 1);
+    line(MAP, Point(50, 350), Point(550, 350), Scalar(255,255,255), 1);
     while(ros::ok){
-        cv::Mat map = cv::Mat::zeros(MAP_WIDTH, MAP_HEIGHT, CV_8UC3);
-        // Drawing Lidar data
-        float obstacle_x, obstacle_y;
-        int cx, cy;
-        int cx1, cx2, cy1, cy2;
-        for(int i = 0; i < lidar_size; i++)
-        {
-            obstacle_x = lidar_distance[i]*cos(lidar_degree[i]);
-            obstacle_y = lidar_distance[i]*sin(lidar_degree[i]);
-            cx = MAP_WIDTH/2 + (int)(obstacle_y/MAP_RESOL);
-            cy = MAP_HEIGHT/2 + (int)(obstacle_x/MAP_RESOL);
-            cx1 = cx-OBSTACLE_PADDING;
-            cy1 = cy-OBSTACLE_PADDING;
-            cx2 = cx+OBSTACLE_PADDING;
-            cy2 = cy+OBSTACLE_PADDING;
-
-            if(check_point_range(cx,cy) && check_point_range(cx1,cy1) && check_point_range(cx2,cy2))
-            {
-                cv::line(map, cv::Point(MAP_WIDTH/2, MAP_HEIGHT/2),cv::Point(cx, cy),cv::Scalar(63,63,0), 1);
-                cv::rectangle(map,cv::Point(cx1, cy1),cv::Point(cx2, cy2), cv::Scalar(255,255,0), -1);
-            }
+      circle(MAP, Point(50+int(round(X)), 350-int(round(Y))), 3, cv::Scalar(255,0,0), -1);
+      for (int i=0; i<nBalls; i++){ //ball_dist[i], ball_angle[i]
+        int ball_x = 50 + (int)round(X + ballDist[i]*cos(ballAngle[i]+O)*100);
+        int ball_y = 350 - (int)round(Y + ballDist[i]*sin(ballAngle[i]+O)*100);
+        if (ball_x>50 && ball_x<550 && ball_y>50 && ball_y<350){
+          circle(MAP, Point(ball_x, ball_y), 3, cv::Scalar(0,0,255), -1);
+          mapBall.at<ushort>(ball_y,ball_x)++;
+          ballZones.addZone(ball_y,ball_x);
         }
-        // Drawing ball
-        for(int i = 0; i < ball_number; i++)
-        {
-            cx =(int)(ball_X[i]/4);
-            cy =(int)(ball_Y[i]/4);
-            cx1 = cx-OBSTACLE_PADDING*2;
-            cy1 = cy-OBSTACLE_PADDING*2;
-            cx2 = cx+OBSTACLE_PADDING*2;
-            cy2 = cy+OBSTACLE_PADDING*2;
+      }
 
-            if(check_point_range(cx,cy) && check_point_range(cx1,cy1) && check_point_range(cx2,cy2))
-            {
-                cv::rectangle(map,cv::Point(cx1, cy1),cv::Point(cx2, cy2), cv::Scalar(0,0,255), -1);
-            }
-        }
-        // Drawing ROBOT
-        cv::circle(map,cv::Point(MAP_WIDTH/2, MAP_HEIGHT/2),3,cv::Scalar(255,0,0),-1);
+      int bzSize = ballZones.size();
+      Mat target;
+      for (int i=0; i<bzSize; i++){
+        target = mapBall(Rect(Point(ballZones.zoneList[i].cenCol-ZONE_SIZE,ballZones.zoneList[i].cenRow-ZONE_SIZE),Point(ballZones.zoneList[i].cenCol+ZONE_SIZE,ballZones.zoneList[i].cenRow+ZONE_SIZE)));
+        cout << i << "-th zone : " << target.size() << endl;
 
-        cv::imshow("Frame",map);
-        cv::waitKey(50);
+      }
+      // if (ball_x>50 && ball_x<550 && ball_y>50 && ball_y<350){
+      //   mapBall.at<ushort>(ball_y, ball_x) += 1;
+      //   circle(MAP, Point(ball_x, ball_y),2,cv::Scalar(0,0,255), -1);
+      // }
 
-        if(cv::waitKey(50)==113){  //wait for a key command. if 'q' is pressed, then program will be terminated.
-            return 0;
-        }
-        ros::spinOnce();
+      imshow("map", MAP);
+      waitKey(10);
+      // if(cv::waitKey(50)==113){  //wait for a key command. if 'q' is pressed, then program will be terminated.
+      //     return 0;
+      // }
+      ros::spinOnce();
     }
-
-
-
     return 0;
 }
