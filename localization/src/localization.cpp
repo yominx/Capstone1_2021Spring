@@ -12,31 +12,41 @@
 #include <boost/thread.hpp>
 
 #include "ros/ros.h"
+
 #include "std_msgs/Int8.h"
+#include "std_msgs/MultiArrayLayout.h"
+#include "std_msgs/MultiArrayDimension.h"
+#include "std_msgs/Int8MultiArray.h"
 #include "sensor_msgs/LaserScan.h"
 #include "geometry_msgs/Vector3.h"
-#include "core_msgs/ball_position.h"
 
 #include "opencv2/opencv.hpp"
-#include <opencv2/highgui.hpp>
-#include <opencv2/plot.hpp>
-#include <opencv2/highgui/highgui.hpp>
 
 using namespace cv;
 using namespace std;
 
 
 
-float MAP_CX = 600;
+float MAP_CX = 600; 
 float MAP_CY = 600;
-float MAP_RESOL = 0.01;
-int MAP_WIDTH = 1200;
-int MAP_HEIGHT = 1200;
+float MAP_RESOL = 0.01; 
+int MAP_WIDTH = 1200; 
+int MAP_HEIGHT = 1200; 
 int MAP_CENTER = 50;
 
 
-geometry_msgs::Vector3 odometry;
-ros::Publisher pub;
+geometry_msgs::Vector3 robot_pos;
+std_msgs::Int8MultiArray obs_pos;
+
+float pos_x=-5;
+float pos_y=70;
+float pos_o=0.1;
+
+float control_x;
+float control_y;
+float control_o;
+
+
 
 
 
@@ -46,38 +56,20 @@ float lidar_distance[400];
 
 int init_odom = 1; // Entrance node도 켰으면, 0으로 초기화!!
 
-float control_x;
-float control_y;
-float control_o;
-
-
-struct pos{
-  float x=-5;
-  float y=70;
-  float o=0.1;
-};
-struct pos robot_pos;
-
-float pos_x;
-float pos_y;
-float pos_o;
-
 
 boost::mutex map_mutex;
 
 float pi=2*atanf(1);
 #define RAD2DEG(x) ((x)*180./M_PI)
 
-// ball pos instances
-int nBalls;
-float ball_dist[20];
-float ball_angle[20];
+
 
 
 bool check_point_range(int cx, int cy) //어떤 input 위치가 MAP 안에 있는지 검사
 {
     return (cx<MAP_WIDTH-1)&&(cx>0)&&(cy<MAP_HEIGHT-1)&&(cy>0);
 }
+
 
 float vectorMean(std::vector<float> V){
     float total = 0;
@@ -86,7 +78,6 @@ float vectorMean(std::vector<float> V){
     }
     return (total /(float)V.size());
 }
-
 
 
 
@@ -131,9 +122,8 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
 
 
 
-
-void rectangular_map(vector<Vec4i> lines, float length_threshold, float angle_threshold){
-
+  void rectangular_map(vector<Vec4i> lines, float length_threshold, float angle_threshold){
+    
     float slope;
     float length;
     float perp;
@@ -143,11 +133,11 @@ void rectangular_map(vector<Vec4i> lines, float length_threshold, float angle_th
 
     pos_x=robot_pos.x;
     pos_y=robot_pos.y;
-    pos_o=robot_pos.o;
+    pos_o=robot_pos.z;
 
     int oricaseNo, linecaseNo;
     vector<float> oridata, xdata, ydata;
-
+    
 
 
 //Debugging: cout<<"input xyo is "<<pos_x<<"/"<<pos_y<<"/"<<pos_o<<endl;
@@ -190,25 +180,25 @@ void rectangular_map(vector<Vec4i> lines, float length_threshold, float angle_th
 
         case 1:
           switch (linecaseNo){
-            case 1:
+            case 1:              
               if ( (abs(slope-pos_o)<angle_threshold) && (abs(perp-(300-pos_y))<length_threshold) ){
                 oridata.push_back(slope);
                 ydata.push_back(300-perp);
               }
               break;
-            case 2:
+            case 2:              
               if ( (abs(slope-(M_PI/2-pos_o))<angle_threshold )&&( abs(perp-(pos_x))<length_threshold )){
                 oridata.push_back(M_PI/2-slope);
                 xdata.push_back(perp);
               }
               break;
-            case 3:
+            case 3:              
               if ( abs(slope-pos_o)<angle_threshold && (abs(perp-(pos_y))<length_threshold)  ){
                 oridata.push_back(slope);
                 ydata.push_back(perp);
               }
               break;
-            case 4:
+            case 4:              
               if ( abs(slope-(M_PI/2-pos_o))<angle_threshold && (abs(perp-(500-pos_x))<length_threshold) ){
                 oridata.push_back(M_PI/2-slope);
                 xdata.push_back(500-perp);
@@ -224,19 +214,19 @@ void rectangular_map(vector<Vec4i> lines, float length_threshold, float angle_th
                 xdata.push_back(perp);
               }
               break;
-            case 2:
+            case 2:              
               if ( abs(slope-(M_PI-pos_o))<angle_threshold && abs(perp-(pos_y))<length_threshold  ){
                 oridata.push_back(M_PI-slope);
                 ydata.push_back(perp);
               }
               break;
-            case 3:
+            case 3:              
               if ( abs(slope-(pos_o-M_PI/2))<angle_threshold && abs(perp-(500-pos_x))<length_threshold  ){
                 oridata.push_back(slope+M_PI/2);
                 xdata.push_back(500-perp);
               }
               break;
-            case 4:
+            case 4:              
               if ( abs(slope-(M_PI-pos_o))<angle_threshold && abs(perp-(300-pos_y))<length_threshold  ){
                 oridata.push_back(M_PI-slope);
                 ydata.push_back(300-perp);
@@ -250,31 +240,31 @@ void rectangular_map(vector<Vec4i> lines, float length_threshold, float angle_th
               //pos_o가 실제보다 작을 경우
               //큰 오차 없으면 아무것도 추가 안되고
               //
-
-
+            
+              
           break;
 
         case 3:
           switch (linecaseNo){
-            case 1:
+            case 1:              
               if ( abs(slope-(pos_o-M_PI))<angle_threshold && abs(pos_y-perp)<length_threshold  ){
                 oridata.push_back(slope+M_PI);
                 ydata.push_back(perp);
               }
               break;
-            case 2:
+            case 2:              
               if ( abs(slope-(1.5*M_PI-pos_o))<angle_threshold && abs(pos_x-(500-perp))<length_threshold  ){
                 oridata.push_back(1.5*M_PI-slope);
                 xdata.push_back(500-perp);
               }
               break;
-            case 3:
+            case 3:              
               if ( abs(slope-(pos_o-M_PI))<angle_threshold && abs(pos_y-(300-perp))<length_threshold  ){
                 oridata.push_back(slope+M_PI);
                 ydata.push_back(300-perp);
               }
               break;
-            case 4:
+            case 4:              
               if ( abs(slope- (1.5*M_PI-pos_o))<angle_threshold && abs(perp-pos_x)<length_threshold  ){
                 oridata.push_back(1.5*M_PI-slope);
                 xdata.push_back(perp);
@@ -285,25 +275,25 @@ void rectangular_map(vector<Vec4i> lines, float length_threshold, float angle_th
 
         case 4:
           switch (linecaseNo){
-            case 1:
+            case 1:              
               if ( abs(slope-(pos_o-1.5*M_PI))<angle_threshold && abs(pos_x-(500-perp) )<length_threshold ){
                 oridata.push_back(slope+1.5*M_PI);
                 xdata.push_back(500-perp);
               }
               break;
-            case 2:
+            case 2:              
               if ( abs(slope-(2*M_PI-pos_o))<angle_threshold && abs(pos_y-(300-perp))<length_threshold  ){
                 oridata.push_back(2*M_PI-slope);
                 ydata.push_back(300-perp);
               }
               break;
-            case 3:
+            case 3:              
               if ( abs(slope-(pos_o-1.5*M_PI))<angle_threshold && abs(pos_x-perp)<length_threshold  ){
                 oridata.push_back(slope+1.5*M_PI);
                 xdata.push_back(perp);
               }
               break;
-            case 4:
+            case 4:              
               if ( abs(slope- (2*M_PI-pos_o))<angle_threshold && abs(perp-pos_y)<length_threshold ){
                 oridata.push_back(2*M_PI-slope);
                 ydata.push_back(perp);
@@ -318,12 +308,12 @@ void rectangular_map(vector<Vec4i> lines, float length_threshold, float angle_th
     int button=1;
     if(lines.size()>0){
 
-
+      
       if(oridata.size()<lines.size()/5){//pos_o가 잘못된 경우.
       //oridata 사이즈의 기준 크기가 작을수록 밑의 기준은 커야한다. 반대로 기준 크기가 클수록 밑 기준은 작아야한다.
       //+빨리 회전할수록 밑의 기준이 커야 한다
         if(abs(pos_o-M_PI/2)<0.1){//이 크기가 클수록 angle_theshold도 커야 한다.
-          pos_o=M_PI/2+(M_PI/2-pos_o); //
+          pos_o=M_PI/2+(M_PI/2-pos_o); // 
           //pos_y=vectorMean(ydata);
         }else if(abs(pos_o-M_PI)<0.1){//0.05가 크면 엄한 녀석을 잡아넣을 수 있다. 그러나 0.05가 작으면 0.05보다 살짝 벗어나는 곳에서 멈추면 잡을수가 없다.
         //angle_threshold의 1/2
@@ -340,7 +330,7 @@ void rectangular_map(vector<Vec4i> lines, float length_threshold, float angle_th
         }
 
 
-
+        
 //Debugging: cout<<"Oops"<<endl;
 
       }else if(xdata.size()<lines.size()/5){
@@ -357,12 +347,12 @@ void rectangular_map(vector<Vec4i> lines, float length_threshold, float angle_th
     }
 
 //Debugging:
-    cout<<"output xyo is "<<int(pos_x)<<"/"<<int(pos_y)<<"/"<<int(pos_o)<<endl;
+cout<<"output xyo is "<<int(pos_x)<<"/"<<int(pos_y)<<"/"<<pos_o<<endl;
 
     robot_pos.x=pos_x;
     robot_pos.y=pos_y;
-    robot_pos.o=pos_o;
-
+    robot_pos.z=pos_o;
+    
 }
 
 
@@ -409,22 +399,12 @@ void lidar_Callback(const sensor_msgs::LaserScan::ConstPtr& scan) //LiDAR scan�
 //   }else{
 //     robot_pos.o=robot_pos.o+control_o;
 //   }
-
+  
 // }
 
 
 
-void ballPos_Callback(const core_msgs::ball_position::ConstPtr& position)
-{
-    nBalls = position->size;
-    for(int i = 0; i < nBalls; i++)
-    {
-        ball_dist[i] = position->dist[i];
-        ball_angle[i] = position->angle[i];
-        // std::cout << "degree : "<< ball_degree[i];
-        // std::cout << "   distance : "<< ball_distance[i]<<std::endl;
-		}
-}
+
 
 
 
@@ -434,64 +414,94 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "lidar_odometry_node");
     ros::NodeHandle nh; //NodeHandle 클래스의 nh 객체 선언
     ros::Subscriber sub = nh.subscribe<sensor_msgs::LaserScan>("/scan", 1000, lidar_Callback); //LiDAR 데이터 받아오기
-    ros::Subscriber subBallPos = nh.subscribe<core_msgs::ball_position>("/position", 1000, ballPos_Callback);
     //ros::Subscriber sub1 = nh.subscribe<std_msgs::Int8>("/entrance", 1, line_Callback); //Entrance zone 들어갔는지 여부 받아오기
     //ros::Subscriber sub2 = nh.subscribe<geometry_msgs::Vector3>("/control", 1000, control_callback); //getting control input
 
-    pub = nh.advertise<geometry_msgs::Vector3>("/odometry", 1); //odometry, 즉 robot의 위치를 Vector3로 발행한다.
+    ros::Publisher pub = nh.advertise<geometry_msgs::Vector3>("/robot_pos", 1); //odometry, 즉 robot의 위치를 Vector3로 발행한다.
+    ros::Publisher pub1 = nh.advertise<std_msgs::Int8MultiArray>("/obs_pos", 1);
 
+    robot_pos.x=pos_x;
+    robot_pos.y=pos_y;
+    robot_pos.z=pos_o;
 
-    cv::Mat zone = cv::Mat::zeros(400, 600, CV_8UC3);
-    line(zone, Point(50, 50), Point(550, 50), Scalar(255,255,255), 1);
-    line(zone, Point(50, 50), Point(50, 250), Scalar(255,255,255), 1);
-    line(zone, Point(550, 50), Point(550, 350), Scalar(255,255,255), 1);
-    line(zone, Point(50, 350), Point(550, 350), Scalar(255,255,255), 1);
+// Debugging:
+// cv::Mat zone = cv::Mat::zeros(600, 600, CV_8UC3);
+// line(zone, Point(50, 50), Point(550, 50), Scalar(255,255,255), 1);
+// line(zone, Point(50, 50), Point(50, 250), Scalar(255,255,255), 1);
+// line(zone, Point(550, 50), Point(550, 350), Scalar(255,255,255), 1);
+// line(zone, Point(50, 350), Point(550, 350), Scalar(255,255,255), 1);
 
-    circle(zone, Point(270, 130), 10, cv::Scalar(255,255,255), -1);
-    circle(zone, Point(230, 270), 10, cv::Scalar(255,255,255), -1);
-    circle(zone, Point(400, 260), 10, cv::Scalar(255,255,255), -1);
-    circle(zone, Point(550, 200), 10, cv::Scalar(0,255,0), -1);
+// circle(zone, Point(270, 130), 10, cv::Scalar(255,255,255), -1);
+// circle(zone, Point(230, 270), 10, cv::Scalar(255,255,255), -1);
+// circle(zone, Point(400, 260), 10, cv::Scalar(255,255,255), -1);
+
+// circle(zone, Point(550, 200), 10, cv::Scalar(0,255,0), -1);
+
 
     while(ros::ok){
         cv::Mat map = cv::Mat::zeros(MAP_WIDTH, MAP_HEIGHT, CV_8UC3);
 
-        //CV_8UC3는 RGB 3채널 컬러 이미지를 위한 데이터 방식이다. 일단 zero로 initialize 하여 map 객체 만듦
-
-
-
         //Substracting the obstacle data from laser scan, and Drawing remaining wall data on the virtual map
         vector<float> wall_distance, wall_degree;
+        vector<float> obs_distance, obs_degree;
 
         wall_distance.push_back(lidar_distance[0]);
         wall_degree.push_back(lidar_degree[0]);
-        int is_difference_small=1;
+
+        int view_angle=0;
+        float sum=lidar_distance[0];
+        float avg_distance;
+        float obstacle_width;
+
 
         for(int i = 1; i < lidar_size; i++)
         {
 
-          if(lidar_distance[i] <50){ //smaller than the maximum liDAR range(distance)
+          if(lidar_distance[i] <10){ //smaller than the maximum liDAR range(distance)
               wall_distance.push_back(lidar_distance[i]);
               wall_degree.push_back(lidar_degree[i]);
-              is_difference_small++;
+              view_angle++;
+              sum=sum+lidar_distance[i];
           }
 
-          if(abs(lidar_distance[i] - lidar_distance[i-1]) > 2){
+          if(abs(lidar_distance[i] - lidar_distance[i-1]) > 0.3){
           //distance changed abruptly -> outermost wall or an another distant obstacle is detected.
+            view_angle=view_angle-1;
+            sum=sum-lidar_distance[i];
+            avg_distance=sum/(view_angle+1);
+            obstacle_width=avg_distance*(M_PI/180)*view_angle;
+//Debugging:cout<<obstacle_width<<"/"<<view_angle<<endl;
 
-            if(is_difference_small < 20){//threshold should be larger than the maximum view angle of the obstacle
-              //this means that formerly detected object has small view angle, which means it is likely to be an obstacle
-              for(int j=0; j<is_difference_small; j++){
+            if(obstacle_width < 0.15 && view_angle>0 && abs(lidar_distance[i-1]-avg_distance)<0.2 ){//threshold should be larger than the maximum width of the obstacle
+              //this means that formerly detected object has small width, which means it is likely to be an obstacle
+
+              obs_distance.push_back(lidar_distance[i-1-view_angle/2]+0.15/2);
+              obs_degree.push_back(lidar_degree[i-1-view_angle/2]);
+
+              for(int j=0; j<view_angle+2; j++){
                 wall_distance.pop_back();
                 wall_degree.pop_back();
               } //remove the added lidar data as much as the view angle of the obstacle
+              wall_distance.push_back(lidar_distance[i]);
+              wall_degree.push_back(lidar_degree[i]);
+
+
             }
-            //If not, the former object was not obstacle, but wall.
+              view_angle=0; //Initiallization
+              sum=lidar_distance[i];
 
-            is_difference_small=1; //Initiallization
           }
-        }
 
+        }
+        
         //Drawing
+
+// Debugging:
+// int cxi0 = MAP_WIDTH/2 + (int)(wall_distance[0]*sin(wall_degree[0])/MAP_RESOL);
+// int cyi0 = MAP_HEIGHT/2 + (int)(wall_distance[0]*cos(wall_degree[0])/MAP_RESOL);
+// circle(map, Point(cxi0, cyi0), 3, cv::Scalar(255,0,0), -1);
+
+
         for(int i = 1; i<wall_distance.size(); i++){
           int cxi = MAP_WIDTH/2 + (int)(wall_distance[i]*sin(wall_degree[i])/MAP_RESOL);
           int cyi = MAP_HEIGHT/2 + (int)(wall_distance[i]*cos(wall_degree[i])/MAP_RESOL);
@@ -506,12 +516,9 @@ int main(int argc, char **argv)
 
         cv::Mat gray; //행렬 클래스. 영상/이미지 저장에도 쓰임.
         cvtColor(map,gray,COLOR_BGR2GRAY); //map을 회색으로 칠해(?) gray라는 MAT 클래스로 변환
-
         cv::Mat edges;
-        Canny(gray,edges,20,200);
-        //gray로부터 경곗값 50, 150을 기준으로 이미지의 경계선만을 검출하여 edge라는 행렬로 출력.
+        Canny(gray,edges,20,200);//gray로부터 경곗값 50, 150을 기준으로 이미지의 경계선만을 검출하여 edge라는 행렬로 출력.
         vector<Vec4i> lines; //lines는 밑의 Hough 변환 결과를 받아올 array. 선분의 시작점 좌표 x,y와 끝점좌표 x,y를 받아옴.
-
         HoughLinesP(edges, lines, 0.5, CV_PI/180, 30, 20, 50);
         //주어진 이미지 gray로부터 직선 검출. 1 과 CV_PI/180는 모델링할 직선 방정식 r=xcos(th)+ysin(th)의 파라미터 r과 th의 해상도 개념.
         //30은 선으로 치려면 최소 몇 개 데이터 이상이어야 하는지, 15는 선으로 검출하기 위한 최소 길이, 5는 다른 선으로 간주되지 않기 위한 점 데이터 사이 최대 허용 길이이다.
@@ -519,21 +526,31 @@ int main(int argc, char **argv)
 
         rectangular_map(lines, 20, 0.2); //angle_threshold는 최대 0.7보다는 작아야 한다.
 
-
-
-//Debugging: circle(map,Point(MAP_WIDTH/2,MAP_HEIGHT/2),10, cv::Scalar(0,0,255), -1);
-
-
-        circle(zone, Point(50+int(robot_pos.x), 350-int(robot_pos.y)), 3, cv::Scalar(255,0,0), -1);
-        for (int i=0; i<nBalls; i++){ //ball_dist[i], ball_angle[i]
-          int ball_x = 50 + (int)(robot_pos.x + ball_dist[i]*cos(ball_angle[i]+robot_pos.o)*100);
-          int ball_y = 350 - (int)(robot_pos.y + ball_dist[i]*sin(ball_angle[i]+robot_pos.o)*100);
-          if (ball_x>50 && ball_x<550 && ball_y>50 && ball_y<350){
-            circle(zone, Point(ball_x, ball_y),2,cv::Scalar(0,0,255), -1);
-          }
+        
+        obs_pos.data.clear();
+        int obs_abs_pos[2];
+        for (int i=0; i<obs_distance.size(); i++){
+          int obs_rel_x = (int)(obs_distance[i]*sin(obs_degree[i])/MAP_RESOL);
+          int obs_rel_y = (int)(obs_distance[i]*cos(obs_degree[i])/MAP_RESOL);
+//Debugging:
+circle(map, Point(MAP_WIDTH/2+obs_rel_x, MAP_HEIGHT/2+obs_rel_y), 3, cv::Scalar(255,255,0), -1);
+          obs_abs_pos[0]=(int)(robot_pos.x+cos(pos_o)*obs_rel_x-cos(pos_o+M_PI/2)*obs_rel_y);
+          obs_abs_pos[1]=(int)(robot_pos.y+sin(pos_o)*obs_rel_x-sin(pos_o+M_PI/2)*obs_rel_y);
+          cout<<obs_abs_pos[0]<<"/"<<obs_abs_pos[1]<<endl;
+          obs_pos.data.push_back(obs_abs_pos[0]);
+          obs_pos.data.push_back(obs_abs_pos[1]);
         }
-        cv::imshow("Harvesting zone map",zone);
-        cv::waitKey(50);
+    
+//Debugging:
+for(int i=0; i<obs_pos.data.size()/2; i++ ){
+  //cout<<obs_pos.data[2*i]<<"/"<<obs_pos.data[2*i+1]<<endl;
+}
+
+// Debugging: circle(map,Point(MAP_WIDTH/2,MAP_HEIGHT/2),10, cv::Scalar(0,0,255), -1);   
+// circle(zone, Point(50+int(robot_pos.x), 350-int(robot_pos.y)), 3, cv::Scalar(255,0,0), -1);
+// cv::imshow("Harvesting zone map",zone);
+cv::imshow("Harvesting zone map",map);
+cv::waitKey(50);
 
 
         // if(init_odom == 0){
@@ -541,12 +558,11 @@ int main(int argc, char **argv)
         //   pos_y = 0.0;
         //   pos_o = 0.0;
         // } 각도가 제일 문제. 1. 허용오차 작게 하고 예상포인트 세트를 다 돌려봐서 그 중 맞는걸로, 2. 처음 시행시에는 허용오차 크게, 3. 들어오기 꽤 전부터 먼저 돌리면서 허용오차는 빡세게 하면서 기다리기
-        //이 노드는 아무리 빨라도 |x좌표|+초기 허용오차 <50일 때만 쓸수있다.
+        //이 노드는 아무리 빨라도 |x좌표|+초기 허용오차 <50일 때만 쓸수있다. 
 
-      	odometry.x=robot_pos.x;
-      	odometry.y=robot_pos.y;
-      	odometry.z=robot_pos.o;
-      	pub.publish(odometry);
+
+      	pub.publish(robot_pos);
+        pub1.publish(obs_pos);
 
         ros::spinOnce();
     }
