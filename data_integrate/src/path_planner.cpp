@@ -53,7 +53,7 @@ int robotX, 	robotY,
 
 int REMAINING_BALLS = 5;
 
-class Node(){
+class Node{
 public:
 	int x;
 	int y;
@@ -73,7 +73,10 @@ public:
 		dist_h 		= 10000;
 	}
 
-}
+	Node(){
+
+	}
+};
 
 int Astar_plan(int size, int target_index, Node* node_list);
 
@@ -109,7 +112,7 @@ bool visible_robot(int ball_number){
 		// y=ax+b
 		a = diffY/diffX; // slope
 		b = y1-a*x1;
-		den = math.sqrt(a*a+1);
+		den = sqrt(a*a+1);
 		for(int i=0;i<5;i++){
 			num = a*pillarX[i] + b - pillarY[i];
 			if (pillar_exist[i] && num/den < (PILLAR_RADIUS + ROBOT_SIZE + MARGIN)) return false; // num/den == distance
@@ -139,7 +142,7 @@ bool visible_arbitrary(int x1, int y1, int x2, int y2){
 		// y=ax+b
 		a = diffY/diffX; // slope
 		b = y1-a*x1;
-		den = math.sqrt(a*a+1);
+		den = sqrt(a*a+1);
 		for(int i=0;i<5;i++){
 			num = a*pillarX[i] + b - pillarY[i];
 			if (pillar_exist[i] && num/den < (PILLAR_RADIUS + ROBOT_SIZE + MARGIN)) return false; // num/den == distance
@@ -160,7 +163,7 @@ int get_shortest_index(int size, Node* node_list){ // '-1' means 'No balls are d
 	float min_dist, dist;
 
 	for(int i=0;i<size;i++){
-		Node node = node_list;
+		Node node = node_list[i];
 
 		if (node.type != BALL) continue;
 
@@ -170,35 +173,28 @@ int get_shortest_index(int size, Node* node_list){ // '-1' means 'No balls are d
 			min_dist = dist;
 		}
 	}
-	return index
+	return index;
 } 
 
 
 
-std::vector<> path_list(int targetX, int targetY){
-	if();	
-
-
-}
-
-
-void positions_callback(const core_msgs::position::ConstPtr& object)
+void positions_callback(const core_msgs::multiarray::ConstPtr& object)
 {
 	Node nodes[20];
-	int size = object.cols, node_number = 0;
+	int size = object->cols, node_number = 0;
 	int GAP = ROBOT_SIZE + PILLAR_RADIUS + MARGIN;
 
 	for (int i = 0; i < size; i++){ 
-		int x = object.data[3*i+1];
-		int y = object.data[3*i+2];
+		int x = object->data[3*i+1];
+		int y = object->data[3*i+2];
 
-		if(object.data[3*i] == ROBOT || object.data[3*i] == BALL){
-			nodes[nodeIdx++] = Node(object.data[3*i], x, y); // type, x, y
-		} else if (object.data[3*i] == PILLAR){
-			nodes[nodeIdx++] = Node(PILLAR, x + GAP, y + GAP);
-			nodes[nodeIdx++] = Node(PILLAR, x + GAP, y - GAP);
-			nodes[nodeIdx++] = Node(PILLAR, x - GAP, y + GAP);
-			nodes[nodeIdx++] = Node(PILLAR, x - GAP, y - GAP);
+		if(object->data[3*i] == ROBOT || object->data[3*i] == BALL){
+			nodes[node_number++] = Node(object->data[3*i], x, y); // type, x, y
+		} else if (object->data[3*i] == PILLAR){
+			nodes[node_number++] = Node(PILLAR, x + GAP, y + GAP);
+			nodes[node_number++] = Node(PILLAR, x + GAP, y - GAP);
+			nodes[node_number++] = Node(PILLAR, x - GAP, y + GAP);
+			nodes[node_number++] = Node(PILLAR, x - GAP, y - GAP);
 		}
 	}
 
@@ -230,7 +226,7 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "path_planner");
     ros::NodeHandle n;
 
-    ros::Subscriber sub_positions = n.subscribe<core_msgs::multiarray>("/position", 100, position_callback);
+    ros::Subscriber sub_positions = n.subscribe<core_msgs::multiarray>("/position", 100, positions_callback);
 	waypoints_publisher = n.advertise<core_msgs::multiarray>("/waypoints", 10);
 
     while(ros::ok){
@@ -243,23 +239,25 @@ int main(int argc, char **argv)
 
 int min_dist_idx(Node* node_list, std::vector<int>* visible_queue){
 	float dist, min_dist, idx = -1;
-	vector<int>::iterator iter;
+	vector<int>::iterator it;
 
-	for (it=visible_queue.begin(); it != visible_queue.end(); it++) { 
+	for (it=visible_queue->begin(); it != visible_queue->end(); it++) { 
 		Node cur_node = node_list[*it];
 		if (cur_node.confirmed) continue;
 		dist = cur_node.dist_exact + cur_node.dist_h;
 	
 		if(idx == -1 || dist < min_dist){
 			min_dist = dist;
-			idx = i;
+			idx = (*it);
 		}
 	}
 
 	return idx;
 }
 
-void update_visibility(int cur_idx, int goal_index, Node* node_list, std::vector<int>* visible_queue){
+void update_visibility(int cur_idx, int goal_index, int size, Node* node_list, std::vector<int>* visible_queue){
+	int xt = node_list[goal_index].x, 	yt = node_list[goal_index].y;
+
 	for(int i = 0; i < size; i++){
 		if (node_list[i].confirmed) continue;
 		if (visible_arbitrary(node_list[cur_idx].x, node_list[cur_idx].y, 
@@ -279,8 +277,8 @@ void update_visibility(int cur_idx, int goal_index, Node* node_list, std::vector
 				node_list[i].dist_h		= dist_h;
 			}
 
-			if(std::find(visible_queue.begin(), visible_queue.end(), x) == visible_queue.end()) {
-				visible_queue.push_back(i);// queue doesn't contains i
+			if(std::find(visible_queue->begin(), visible_queue->end(), i) == visible_queue->end()) {
+				visible_queue->push_back(i);// queue doesn't contains i
 			}
 		}
 	}
@@ -302,10 +300,10 @@ int Astar_plan(int size, int target_index, Node* node_list){
 	int xcur = node_list[cur_idx].x, 		ycur = node_list[cur_idx].y;
 
 	do{
-		update_visibility(cur_idx, target_index, node_list, &visible_queue);
+		update_visibility(cur_idx, target_index, size, node_list, &visible_queue);
 		cur_idx = min_dist_idx(node_list, &visible_queue);
 		node_list[cur_idx].confirmed = true;
-	} while (cur_idx != target_index) // if target is reachable, end of astar.
+	} while (cur_idx != target_index); // if target is reachable, end of astar.
 
 	Node cur_node = node_list[cur_idx];
 
