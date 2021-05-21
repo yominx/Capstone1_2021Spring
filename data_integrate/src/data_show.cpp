@@ -271,7 +271,7 @@ int main(int argc, char **argv)
       msg.data.push_back(50+int(round(X)));
       msg.data.push_back(350-int(round(Y)));
       msg.cols = 1+nBalls+nGoals+nPillars;
-
+      pub.publish(msg);
       imshow("map", MAP);
       waitKey(10);
       loop_rate.sleep();
