@@ -50,6 +50,14 @@ int len;
 int n;
 int left_points,right_points;
 
+/* robot position variables */
+float pos_x;
+float pos_y;
+float pos_o;
+float target_x;
+float target_y;
+float diff_o;
+
 #define ENTRANCE 1
 #define BALLHARVESTING 2
 
@@ -87,6 +95,17 @@ void camera_Callback(const core_msgs::ball_position::ConstPtr& position)
     }
 
 }
+void position_Callback(const geometry_msgs::Vector3::ConstPtr& robot_pos) {
+	pos_x = robot_pos->x;
+	pos_y = robot_pos->y;
+	pos_o = robot_pos->z;
+}
+void target_Callback(const geometry_msgs::Vector3::ConstPtr& target_pos) {
+	target_x = target_pos->x;
+	target_y = target_pos->y;
+	diff_o = atan2(target_y-pos_y, target_x-pos_x) - pos_o; // while -pos_o, |diff_o| may become > pi
+}
+
 
 void control_entrance(geometry_msgs::Twist *targetVel)
 {
@@ -124,12 +143,31 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 
 void control_ballharvesting(geometry_msgs::Twist *targetVel)
 {
+	float ANGLE_THRESHOLD = M_PI/60;
+	int angle_sign = (diff_o > 0 ? 1 : -1);
+
 	cout << "Ball Harvesting Control" << endl;
-	targetVel->linear.x  = 100;
-	targetVel->angular.z = 0;
-	while (true){
-		break;
+	if (fabs(diff_o) > ANGLE_THRESHOLD) {
+		/* in place rotation ->should be modified*/
+		targetVel->linear.x  = 0;
+		targetVel->angular.z = angle_sign*100;
 	}
+	else {
+		/* move forward ->should be modified*/
+		targetVel->linear.x  = 100;
+		targetVel->angular.z = 0;
+	}
+	return;
+}
+
+void in_place_turn() {
+	return;
+}
+void move_forward() {
+	return;
+}
+void stop() {
+	return;
 }
 
 int select_control_method(){
@@ -151,6 +189,10 @@ int main(int argc, char **argv)
 
     ros::Subscriber sub = n.subscribe<sensor_msgs::LaserScan>("/scan", 1000, lidar_Callback);
     ros::Subscriber sub1 = n.subscribe<core_msgs::ball_position>("/position", 1000, camera_Callback);
+    /* // for ballharvesting motor control
+	ros::Subscriber sub_pos = n.subscribe<geometry_msgs::Vector3>("/robot_pos", 1000, position_Callback);
+	ros::Subscriber sub_target = n.subscribe<geometry_msgs::Vector3>("/target_pos", 1000, target_Callback);
+	*/
 	ros::Publisher commandVel = n.advertise<geometry_msgs::Twist>("/command_vel", 10);
 	
 	ros::Publisher ball_delivery = n.advertise<std_msgs::Int8>("/ball_delivery", 10);//pickup & dumping
