@@ -60,14 +60,15 @@ class Zones
   class Zone
   {
   public:
+    int type;
     int nPoints;
     int cenRow; //(row,col)
     int cenCol;
     int cnt;
     bool reliable;
-    //int zoneSize = reliable ? 5 : 3;
-    int zoneSize = 10;
-    Zone(int r, int c);
+    int zoneSize;
+    float threshold;
+    Zone(int r, int c, int type);
     ~Zone();
     bool insideZone(int r, int c);
     void add(int r, int c, int type);
@@ -101,7 +102,7 @@ void Zones::addZone(int r, int c, int type)
       return;
     }
   }
-  zoneList.push_back(Zone(r,c));
+  zoneList.push_back(Zone(r,c,type));
 }
 
 void Zones::removeZone(int i, int type)
@@ -120,10 +121,27 @@ void Zones::removeZone(int i, int type)
   Zone zone = zoneList[i];
   Rect roi = Rect(Point(zone.cenCol-zone.zoneSize,zone.cenRow-zone.zoneSize),Point(zone.cenCol+zone.zoneSize,zone.cenRow+zone.zoneSize));
   map(roi) = Scalar(0);
+  circle(MAP, Point(zone.cenCol, zone.cenRow),2,Scalar(0,0,0), -1);
   zoneList.erase(zoneList.begin()+i);
+  cout << "zone " << i << "-th removed" << endl;
 }
 
-Zones::Zone::Zone(int r, int c):nPoints(1),cenRow(r),cenCol(c),cnt(0),reliable(false){}
+Zones::Zone::Zone(int r, int c, int type):type(type),nPoints(1),cenRow(r),cenCol(c),cnt(1),reliable(false)
+{
+  switch(type){
+    case BALL:
+      zoneSize = 20;
+      threshold = 0.3;
+      break;
+    case PILLAR:
+      zoneSize = 20;
+      threshold = 0.1;
+      break;
+    case GOAL:
+      zoneSize = 50;
+      threshold = 0.01;
+  }
+}
 Zones::Zone::~Zone(){}
 
 bool Zones::Zone::insideZone(int r, int c)
@@ -145,6 +163,7 @@ void Zones::Zone::add(int r, int c, int type)
       map = mapGoal;
   }
   if (map.at<int>(r,c) > map.at<int>(cenRow,cenCol)){
+    circle(MAP, Point(cenCol, cenRow),2,Scalar(0,0,0), -1);
     cenRow = r;
     cenCol = c;
   }
@@ -176,36 +195,35 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
   for (int i=0; i<size; i++){ //ball_dist[i], ball_angle[i]
     int x = 50 + (int)round(X + (dist[i]*cos(angle[i] + O)*100));
     int y = 350 - (int)round(Y + (dist[i]*sin(angle[i] + O)*100));
-    cout << i << "/" << size << " Pos(x,y) = (" << x << ", " << y << ")" << endl;
     if (!(x>50 && x<=550 && y>50 && y<350)){
       continue;
     }
-    //circle(MAP, Point(x, y), 3, cv::Scalar(0,255,255), -1);
     map.at<int>(y,x) += 1;
-    //cout << "ball point at (" << x << ", " << y << ")= " << map.at<int>(y, x) << endl;
     zones.addZone(y,x,type);
   }
 
   int zSize = zones.zoneList.size();
   for (int i=0,j=0; i<zSize; i++, j++){
     zones.zoneList[j].cnt++;
-    cout << "(" << j << "-th zone) nPoints: " << zones.zoneList[j].nPoints << ", cnt: "<< zones.zoneList[j].cnt << endl;
-
+    // cout << "(" << j << "-th zone) nPoints: " << zones.zoneList[j].nPoints << ", cnt: "<< zones.zoneList[j].cnt << endl;
+    // cout << "(" << j << "-th zone) is reliable : " << zones.zoneList[j].reliable << endl;
+    // cout << "(" << j << "-th zone) cnt*threshold = " << zones.zoneList[j].cnt << " * " << zones.zoneList[j].threshold << " = " << zones.zoneList[j].cnt * zones.zoneList[j].threshold <<endl;
+    if ((zones.zoneList[j].cnt % 30) == 0){
+      if (zones.zoneList[j].nPoints > zones.zoneList[j].cnt * zones.zoneList[j].threshold){
+        zones.zoneList[j].reliable = true;
+        // cout << "(" << j << "-th zone) is reliable" << endl;
+      }
+      else {
+        zones.removeZone(j, type);
+        j--;
+      }
+    }
     if (zones.zoneList[j].reliable){
       msg.data.push_back(type);
       msg.data.push_back(zones.zoneList[j].cenCol);
       msg.data.push_back(zones.zoneList[j].cenRow);
-      circle(MAP, Point(zones.zoneList[j].cenCol, zones.zoneList[j].cenRow),2,color, -1);
+      circle(MAP, Point(zones.zoneList[j].cenCol, zones.zoneList[j].cenRow),5,color, -1);
       continue;
-    }
-    if (zones.zoneList[i].cnt == 10){
-      if (zones.zoneList[i].nPoints > 3){
-        zones.zoneList[i].reliable = true;
-      }
-      else {
-        zones.removeZone(i, type);
-        j--;
-      }
     }
   }
 }
@@ -266,7 +284,7 @@ int main(int argc, char **argv)
       filtering(ballZones, nBalls, ballDist, ballAngle, BALL, msg);
       //filtering(pillarZones, nPilla, pillarDist, pillarAngle, PILLAR, msg);
       filtering(goalZones, nGoals, goalDist, goalAngle, GOAL, msg);
-      circle(MAP, Point(50+int(round(X)), 350-int(round(Y))), 3, cv::Scalar(255,0,0), -1);
+      circle(MAP, Point(50+int(round(X)), 350-int(round(Y))), 5, cv::Scalar(255,0,0), -1);
       msg.data.push_back(VEHICLE);
       msg.data.push_back(50+int(round(X)));
       msg.data.push_back(350-int(round(Y)));
