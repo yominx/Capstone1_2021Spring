@@ -24,6 +24,7 @@
 #include "core_msgs/ball_position.h"
 #include "core_msgs/goal_position.h"
 #include "core_msgs/multiarray.h"
+#include "geometry_msgs/Vector3.h"
 
 
 #define RAD2DEG(x) ((x)*180./M_PI)
@@ -40,11 +41,16 @@
 #define PILLAR 	3
 #define GOAL 	4
 
+#define MAP_WIDTH 	600
+#define MAP_HEIGHT 	400
+
+
 boost::mutex map_mutex;
 using namespace std;
+using namespace cv;
 
 ros::Publisher waypoints_publisher;
-
+Mat missionmap;
 
 int robotX, 	robotY,
 	ballX[10],  ballY[10], ball_exist[10],
@@ -53,7 +59,9 @@ int robotX, 	robotY,
 
 int REMAINING_BALLS = 5;
 
-class Node{
+
+
+class NodeMap{
 public:
 	int x;
 	int y;
@@ -63,7 +71,7 @@ public:
 	float dist_h;
 	bool confirmed;
 
-	Node(int type_input, int x_input, int y_input){
+	NodeMap(int type_input, int x_input, int y_input){
 		x 	= x_input;
 		y 	= y_input;
 		type = type_input;
@@ -73,12 +81,22 @@ public:
 		dist_h 		= 10000;
 	}
 
-	Node(){
+	NodeMap(){
 
 	}
 };
 
-int Astar_plan(int size, int target_index, Node* node_list);
+int Astar_plan(int size, int target_index, NodeMap* node_list);
+void visualize(int size, NodeMap* nodes, int goal_index);
+
+
+void publish_wayp(int x, int y, int z){
+	geometry_msgs::Vector3 waypoint;
+	waypoint.x = x;
+	waypoint.y = y;
+	waypoint.z = z;
+	waypoints_publisher.publish(waypoint);
+}
 
 bool rotatable(int X, int Y){
 	for(int i=0;i<10;i++){
@@ -157,13 +175,13 @@ bool visible_arbitrary(int x1, int y1, int x2, int y2){
 }
 
 
-int get_shortest_index(int size, Node* node_list){ // '-1' means 'No balls are detected'
+int get_shortest_index(int size, NodeMap* node_list){ // '-1' means 'No balls are detected'
 	// TODO: use A* to calculate more EXACT distance
 	int index = -1;
 	float min_dist, dist;
 
 	for(int i=0;i<size;i++){
-		Node node = node_list[i];
+		NodeMap node = node_list[i];
 
 		if (node.type != BALL) continue;
 
@@ -180,43 +198,60 @@ int get_shortest_index(int size, Node* node_list){ // '-1' means 'No balls are d
 
 void positions_callback(const core_msgs::multiarray::ConstPtr& object)
 {
-	Node nodes[20];
+	NodeMap nodes[20];
 	int size = object->cols, node_number = 0;
 	int GAP = ROBOT_SIZE + PILLAR_RADIUS + MARGIN;
+	int THRESHOLD = 10;
+
 
 	for (int i = 0; i < size; i++){ 
 		int x = object->data[3*i+1];
 		int y = object->data[3*i+2];
 
 		if(object->data[3*i] == ROBOT || object->data[3*i] == BALL){
-			nodes[node_number++] = Node(object->data[3*i], x, y); // type, x, y
+			nodes[node_number++] = NodeMap(object->data[3*i], x, y); // type, x, y
 		} else if (object->data[3*i] == PILLAR){
-			nodes[node_number++] = Node(PILLAR, x + GAP, y + GAP);
-			nodes[node_number++] = Node(PILLAR, x + GAP, y - GAP);
-			nodes[node_number++] = Node(PILLAR, x - GAP, y + GAP);
-			nodes[node_number++] = Node(PILLAR, x - GAP, y - GAP);
+			nodes[node_number++] = NodeMap(PILLAR, x + GAP, y + GAP);
+			nodes[node_number++] = NodeMap(PILLAR, x + GAP, y - GAP);
+			nodes[node_number++] = NodeMap(PILLAR, x - GAP, y + GAP);
+			nodes[node_number++] = NodeMap(PILLAR, x - GAP, y - GAP);
 		}
 	}
 
-	while (REMAINING_BALLS > 0){
+	if (REMAINING_BALLS > 0){
 		int target_ball_index = get_shortest_index(node_number, nodes);
 		if (target_ball_index == -1){ // No balls are found
 
 			if(visible_arbitrary(robotX, robotY, robotX, robotY + 30)) {
-				//return (robotX, robotY + 30);
+				publish_wayp(robotX + 30, robotY, -1);
 			} else if (visible_arbitrary(robotX, robotY, robotX + 15, robotY + 15)) {
-				//return (robotX + 15, robotY + 15);
+				publish_wayp(robotX + 15, robotY + 15, -1);
 			} else if (visible_arbitrary(robotX, robotY, robotX + 30, robotY)) {
-				//return (robotX + 30, robotY);
+				publish_wayp(robotX, robotY + 30, -1);
 			}
 
 		} else { // make path_plan to nodes[i]
-			// return Astar_plan(node_number, nodes); 
+			int next_index = Astar_plan(node_number, target_ball_index, nodes); 
+			int nextX = nodes[next_index].x;
+			int nextY = nodes[next_index].y;
+
+			if (pow(nextX-robotX,2) + pow(nextY-robotY,2) < pow(THRESHOLD,2)){ // close enough?
+				NodeMap cur_node = nodes[target_ball_index];
+				int cur_idx = target_ball_index;
+				while (cur_node.prev_node_idx != next_index) {
+					cur_idx = cur_node.prev_node_idx;
+					cur_node = nodes[cur_idx];
+				}
+
+				publish_wayp(cur_node.x, cur_node.y, cur_node.type);
+
+			} else {
+				publish_wayp(nextX, nextY, nodes[next_index].type);
+			}
 		}
+	} else { // Go to goal point
+		cout << "Go to goal: Not implemented yet.." << endl;
 	}
-
-
-
 }
 
 
@@ -227,7 +262,7 @@ int main(int argc, char **argv)
     ros::NodeHandle n;
 
     ros::Subscriber sub_positions = n.subscribe<core_msgs::multiarray>("/position", 100, positions_callback);
-	waypoints_publisher = n.advertise<core_msgs::multiarray>("/waypoints", 10);
+	waypoints_publisher = n.advertise<geometry_msgs::Vector3>("/waypoint", 10);
 
     while(ros::ok){
 	    ros::Duration(0.025).sleep();
@@ -237,12 +272,12 @@ int main(int argc, char **argv)
     return 0;
 }
 
-int min_dist_idx(Node* node_list, std::vector<int>* visible_queue){
+int min_dist_idx(NodeMap* node_list, std::vector<int>* visible_queue){
 	float dist, min_dist, idx = -1;
 	vector<int>::iterator it;
 
 	for (it=visible_queue->begin(); it != visible_queue->end(); it++) { 
-		Node cur_node = node_list[*it];
+		NodeMap cur_node = node_list[*it];
 		if (cur_node.confirmed) continue;
 		dist = cur_node.dist_exact + cur_node.dist_h;
 	
@@ -255,7 +290,7 @@ int min_dist_idx(Node* node_list, std::vector<int>* visible_queue){
 	return idx;
 }
 
-void update_visibility(int cur_idx, int goal_index, int size, Node* node_list, std::vector<int>* visible_queue){
+void update_visibility(int cur_idx, int goal_index, int size, NodeMap* node_list, std::vector<int>* visible_queue){
 	int xt = node_list[goal_index].x, 	yt = node_list[goal_index].y;
 
 	for(int i = 0; i < size; i++){
@@ -284,7 +319,7 @@ void update_visibility(int cur_idx, int goal_index, int size, Node* node_list, s
 	}
 }
 
-int Astar_plan(int size, int target_index, Node* node_list){ 
+int Astar_plan(int size, int target_index, NodeMap* node_list){ 
 	// TODO: consider distance difference btw Collector & Lidar sensor when return
 	std::vector<int> visible_queue;
 	int cur_idx, min_idx, start_idx;
@@ -305,7 +340,7 @@ int Astar_plan(int size, int target_index, Node* node_list){
 		node_list[cur_idx].confirmed = true;
 	} while (cur_idx != target_index); // if target is reachable, end of astar.
 
-	Node cur_node = node_list[cur_idx];
+	NodeMap cur_node = node_list[cur_idx];
 
 	while (cur_node.prev_node_idx != start_idx) {
 		cur_idx = cur_node.prev_node_idx;
@@ -316,3 +351,22 @@ int Astar_plan(int size, int target_index, Node* node_list){
 	// Compute visibility & iterate
 }
 
+void visualize(int size, NodeMap* nodes, int goal_index){
+    missionmap = cv::Mat::zeros(MAP_WIDTH, MAP_HEIGHT, CV_8UC3);
+    int x,y;
+    for(int i=0; i<size; i++){
+    	x = nodes[i].x; y = nodes[i].y;
+    	circle(missionmap, Point(x,y),5, Scalar(nodes[i].type * 100,0,0), 1, 8, 0);
+    }
+
+   	NodeMap cur_node = nodes[goal_index];
+   	int cur_idx = goal_index;
+	while (cur_node.prev_node_idx != -1) {
+		NodeMap prev = nodes[cur_node.prev_node_idx];
+		line(missionmap, Point(cur_node.x,cur_node.y), Point(prev.x, prev.y), Scalar(0,0,0), 1, 8, 0);
+		cur_idx = cur_node.prev_node_idx;
+		cur_node = nodes[cur_idx];
+	}
+
+    imshow("BALL HARVESTING MAP", missionmap);
+}
