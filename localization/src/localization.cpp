@@ -25,22 +25,22 @@
 using namespace cv;
 using namespace std;
 
+int initialization=1;
 
-
-float MAP_CX = 600; 
-float MAP_CY = 600;
+float MAP_CX = 500; 
+float MAP_CY = 500;
 float MAP_RESOL = 0.01; 
-int MAP_WIDTH = 1200; 
-int MAP_HEIGHT = 1200; 
+int MAP_WIDTH = 1000; 
+int MAP_HEIGHT = 1000; 
 int MAP_CENTER = 50;
 
 
 geometry_msgs::Vector3 robot_pos;
 std_msgs::Int8MultiArray obs_pos;
 
-float pos_x=-5;
-float pos_y=70;
-float pos_o=0.1;
+float pos_x;
+float pos_y;
+float pos_o;
 
 float control_x;
 float control_y;
@@ -140,7 +140,7 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
     
 
 
-//Debugging: cout<<"input xyo is "<<pos_x<<"/"<<pos_y<<"/"<<pos_o<<endl;
+//Debugging: cout<<endl<<"input xyo is "<<pos_x<<"/"<<pos_y<<"/"<<pos_o<<endl;
 
     for(int i = 0; i < lines.size(); i++)
     {
@@ -153,7 +153,6 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
       perp = abs(la[3]);
 
 
-
       if( 0<pos_o && pos_o<M_PI/2 ){
         oricaseNo=1;
       }else if( M_PI/2<pos_o && pos_o<M_PI ){
@@ -164,17 +163,19 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
         oricaseNo=4;
       }
 
-      if( perp_x>0 && perp_y >0 ){
+      if( perp_x>=0 && perp_y >=0 ){
         linecaseNo=4;
-      }else if( perp_x<0 && perp_y >0 ){
+      }else if( perp_x<=0 && perp_y >=0 ){
         linecaseNo=3;
-      }else if( perp_x<0 && perp_y <0 ){
+      }else if( perp_x<=0 && perp_y <=0 ){
         linecaseNo=2;
-      }else if(( perp_x>0 && perp_y <0 )){
+      }else if(( perp_x>=0 && perp_y <=0 )){
         linecaseNo=1;
       }
 
-//Debugging: cout<<"/"<<oricaseNo<<"/"<<linecaseNo<<"/"<<slope<<"/"<<perp<<"/"<<endl;
+
+
+//Debugging: cout<<"CASE "<<oricaseNo<<linecaseNo<<endl;
 
       switch (oricaseNo){
 
@@ -186,10 +187,16 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
                 ydata.push_back(300-perp);
               }
               break;
-            case 2:              
+            case 2:            
               if ( (abs(slope-(M_PI/2-pos_o))<angle_threshold )&&( abs(perp-(pos_x))<length_threshold )){
                 oridata.push_back(M_PI/2-slope);
                 xdata.push_back(perp);
+              }
+              if( pos_x<20){
+                if ( (abs(slope-(M_PI/2-pos_o))<angle_threshold )&&( abs(perp-(100+pos_x))<length_threshold )){
+                  oridata.push_back(M_PI/2-slope);
+                  xdata.push_back(-100+perp);
+              }
               }
               break;
             case 3:              
@@ -213,6 +220,13 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
                 oridata.push_back(slope+M_PI/2);
                 xdata.push_back(perp);
               }
+
+              if( pos_x<20){
+                if ( (abs(slope- (pos_o-M_PI/2))<angle_threshold )&&( abs(perp-(100+pos_x))<length_threshold )){
+                  oridata.push_back(slope+M_PI/2);
+                  xdata.push_back(-100+perp);
+              }
+              }
               break;
             case 2:              
               if ( abs(slope-(M_PI-pos_o))<angle_threshold && abs(perp-(pos_y))<length_threshold  ){
@@ -233,14 +247,6 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
               }
               break;
             }
-              //pos_o가 실제보다 큰 경우
-              //아예 큰 오차가 없으면 아무것도 추가가 안되고 -> 이 경우, pos_o를 경곗값 기준 현재상태와 반대방향으로 내보낸다.
-              // 맞는 포지션으로 갈 경우 추가가 되며 각도 피드백이 된다.
-
-              //pos_o가 실제보다 작을 경우
-              //큰 오차 없으면 아무것도 추가 안되고
-              //
-            
               
           break;
 
@@ -269,6 +275,13 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
                 oridata.push_back(1.5*M_PI-slope);
                 xdata.push_back(perp);
               }
+
+              if( pos_x<20){
+                if ( (abs(slope- (1.5*M_PI-pos_o))<angle_threshold )&&( abs(perp-(100+pos_x))<length_threshold )){
+                  oridata.push_back(1.5*M_PI-slope);
+                  xdata.push_back(-100+perp);
+              }
+              }
               break;
           }
           break;
@@ -287,10 +300,18 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
                 ydata.push_back(300-perp);
               }
               break;
-            case 3:              
+            case 3:          
+                          
               if ( abs(slope-(pos_o-1.5*M_PI))<angle_threshold && abs(pos_x-perp)<length_threshold  ){
                 oridata.push_back(slope+1.5*M_PI);
                 xdata.push_back(perp);
+              }
+
+              if( pos_x<20){  
+                if ( (abs(slope-(pos_o-1.5*M_PI))<angle_threshold )&&( abs(perp-(100+pos_x))<length_threshold )){
+                  oridata.push_back(slope+1.5*M_PI);
+                  xdata.push_back(-100+perp);
+              }
               }
               break;
             case 4:              
@@ -314,40 +335,53 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
       //+빨리 회전할수록 밑의 기준이 커야 한다
         if(abs(pos_o-M_PI/2)<0.1){//이 크기가 클수록 angle_theshold도 커야 한다.
           pos_o=M_PI/2+(M_PI/2-pos_o); // 
-          //pos_y=vectorMean(ydata);
         }else if(abs(pos_o-M_PI)<0.1){//0.05가 크면 엄한 녀석을 잡아넣을 수 있다. 그러나 0.05가 작으면 0.05보다 살짝 벗어나는 곳에서 멈추면 잡을수가 없다.
         //angle_threshold의 1/2
           pos_o=M_PI+(M_PI-pos_o);
-          //pos_x=vectorMean(xdata);
         } else if(abs(pos_o-1.5*M_PI)<0.1){
           pos_o=1.5*M_PI+(1.5*M_PI-pos_o);
-          //pos_y=vectorMean(ydata);
         } else if(abs(pos_o)<0.1){
           pos_o=2*M_PI-pos_o;
           button=0;
-        } else if(abs(pos_o-2*M_PI)<0.1&& button){
+        } else if( 0<2*M_PI-pos_o && 2*M_PI-pos_o<0.1 && button){
           pos_o=(2*M_PI-pos_o);
+        } else if(2*M_PI-pos_o<0  && button){
+          pos_o=pos_o-2*M_PI;
+        }
+
+        if(xdata.size()<2 && ydata.size()>lines.size()/5){
+          pos_x=pos_x;
+          pos_y=vectorMean(ydata);
+        }else if(ydata.size()<lines.size()/5 && xdata.size()>1 ){
+          pos_y=pos_y;
+          pos_x=vectorMean(xdata);
+        }else if(ydata.size()<lines.size()/5 && xdata.size()<2){
+          pos_x=pos_x;
+          pos_y=pos_y;
         }
 
 
-        
-//Debugging: cout<<"Oops"<<endl;
-
-      }else if(xdata.size()<lines.size()/5){
-        pos_x=pos_x;
+      }else if(xdata.size()<2){
+          pos_x=pos_x;
+          pos_y=vectorMean(ydata);
+          pos_o=vectorMean(oridata);
       }else if(ydata.size()<lines.size()/5){
-        pos_y=pos_y;
-      }
-      else{
+          pos_y=pos_y;
+          pos_x=vectorMean(xdata);
+          pos_o=vectorMean(oridata);
+      }else{
         pos_o=vectorMean(oridata);
         pos_x=vectorMean(xdata);
         pos_y=vectorMean(ydata);
-//Debugging: cout<<"So Good"<<endl;
       }
     }
 
+
+
+
+
 //Debugging:
-cout<<"output xyo is "<<int(pos_x)<<"/"<<int(pos_y)<<"/"<<pos_o<<endl;
+cout<<"output xyo is "<<pos_x<<"/"<<pos_y<<"/"<<pos_o<<endl;
 
     robot_pos.x=pos_x;
     robot_pos.y=pos_y;
@@ -360,7 +394,7 @@ cout<<"output xyo is "<<int(pos_x)<<"/"<<int(pos_y)<<"/"<<pos_o<<endl;
 void lidar_Callback(const sensor_msgs::LaserScan::ConstPtr& scan) //LiDAR scan으로부터 lidar 각도에 따른 거리 배정
 {
     map_mutex.lock();
-    int count = (scan->angle_max -scan->angle_min)/ scan->angle_increment;
+    int count = (scan->angle_max -scan->angle_min)/ scan->angle_increment+1;
     lidar_size=count;
     for(int i = 0; i < count; i++)
     {
@@ -370,59 +404,40 @@ void lidar_Callback(const sensor_msgs::LaserScan::ConstPtr& scan) //LiDAR scan�
     map_mutex.unlock();
 }
 
-// void line_Callback(const std_msgs::Int8::ConstPtr& entrance) //entrance.data는 1이면 entrance zone이라는 뜻이고, 0이면 harvesting zone이라는 의미.
-// // entrance zone에서는 init_odom을 0으로 하고, harvesting zone에 들어선 순간부터 init_odom 을 1로 한다.
-// {
-//   cout<<"line called back"<<endl;
-//   if(entrance != NULL){
-//     int ent = entrance -> data;
-//     if(ent == 1){
-//       init_odom = 0;
-//     }
-//     else if(init_odom == 0 && ent == 0){
-//       init_odom = 1;
-//     }
-//   }
-// }
-// init_odom=1;
 
 
-// void control_Callback(const geometry_msgs::Vector3::ConstPtr& control) //Reflecting control input into the expeted current robot position, instead of the old position
-// {
-//   robot_pos.x=robot_pos.x+control_x;
-//   robot_pos.y=robot_pos.y+control_y;
+int zone_info;
+void entrance_Callback(const std_msgs::Int8::ConstPtr& zone) //LiDAR scan으로부터 lidar 각도에 따른 거리 배정
+{
+  zone_info=zone->data;
 
-//   if (robot_pos.o<1 && robot_pos.o+control_o<0){
-//     robot_pos.o=2*M_PI+(robot_pos.o+control_o);
-//   }else if (robot_pos.o>2*M_PI-1 && robot_pos.o+control_o>2*M_PI){
-//     robot_pos.o=robot_pos.o+control_o - 2*M_PI;
-//   }else{
-//     robot_pos.o=robot_pos.o+control_o;
-//   }
-  
-// }
+      //   robot_pos.x=robot_pos.x+control_x;
+  //   robot_pos.y=robot_pos.y+control_y;
 
+  //   if (robot_pos.o<1 && robot_pos.o+control_o<0){
+  //     robot_pos.o=2*M_PI+(robot_pos.o+control_o);
+  //   }else if (robot_pos.o>2*M_PI-1 && robot_pos.o+control_o>2*M_PI){
+  //     robot_pos.o=robot_pos.o+control_o - 2*M_PI;
+  //   }else{
+  //     robot_pos.o=robot_pos.o+control_o;
+  //   }
 
-
-
+}
 
 
 
 
 int main(int argc, char **argv)
 {
-    ros::init(argc, argv, "lidar_odometry_node");
+    ros::init(argc, argv, "localization_node");
     ros::NodeHandle nh; //NodeHandle 클래스의 nh 객체 선언
     ros::Subscriber sub = nh.subscribe<sensor_msgs::LaserScan>("/scan", 1000, lidar_Callback); //LiDAR 데이터 받아오기
-    //ros::Subscriber sub1 = nh.subscribe<std_msgs::Int8>("/entrance", 1, line_Callback); //Entrance zone 들어갔는지 여부 받아오기
+    ros::Subscriber sub1 = nh.subscribe<std_msgs::Int8>("/zone", 1, entrance_Callback); //Entrance zone 들어갔는지 여부 받아오기
     //ros::Subscriber sub2 = nh.subscribe<geometry_msgs::Vector3>("/control", 1000, control_callback); //getting control input
 
     ros::Publisher pub = nh.advertise<geometry_msgs::Vector3>("/robot_pos", 1); //odometry, 즉 robot의 위치를 Vector3로 발행한다.
     ros::Publisher pub1 = nh.advertise<std_msgs::Int8MultiArray>("/obs_pos", 1);
 
-    robot_pos.x=pos_x;
-    robot_pos.y=pos_y;
-    robot_pos.z=pos_o;
 
 // Debugging:
 // cv::Mat zone = cv::Mat::zeros(600, 600, CV_8UC3);
@@ -457,7 +472,7 @@ int main(int argc, char **argv)
         for(int i = 1; i < lidar_size; i++)
         {
 
-          if(lidar_distance[i] <10){ //smaller than the maximum liDAR range(distance)
+          if(lidar_distance[i] >0){ //smaller than the maximum liDAR range(distance)
               wall_distance.push_back(lidar_distance[i]);
               wall_degree.push_back(lidar_degree[i]);
               view_angle++;
@@ -472,7 +487,7 @@ int main(int argc, char **argv)
             obstacle_width=avg_distance*(M_PI/180)*view_angle;
 //Debugging:cout<<obstacle_width<<"/"<<view_angle<<endl;
 
-            if(obstacle_width < 0.15 && view_angle>0 && abs(lidar_distance[i-1]-avg_distance)<0.2 ){//threshold should be larger than the maximum width of the obstacle
+            if(0.07<obstacle_width && obstacle_width < 0.15 && view_angle>0 && abs(lidar_distance[i-1]-avg_distance)<0.2 ){//threshold should be larger than the maximum width of the obstacle
               //this means that formerly detected object has small width, which means it is likely to be an obstacle
 
               obs_distance.push_back(lidar_distance[i-1-view_angle/2]+0.15/2);
@@ -519,47 +534,60 @@ int main(int argc, char **argv)
         cv::Mat edges;
         Canny(gray,edges,20,200);//gray로부터 경곗값 50, 150을 기준으로 이미지의 경계선만을 검출하여 edge라는 행렬로 출력.
         vector<Vec4i> lines; //lines는 밑의 Hough 변환 결과를 받아올 array. 선분의 시작점 좌표 x,y와 끝점좌표 x,y를 받아옴.
-        HoughLinesP(edges, lines, 0.5, CV_PI/180, 30, 20, 50);
+        HoughLinesP(edges, lines, 0.5, CV_PI/180, 20, 20, 90);
         //주어진 이미지 gray로부터 직선 검출. 1 과 CV_PI/180는 모델링할 직선 방정식 r=xcos(th)+ysin(th)의 파라미터 r과 th의 해상도 개념.
         //30은 선으로 치려면 최소 몇 개 데이터 이상이어야 하는지, 15는 선으로 검출하기 위한 최소 길이, 5는 다른 선으로 간주되지 않기 위한 점 데이터 사이 최대 허용 길이이다.
 
 
-        rectangular_map(lines, 20, 0.2); //angle_threshold는 최대 0.7보다는 작아야 한다.
 
-        
+    Vec4i l;
+         for(int i = 0; i < lines.size(); i++)
+    {
+      l = lines[i];
+      line(map, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(255,0,0), 1);
+    }
+
+
+
+
+//테스트 용으로 사용시 아래 단락을 주석처리하고 robot_pos의 초기값을 main함수 밖에서 설정
+        if (zone_info==1){
+          robot_pos.x=-30;
+          robot_pos.y=50;
+          robot_pos.z=2*M_PI-0.2;
+        }else if (zone_info==2 && initialization<20){
+          rectangular_map(lines, 25, 0.3);
+          initialization++;
+        }else{
+          rectangular_map(lines, 20, 0.2); //angle_threshold는 최대 0.7보다는 작아야 한다.
+        }
+//
+
+
+        //Getting obstacle location 
         obs_pos.data.clear();
         int obs_abs_pos[2];
         for (int i=0; i<obs_distance.size(); i++){
           int obs_rel_x = (int)(obs_distance[i]*sin(obs_degree[i])/MAP_RESOL);
           int obs_rel_y = (int)(obs_distance[i]*cos(obs_degree[i])/MAP_RESOL);
-//Debugging:
-circle(map, Point(MAP_WIDTH/2+obs_rel_x, MAP_HEIGHT/2+obs_rel_y), 3, cv::Scalar(255,255,0), -1);
+//Debugging: circle(map, Point(MAP_WIDTH/2+obs_rel_x, MAP_HEIGHT/2+obs_rel_y), 3, cv::Scalar(255,255,0), -1);
           obs_abs_pos[0]=(int)(robot_pos.x+cos(pos_o)*obs_rel_x-cos(pos_o+M_PI/2)*obs_rel_y);
           obs_abs_pos[1]=(int)(robot_pos.y+sin(pos_o)*obs_rel_x-sin(pos_o+M_PI/2)*obs_rel_y);
-          cout<<obs_abs_pos[0]<<"/"<<obs_abs_pos[1]<<endl;
+//cout<<obs_abs_pos[0]<<"/"<<obs_abs_pos[1]<<endl;
           obs_pos.data.push_back(obs_abs_pos[0]);
           obs_pos.data.push_back(obs_abs_pos[1]);
         }
     
 //Debugging:
-for(int i=0; i<obs_pos.data.size()/2; i++ ){
-  //cout<<obs_pos.data[2*i]<<"/"<<obs_pos.data[2*i+1]<<endl;
-}
+// for(int i=0; i<obs_pos.data.size()/2; i++ ){
+//   //cout<<obs_pos.data[2*i]<<"/"<<obs_pos.data[2*i+1]<<endl;
+// }
 
 // Debugging: circle(map,Point(MAP_WIDTH/2,MAP_HEIGHT/2),10, cv::Scalar(0,0,255), -1);   
 // circle(zone, Point(50+int(robot_pos.x), 350-int(robot_pos.y)), 3, cv::Scalar(255,0,0), -1);
 // cv::imshow("Harvesting zone map",zone);
-cv::imshow("Harvesting zone map",map);
-cv::waitKey(50);
-
-
-        // if(init_odom == 0){
-        //   pos_x = 0.0;
-        //   pos_y = 0.0;
-        //   pos_o = 0.0;
-        // } 각도가 제일 문제. 1. 허용오차 작게 하고 예상포인트 세트를 다 돌려봐서 그 중 맞는걸로, 2. 처음 시행시에는 허용오차 크게, 3. 들어오기 꽤 전부터 먼저 돌리면서 허용오차는 빡세게 하면서 기다리기
-        //이 노드는 아무리 빨라도 |x좌표|+초기 허용오차 <50일 때만 쓸수있다. 
-
+// cv::imshow("Harvesting zone map",map);
+// cv::waitKey(50);
 
       	pub.publish(robot_pos);
         pub1.publish(obs_pos);
