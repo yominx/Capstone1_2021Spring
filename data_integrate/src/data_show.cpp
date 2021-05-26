@@ -33,8 +33,6 @@ using namespace cv;
 int MAP_WIDTH = 600;
 int MAP_HEIGHT = 400;
 int MAP_CENTER = 50;
-int ZONE_SIZE = 5;           // Obstacle Size
-int OBSTACLE_CONNECT_MAX = 15;      // Range to connect obstacles
 
 int nBalls=0;
 float ballDist[20];
