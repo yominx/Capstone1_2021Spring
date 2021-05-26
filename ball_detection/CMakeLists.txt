@@ -46,10 +46,3 @@ add_dependencies(ball_detect_node core_msgs_generate_messages_cpp)
 target_link_libraries(ball_detect_node
   ${catkin_LIBRARIES} ${OpenCV_LIBS} ${cv_bridge_LIBRARIES}
 )
-
-add_executable(ball_detect_node2 src/ball_detect_ver2.cpp)
-add_dependencies(ball_detect_node2 core_msgs_generate_messages_cpp)
-
-target_link_libraries(ball_detect_node2
-  ${catkin_LIBRARIES} ${OpenCV_LIBS} ${cv_bridge_LIBRARIES}
-)
