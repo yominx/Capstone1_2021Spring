@@ -154,6 +154,7 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 		targetVel->linear.x  = 4;
 		targetVel->angular.z = 0;
 	}
+	}
 	
 	map_mutex.unlock();
 
