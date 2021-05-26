@@ -17,8 +17,10 @@
 #include "std_msgs/MultiArrayLayout.h"
 #include "std_msgs/MultiArrayDimension.h"
 #include "std_msgs/Int8MultiArray.h"
+#include "std_msgs/Float32MultiArray.h"
 #include "sensor_msgs/LaserScan.h"
 #include "geometry_msgs/Vector3.h"
+#include "geometry_msgs/Twist.h"
 
 #include "opencv2/opencv.hpp"
 
@@ -51,10 +53,9 @@ float control_o;
 
 
 int lidar_size;//lidar callback에서 사용되는 lidar point 개수
-float lidar_degree[400]; //넉넉하게 400ㅇ로 한듯?
+float lidar_degree[400]; 
 float lidar_distance[400];
 
-int init_odom = 1; // Entrance node도 켰으면, 0으로 초기화!!
 
 
 boost::mutex map_mutex;
@@ -192,7 +193,7 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
                 oridata.push_back(M_PI/2-slope);
                 xdata.push_back(perp);
               }
-              if( pos_x<20){
+              if( pos_x<50){
                 if ( (abs(slope-(M_PI/2-pos_o))<angle_threshold )&&( abs(perp-(100+pos_x))<length_threshold )){
                   oridata.push_back(M_PI/2-slope);
                   xdata.push_back(-100+perp);
@@ -221,7 +222,7 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
                 xdata.push_back(perp);
               }
 
-              if( pos_x<20){
+              if( pos_x<50){
                 if ( (abs(slope- (pos_o-M_PI/2))<angle_threshold )&&( abs(perp-(100+pos_x))<length_threshold )){
                   oridata.push_back(slope+M_PI/2);
                   xdata.push_back(-100+perp);
@@ -276,7 +277,7 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
                 xdata.push_back(perp);
               }
 
-              if( pos_x<20){
+              if( pos_x<50){
                 if ( (abs(slope- (1.5*M_PI-pos_o))<angle_threshold )&&( abs(perp-(100+pos_x))<length_threshold )){
                   oridata.push_back(1.5*M_PI-slope);
                   xdata.push_back(-100+perp);
@@ -307,7 +308,7 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
                 xdata.push_back(perp);
               }
 
-              if( pos_x<20){  
+              if( pos_x<50){  
                 if ( (abs(slope-(pos_o-1.5*M_PI))<angle_threshold )&&( abs(perp-(100+pos_x))<length_threshold )){
                   oridata.push_back(slope+1.5*M_PI);
                   xdata.push_back(-100+perp);
@@ -340,8 +341,11 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
           pos_o=M_PI+(M_PI-pos_o);
         } else if(abs(pos_o-1.5*M_PI)<0.1){
           pos_o=1.5*M_PI+(1.5*M_PI-pos_o);
-        } else if(abs(pos_o)<0.1){
+        } else if(0<pos_o && pos_o<0.1){
           pos_o=2*M_PI-pos_o;
+          button=0;
+        }else if(0>pos_o){
+          pos_o=2*M_PI+pos_o;
           button=0;
         } else if( 0<2*M_PI-pos_o && 2*M_PI-pos_o<0.1 && button){
           pos_o=(2*M_PI-pos_o);
@@ -349,13 +353,13 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
           pos_o=pos_o-2*M_PI;
         }
 
-        if(xdata.size()<2 && ydata.size()>lines.size()/5){
+        if(xdata.size()<2 && ydata.size()>2){
           pos_x=pos_x;
           pos_y=vectorMean(ydata);
-        }else if(ydata.size()<lines.size()/5 && xdata.size()>1 ){
+        }else if(ydata.size()<3 && xdata.size()>1 ){
           pos_y=pos_y;
           pos_x=vectorMean(xdata);
-        }else if(ydata.size()<lines.size()/5 && xdata.size()<2){
+        }else if(ydata.size()<3 && xdata.size()<2){
           pos_x=pos_x;
           pos_y=pos_y;
         }
@@ -365,7 +369,7 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
           pos_x=pos_x;
           pos_y=vectorMean(ydata);
           pos_o=vectorMean(oridata);
-      }else if(ydata.size()<lines.size()/5){
+      }else if(ydata.size()<3){
           pos_y=pos_y;
           pos_x=vectorMean(xdata);
           pos_o=vectorMean(oridata);
@@ -407,21 +411,25 @@ void lidar_Callback(const sensor_msgs::LaserScan::ConstPtr& scan) //LiDAR scan�
 
 
 int zone_info;
-void entrance_Callback(const std_msgs::Int8::ConstPtr& zone) //LiDAR scan으로부터 lidar 각도에 따른 거리 배정
+void entrance_Callback(const std_msgs::Int8::ConstPtr& zone)
 {
   zone_info=zone->data;
 
-      //   robot_pos.x=robot_pos.x+control_x;
-  //   robot_pos.y=robot_pos.y+control_y;
+}
 
-  //   if (robot_pos.o<1 && robot_pos.o+control_o<0){
-  //     robot_pos.o=2*M_PI+(robot_pos.o+control_o);
-  //   }else if (robot_pos.o>2*M_PI-1 && robot_pos.o+control_o>2*M_PI){
-  //     robot_pos.o=robot_pos.o+control_o - 2*M_PI;
-  //   }else{
-  //     robot_pos.o=robot_pos.o+control_o;
-  //   }
+float linear_vel;
+float angular_vel;
+float Ts;
 
+void control_input_Callback(const geometry_msgs::Twist::ConstPtr& targetVel){
+  linear_vel = targetVel->linear.x;
+  angular_vel = targetVel->angular.z;
+  
+  Ts=0.001;
+
+  robot_pos.x=robot_pos.x+linear_vel*cos(robot_pos.z)*Ts;
+  robot_pos.y=robot_pos.x+linear_vel*sin(robot_pos.z)*Ts;
+  robot_pos.z=robot_pos.z+angular_vel*Ts;
 }
 
 
@@ -433,10 +441,10 @@ int main(int argc, char **argv)
     ros::NodeHandle nh; //NodeHandle 클래스의 nh 객체 선언
     ros::Subscriber sub = nh.subscribe<sensor_msgs::LaserScan>("/scan", 1000, lidar_Callback); //LiDAR 데이터 받아오기
     ros::Subscriber sub1 = nh.subscribe<std_msgs::Int8>("/zone", 1, entrance_Callback); //Entrance zone 들어갔는지 여부 받아오기
-    //ros::Subscriber sub2 = nh.subscribe<geometry_msgs::Vector3>("/control", 1000, control_callback); //getting control input
+    ros::Subscriber commandVel = nh.subscribe<geometry_msgs::Twist>("/command_vel", 10, control_input_Callback);
 
     ros::Publisher pub = nh.advertise<geometry_msgs::Vector3>("/robot_pos", 1); //odometry, 즉 robot의 위치를 Vector3로 발행한다.
-    ros::Publisher pub1 = nh.advertise<std_msgs::Int8MultiArray>("/obs_pos", 1);
+    ros::Publisher pub1 = nh.advertise<std_msgs::Float32MultiArray>("/obs_pos", 1);
 
 
 // Debugging:
@@ -491,7 +499,14 @@ int main(int argc, char **argv)
               //this means that formerly detected object has small width, which means it is likely to be an obstacle
 
               obs_distance.push_back(lidar_distance[i-1-view_angle/2]+0.15/2);
-              obs_degree.push_back(lidar_degree[i-1-view_angle/2]);
+              if (lidar_degree[i-1-view_angle/2]>=M_PI/2 && lidar_degree[i-1-view_angle/2]<=1.5*M_PI){
+                obs_degree.push_back(lidar_degree[i-1-view_angle/2]-M_PI/2);
+              } else if(lidar_degree[i-1-view_angle/2]<=M_PI/2){
+                obs_degree.push_back(lidar_degree[i-1-view_angle/2]-M_PI/2);
+              } else if(lidar_degree[i-1-view_angle/2]>=1.5*M_PI && lidar_degree[i-1-view_angle/2]<=2*M_PI){
+                obs_degree.push_back(lidar_degree[i-1-view_angle/2]-2.5*M_PI);
+              }
+
 
               for(int j=0; j<view_angle+2; j++){
                 wall_distance.pop_back();
@@ -566,18 +581,11 @@ int main(int argc, char **argv)
 
         //Getting obstacle location 
         obs_pos.data.clear();
-        int obs_abs_pos[2];
         for (int i=0; i<obs_distance.size(); i++){
-          int obs_rel_x = (int)(obs_distance[i]*sin(obs_degree[i])/MAP_RESOL);
-          int obs_rel_y = (int)(obs_distance[i]*cos(obs_degree[i])/MAP_RESOL);
-//Debugging: circle(map, Point(MAP_WIDTH/2+obs_rel_x, MAP_HEIGHT/2+obs_rel_y), 3, cv::Scalar(255,255,0), -1);
-          obs_abs_pos[0]=(int)(robot_pos.x+cos(pos_o)*obs_rel_x-cos(pos_o+M_PI/2)*obs_rel_y);
-          obs_abs_pos[1]=(int)(robot_pos.y+sin(pos_o)*obs_rel_x-sin(pos_o+M_PI/2)*obs_rel_y);
-//cout<<obs_abs_pos[0]<<"/"<<obs_abs_pos[1]<<endl;
-          obs_pos.data.push_back(obs_abs_pos[0]);
-          obs_pos.data.push_back(obs_abs_pos[1]);
+          obs_pos.data.push_back(obs_distance[i]);
+          obs_pos.data.push_back(obs_degree[i]);
         }
-    
+
 //Debugging:
 // for(int i=0; i<obs_pos.data.size()/2; i++ ){
 //   //cout<<obs_pos.data[2*i]<<"/"<<obs_pos.data[2*i+1]<<endl;
