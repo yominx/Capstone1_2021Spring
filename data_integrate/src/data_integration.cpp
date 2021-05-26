@@ -307,8 +307,8 @@ int main(int argc, char **argv)
 			csg_count=1;
 			if(abs(pos_x-target_x)<5 && abs(pos_y-target_y)<5){
 				delivery=1;
-				linear.z=0;
-				angular.z=0;
+				targetVel->linear.z=0;
+				targetVel->angular.z=0;
 			}
 		}else if(waytype==3){
 			if(abs(pos_x-500)<20 && abs(pos_y-150)<20){
@@ -322,12 +322,12 @@ int main(int argc, char **argv)
 				}
 
 				if(abs(pos_o-target_o)>0.01){
-					angular.z=1;
+					targetVel->angular.z=1;
 				}else{
-					angular.z=0;
+					targetVel->angular.z=0;
 					delivery=2;
 				}
-				linear.x=0;
+				targetVel->linear.x=0;
 			}
 		}
 			
