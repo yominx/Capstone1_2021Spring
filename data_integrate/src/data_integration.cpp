@@ -50,6 +50,9 @@ int len;
 int n;
 int left_points,right_points;
 
+int left_back_pts, right_back_pts;
+int out_of_range_pts;
+
 /* robot position variables */
 float pos_x;
 float pos_y;
@@ -126,7 +129,10 @@ void control_entrance(geometry_msgs::Twist *targetVel)
         } else if (MIN_DIST_THRESHOLD < lidar_distance[i] && lidar_distance[i] < RADIUS
         			&& 90 < lidar_degree[i] && lidar_degree[i] < 180){
 			left_points++;
-        } else if (MIN_DIST_THRESHOLD < lidar_distance[i] && lidar_distance[i]< RADIUS
+        } else if (-1< lidar_distance[i] && lidar_distance[i]< RADIUS
+        	&& -180 < lidar_degree[i] && lidar_degree[i] < -90){
+			left_back_pts++;
+		} else if (MIN_DIST_THRESHOLD < lidar_distance[i] && lidar_distance[i]< RADIUS
         	&& -90 < lidar_degree[i] && lidar_degree[i] < 0){
 			right_back_pts++;
 		} else if (3< lidar_distance[i]
@@ -147,6 +153,7 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 	} else { // Just move forward
 		targetVel->linear.x  = 4;
 		targetVel->angular.z = 0;
+	}
 	}
 	
 	map_mutex.unlock();
