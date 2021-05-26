@@ -15,7 +15,7 @@
 #include "core_msgs/goal_position.h"
 #include "geometry_msgs/Vector3.h"
 #include "core_msgs/multiarray.h"
-#include "std_msgs/Int8MultiArray.h"
+#include "std_msgs/Float32MultiArray.h"
 
 #include "opencv2/opencv.hpp"
 #include <opencv2/highgui.hpp>
@@ -267,7 +267,7 @@ int main(int argc, char **argv)
     ros::Subscriber subOdo = n.subscribe<geometry_msgs::Vector3>("/robot_pos", 1000, odometry_Callback);
     ros::Subscriber subBall = n.subscribe<core_msgs::goal_position>("/goal_position", 1000, goalPos_Callback);
     ros::Subscriber subGoal = n.subscribe<core_msgs::ball_position>("/ball_position", 1000, ballPos_Callback);
-    ros::Subscriber subPillar = n.subscribe<std_msgs::Int8MultiArray>("/obs_pos", 1000, pillarPos_Callback);
+    ros::Subscriber subPillar = n.subscribe<std_msgs::Float32MultiArray>("/obs_pos", 1000, pillarPos_Callback);
     ros::Rate loop_rate(10);
     line(MAP, Point(50, 50), Point(550, 50), Scalar(255,255,255), 1);
     line(MAP, Point(50, 50), Point(50, 250), Scalar(255,255,255), 1);

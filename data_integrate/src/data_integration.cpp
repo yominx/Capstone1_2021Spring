@@ -121,7 +121,7 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 	float threshold = 8, MIN_DIST_THRESHOLD = 0.05, RADIUS = 0.8;
 
 	map_mutex.lock();
-	left_points=0; right_points=0;
+	left_points=0; right_points=0; left_back_pts=0; right_back_pts=0; out_of_range_pts=0;
 	for (int i = 0; i < lidar_size; i++) {
         if (MIN_DIST_THRESHOLD < lidar_distance[i] && lidar_distance[i]< RADIUS
         	&& 0 < lidar_degree[i] && lidar_degree[i] < 90){
@@ -142,7 +142,7 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 
 	cout << "LEFT " << left_points << " RIGHT " << right_points << endl; 
 	cout <<" LB "<<left_back_pts<<" RB "<<right_back_pts<<endl;
-	cout <<" out of range "<<out_of_range_pts<<endl;
+	cout <<" OOR "<<out_of_range_pts<<endl;
 	int diff = left_points - right_points;
 	if (diff < -threshold) { // control to leftside
 		targetVel->linear.x  = 4;
@@ -212,11 +212,11 @@ int main(int argc, char **argv)
     ros::NodeHandle n;
 
     ros::Subscriber sub = n.subscribe<sensor_msgs::LaserScan>("/scan", 1000, lidar_Callback);
-    ros::Subscriber sub1 = n.subscribe<core_msgs::ball_position>("/position", 1000, camera_Callback);
-    /* // for ballharvesting motor control
+    // ros::Subscriber sub1 = n.subscribe<core_msgs::ball_position>("/position", 1000, camera_Callback);
+    // for ballharvesting motor control
 	ros::Subscriber sub_pos = n.subscribe<geometry_msgs::Vector3>("/robot_pos", 1000, position_Callback);
-	ros::Subscriber sub_target = n.subscribe<geometry_msgs::Vector3>("/target_pos", 1000, target_Callback);
-	*/
+	ros::Subscriber sub_target = n.subscribe<geometry_msgs::Vector3>("/waypoint", 1000, target_Callback);
+	
 	ros::Publisher commandVel = n.advertise<geometry_msgs::Twist>("/command_vel", 10);
 	ros::Publisher zone = n.advertise<std_msgs::Int8>("/zone", 10);
 	ros::Publisher ball_delivery = n.advertise<std_msgs::Int8>("/ball_delivery", 10);//pickup & dumping
