@@ -204,6 +204,7 @@ int select_control_method(){
 int delivery=0;
 int delivery_count=0;
 int mode_input;
+int ball_count=0;
 //ball pickup&dumping part ended
 
 int main(int argc, char **argv)
@@ -219,6 +220,7 @@ int main(int argc, char **argv)
 	
 	ros::Publisher commandVel = n.advertise<geometry_msgs::Twist>("/command_vel", 10);
 	ros::Publisher zone = n.advertise<std_msgs::Int8>("/zone", 10);
+	ros::Publisher ball_number = n.advertise<std_msgs::Int8>("/ball_number", 10);
 	ros::Publisher ball_delivery = n.advertise<std_msgs::Int8>("/ball_delivery", 10);//pickup & dumping
 
 	// ros::Publisher pub_left_wheel= n.advertise<std_msgs::Float64>("/turtlebot3_waffle_sim/left_wheel_velocity_controller/command", 10);
@@ -307,6 +309,7 @@ int main(int argc, char **argv)
 		if(delivery_count>th1 && delivery==1){
 			delivery=0;
 			delivery_count=0;
+			ball_count++;
 		}else if(delivery_count>th2 && delivery==2){
 			delivery=0;
 			delivery_count=0;
@@ -316,7 +319,10 @@ int main(int argc, char **argv)
 		delivery_mode.data=delivery;
 		ball_delivery.publish(delivery_mode);
 		//Ball pickup/dumping part ended
-
+	    
+		std_msgs::Int8 ball_count_no;
+		ball_count_no.data=ball_count;
+		ball_number.publish(ball_count_no);
 		    
 		ros::Duration(0.025).sleep();
 		ros::spinOnce();
