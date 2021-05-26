@@ -59,6 +59,7 @@ float pos_y;
 float pos_o;
 float target_x;
 float target_y;
+int waytype;
 float diff_o;
 float dist;
 
@@ -205,6 +206,7 @@ int delivery=0;
 int delivery_count=0;
 int mode_input;
 int ball_count=0;
+int csg_count;
 //ball pickup&dumping part ended
 
 int main(int argc, char **argv)
@@ -298,17 +300,49 @@ int main(int argc, char **argv)
 		// }
 	    
 		//Ball pickup/dumping part started
-		delivery=1;
+		delivery=0;
+		
+		if(waytype==1 || csg_count>0){
+			csg_count=1;
+			if(abs(pos_x-target_x)<5 && abs(pos_y-target_y)<5){
+				delivery=1;
+				linear.z=0;
+				angular.z=0;
+			}
+		}else if(waytype==3){
+			if(abs(pos_x-500)<20 && abs(pos_y-150)<20){
+				target_o=atan((150-pos_y)/(500-pos_x));
+				
+				if(target_o>0){
+					target_o=target_o+M_PI;
+				}else if(target_o<0){
+					target_o=2*pi+target_o;
+					target_o=target_o-M_PI;
+				}
+
+				if(abs(pos_o-target_o)>0.01){
+					angular.z=1;
+				}else{
+					angular.z=0;
+					delivery=2;
+				}
+				linear.x=0;
+			}
+		}
 			
+	    
+	    
+	    
 		if(delivery!=0){
 			delivery_count++;
 		}
 
 		int th1=1000;
-		int th2=1000;
+		int th2=2000;
 		if(delivery_count>th1 && delivery==1){
 			delivery=0;
 			delivery_count=0;
+			csg_count=0;
 			ball_count++;
 		}else if(delivery_count>th2 && delivery==2){
 			delivery=0;
