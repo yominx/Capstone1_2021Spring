@@ -57,6 +57,7 @@ float pos_o;
 float target_x;
 float target_y;
 float diff_o;
+float dist;
 
 #define ENTRANCE 1
 #define BALLHARVESTING 2
@@ -104,6 +105,9 @@ void target_Callback(const geometry_msgs::Vector3::ConstPtr& target_pos) {
 	target_x = target_pos->x;
 	target_y = target_pos->y;
 	diff_o = atan2(target_y-pos_y, target_x-pos_x) - pos_o; // while -pos_o, |diff_o| may become > pi
+	// atan2: -pi ~ pi, pos_o: 0 ~ 2pi => -3pi ~ pi
+	if (diff_o < -M_PI) diff_o = diff_o + 2*M_PI;
+	dist = sqrt(pow(target_y-pos_y, 2) + pow(target_x-pos_x, 2));
 }
 
 
@@ -150,11 +154,11 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 	if (fabs(diff_o) > ANGLE_THRESHOLD) {
 		/* in place rotation ->should be modified*/
 		targetVel->linear.x  = 0;
-		targetVel->angular.z = angle_sign*100;
+		targetVel->angular.z = angle_sign*2;
 	}
 	else {
 		/* move forward ->should be modified*/
-		targetVel->linear.x  = 100;
+		targetVel->linear.x  = 4;
 		targetVel->angular.z = 0;
 	}
 	return;
@@ -201,18 +205,46 @@ int main(int argc, char **argv)
 	// ros::Publisher pub_right_wheel= n.advertise<std_msgs::Float64>("/turtlebot3_waffle_sim/right_wheel_velocity_controller/command", 10);
 
 	int control_method = ENTRANCE;
+	double t;
+	double time_const_linear = 1; // to be midified with experiments
+	double time_const_angular = 1; // to be midified with experiments
 
     while(ros::ok){
     	geometry_msgs::Twist targetVel;
 
     	if (control_method == ENTRANCE) {
     		control_entrance(&targetVel);
-    	} else if (control_method == BALLHARVESTING) {
+    		commandVel.publish(targetVel);
+    	}
+    	else if (control_method == BALLHARVESTING) {
     		control_ballharvesting(&targetVel);
-    	} else {
+    		
+    		if (targetVel->linear.x == 0) {
+				t = (diff_o / targetVel->angular.z) * time_const_angular;
+				ros::Time beginTime = ros::Time::now();
+				ros::Duration delta_t = ros::Duration(t);
+				ros::Time endTime = beginTime + delta_t;
+				while(ros::Time::now() < endTime)
+				{
+					commandVel.publish(targetVel);
+					ros::Duration(0.001).sleep();
+				}
+			}
+			else {
+				t = (dist / targetVel->linear.z) * time_const_linear;
+				ros::Time beginTime = ros::Time::now();
+				ros::Duration delta_t = ros::Duration(t);
+				ros::Time endTime = beginTime + delta_t;
+				while(ros::Time::now() < endTime)
+				{
+					commandVel.publish(targetVel);
+					ros::Duration(0.001).sleep();
+				}
+			}
+    	}
+    	else {
     		cout << "ERROR: NO CONTROL METHOD" << endl; // Unreachable statement
     	}
-		commandVel.publish(targetVel);
 
 
 		// std_msgs::Float64 left_wheel_msg;
@@ -229,31 +261,31 @@ int main(int argc, char **argv)
 		// 	cout << "ball_X : " << ball_X[i] << "  ball_Y : " << ball_Y[i] << endl;
 		// }
 	    
-	//Ball pickup/dumping part started
-	delivery=1;
-		
-	if(delivery!=0){
-		delivery_count++;
-	}
+		//Ball pickup/dumping part started
+		delivery=1;
+			
+		if(delivery!=0){
+			delivery_count++;
+		}
 
-	int th1=600;
-	int th2=600;
-	if(delivery_count>th1 && delivery==1){
-		delivery=0;
-		delivery_count=0;
-	}else if(delivery_count>th2 && delivery==2){
-		delivery=0;
-		delivery_count=0;
-	}
+		int th1=600;
+		int th2=600;
+		if(delivery_count>th1 && delivery==1){
+			delivery=0;
+			delivery_count=0;
+		}else if(delivery_count>th2 && delivery==2){
+			delivery=0;
+			delivery_count=0;
+		}
 
-	std_msgs::Int8 delivery_mode;
-	delivery_mode.data=delivery;
-	ball_delivery.publish(delivery_mode);
-	//Ball pickup/dumping part ended
+		std_msgs::Int8 delivery_mode;
+		delivery_mode.data=delivery;
+		ball_delivery.publish(delivery_mode);
+		//Ball pickup/dumping part ended
 
-	    
-	    ros::Duration(0.025).sleep();
-	    ros::spinOnce();
+		    
+		ros::Duration(0.025).sleep();
+		ros::spinOnce();
     }
 
     return 0;
