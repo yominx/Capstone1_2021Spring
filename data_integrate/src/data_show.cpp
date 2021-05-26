@@ -33,8 +33,6 @@ using namespace cv;
 int MAP_WIDTH = 600;
 int MAP_HEIGHT = 400;
 int MAP_CENTER = 50;
-int ZONE_SIZE = 5;           // Obstacle Size
-int OBSTACLE_CONNECT_MAX = 15;      // Range to connect obstacles
 
 int nBalls=0;
 float ballDist[20];
@@ -245,7 +243,7 @@ void goalPos_Callback(const core_msgs::goal_position::ConstPtr& pos)
 }
 
 void odometry_Callback(const geometry_msgs::Vector3 odometry){
-    cout << "here " << endl;
+    //cout << "(X,Y,O)= (" << X << ", " << Y << ", " << O << ")"  << endl;
     X = odometry.x;
     Y = odometry.y;
     O = odometry.z;
@@ -266,23 +264,23 @@ int main(int argc, char **argv)
     ros::NodeHandle n;
 
     ros::Publisher pub = n.advertise<core_msgs::multiarray>("/position", 1000); //odometry, 즉 robot의 위치를 Vector3로 발행한다.
-    ros::Subscriber subOdo = n.subscribe<geometry_msgs::Vector3>("/odometry", 1000, odometry_Callback);
+    ros::Subscriber subOdo = n.subscribe<geometry_msgs::Vector3>("/robot_pos", 1000, odometry_Callback);
     ros::Subscriber subBall = n.subscribe<core_msgs::goal_position>("/goal_position", 1000, goalPos_Callback);
     ros::Subscriber subGoal = n.subscribe<core_msgs::ball_position>("/ball_position", 1000, ballPos_Callback);
-    //ros::Subscriber subPillar = n.subscribe<std_msgs::Int8MultiArray>("/obs_pos", 1000, pillarPos_Callback);
+    ros::Subscriber subPillar = n.subscribe<std_msgs::Int8MultiArray>("/obs_pos", 1000, pillarPos_Callback);
     ros::Rate loop_rate(10);
     line(MAP, Point(50, 50), Point(550, 50), Scalar(255,255,255), 1);
     line(MAP, Point(50, 50), Point(50, 250), Scalar(255,255,255), 1);
     line(MAP, Point(550, 50), Point(550, 350), Scalar(255,255,255), 1);
     line(MAP, Point(50, 350), Point(550, 350), Scalar(255,255,255), 1);
-    X=60.;
-    Y=150.;
-    O=0.;
+    // X=60.;
+    // Y=150.;
+    // O=0.;
 
     while(ros::ok){
       core_msgs::multiarray msg;
       filtering(ballZones, nBalls, ballDist, ballAngle, BALL, msg);
-      //filtering(pillarZones, nPilla, pillarDist, pillarAngle, PILLAR, msg);
+      filtering(pillarZones, nPillars, pillarDist, pillarAngle, PILLAR, msg);
       filtering(goalZones, nGoals, goalDist, goalAngle, GOAL, msg);
       circle(MAP, Point(50+int(round(X)), 350-int(round(Y))), 5, cv::Scalar(255,0,0), -1);
       msg.data.push_back(VEHICLE);
