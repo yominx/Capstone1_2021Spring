@@ -25,6 +25,7 @@
 #include "core_msgs/goal_position.h"
 #include "core_msgs/multiarray.h"
 #include "geometry_msgs/Vector3.h"
+#include "std_msgs/Int8.h"
 
 
 #define RAD2DEG(x) ((x)*180./M_PI)
@@ -35,6 +36,7 @@
 #define ROBOT_SIZE 30 
 #define PILLAR_RADIUS 10
 #define	MARGIN 10
+#define	THRESHOLD 10
 
 #define ROBOT 	0
 #define BALL 	1
@@ -53,12 +55,12 @@ ros::Publisher waypoints_publisher;
 Mat missionmap;
 
 int robotX, 	robotY,
-	ballX[10],  ballY[10], ball_exist[10],
-	pillarX[5], pillarY[5],pillar_exist[5],
+	ballX[10],  ballY[10], ballCount,
+	pillarX[5], pillarY[5],pillarCount,
 	goalX,		goalY;
 
 int REMAINING_BALLS = 5;
-
+bool END = false;
 
 
 class NodeMap{
@@ -98,62 +100,31 @@ void publish_wayp(int x, int y, int z){
 	waypoints_publisher.publish(waypoint);
 }
 
-bool rotatable(int X, int Y){
-	for(int i=0;i<10;i++){
-		int diffX = ballX[i]-X, diffY = ballY[i]-Y;
-		if(ball_exist[i] && diffX*diffX + diffY*diffY <= ROBOT_SIZE*ROBOT_SIZE)
-			return false;
-	}
-	for(int i=0;i<5;i++){
-		int diffX = pillarX[i]-X, diffY = pillarY[i]-Y;
-		if(pillar_exist[i] && diffX*diffX + diffY*diffY <= ROBOT_SIZE*ROBOT_SIZE)
-			return false;
-	}
-	// TODO: check for the walls, too.
-	return true;
-}
-
-
-bool visible_robot(int ball_number){
-	if(!ball_exist[ball_number]) return false;
-	int x1 = ballX[ball_number], y1 = ballY[ball_number];
-	int diffX = x1 - robotX, diffY = y1 - robotY;
-	float a, b, num, den;
-	
-	if (diffX == 0){ // x+c=0
-		for(int i=0;i<5;i++){
-			if (pillar_exist[i] && abs(pillarX[i]-robotX) < (PILLAR_RADIUS + ROBOT_SIZE + MARGIN)) return false;
-			if (ball_exist[i]   && abs(ballX[i]-robotX)   < (ROBOT_SIZE + MARGIN)) return false;
-		}
-		return true;
-	} else { 
-		// y=ax+b
-		a = diffY/diffX; // slope
-		b = y1-a*x1;
-		den = sqrt(a*a+1);
-		for(int i=0;i<5;i++){
-			num = a*pillarX[i] + b - pillarY[i];
-			if (pillar_exist[i] && num/den < (PILLAR_RADIUS + ROBOT_SIZE + MARGIN)) return false; // num/den == distance
-		}
-		for(int i=0;i<10;i++){
-			if (i==ball_number) continue;
-
-			num = a*pillarX[i] + b - pillarY[i];
-			if (pillar_exist[i] && num/den < (ROBOT_SIZE + MARGIN)) return false; // num/den == distance
-		}
-
-		return true; 
-	}
-}
+// bool rotatable(int X, int Y){
+// 	for(int i=0;i<10;i++){
+// 		int diffX = ballX[i]-X, diffY = ballY[i]-Y;
+// 		if(ball_exist[i] && diffX*diffX + diffY*diffY <= ROBOT_SIZE*ROBOT_SIZE)
+// 			return false;
+// 	}
+// 	for(int i=0;i<5;i++){
+// 		int diffX = pillarX[i]-X, diffY = pillarY[i]-Y;
+// 		if(pillar_exist[i] && diffX*diffX + diffY*diffY <= ROBOT_SIZE*ROBOT_SIZE)
+// 			return false;
+// 	}
+// 	// TODO: check for the walls, too.
+// 	return true;
+// }
 
 bool visible_arbitrary(int x1, int y1, int x2, int y2){
 	int diffX = x1 - x2, diffY = y1 - y2;
 	float a,b, num, den;
 	
 	if (diffX == 0){ // x+c=0
-		for(int i=0;i<5;i++){
-			if (pillar_exist[i] && abs(pillarX[i]-x1) < (PILLAR_RADIUS + ROBOT_SIZE + MARGIN)) return false;
-			if (ball_exist[i]   && abs(ballX[i]-x1)   < (ROBOT_SIZE + MARGIN)) return false;
+		for(int i=0;i<pillarCount;i++){
+			if (abs(pillarX[i]-x1) < (PILLAR_RADIUS + ROBOT_SIZE + MARGIN)) return false;
+		}
+		for(int i=0;i<ballCount;i++){
+			if (abs(ballX[i]-x1)   < (ROBOT_SIZE + MARGIN)) return false;
 		}
 		return true;
 	} else { 
@@ -161,13 +132,13 @@ bool visible_arbitrary(int x1, int y1, int x2, int y2){
 		a = diffY/diffX; // slope
 		b = y1-a*x1;
 		den = sqrt(a*a+1);
-		for(int i=0;i<5;i++){
+		for(int i=0;i<pillarCount;i++){ // check pillar-collision
 			num = a*pillarX[i] + b - pillarY[i];
-			if (pillar_exist[i] && num/den < (PILLAR_RADIUS + ROBOT_SIZE + MARGIN)) return false; // num/den == distance
+			if (num/den < (PILLAR_RADIUS + ROBOT_SIZE + MARGIN)) return false; // num/den == distance
 		}
-		for(int i=0;i<10;i++){
-			num = a*pillarX[i] + b - pillarY[i];
-			if (pillar_exist[i] && num/den < (ROBOT_SIZE + MARGIN)) return false; // num/den == distance
+		for(int i=0;i<ballCount;i++){ // check ball-collision
+			num = a*ballX[i] + b - ballY[i];
+			if (num/den < (ROBOT_SIZE + MARGIN)) return false; // num/den == distance. ignore radius of the ball.
 		}
 
 		return true; 
@@ -194,73 +165,139 @@ int get_shortest_index(int size, NodeMap* node_list){ // '-1' means 'No balls ar
 	return index;
 } 
 
-
-
-NodeMap nodes[20];
-void positions_callback(const core_msgs::multiarray::ConstPtr& object)
-{
-	int size = object->cols, node_number = 0;
+int buildMap(int size, NodeMap* nodes, const core_msgs::multiarray::ConstPtr& object){
+	int node_number = 0;
 	int GAP = ROBOT_SIZE + PILLAR_RADIUS + MARGIN;
-	int THRESHOLD = 10;
+	// reset prev data
+	pillarCount = 0; ballCount = 0;
 
-	cout << "Position callback: " << size << "elements known" << endl;
-
-
-	node_lock.lock();
 	for (int i = 0; i < size; i++){ 
 		int x = object->data[3*i+1];
 		int y = object->data[3*i+2];
 
-		if(object->data[3*i] == ROBOT || object->data[3*i] == BALL){
-			nodes[node_number++] = NodeMap(object->data[3*i], x, y); // type, x, y
-		} else if (object->data[3*i] == PILLAR){
-			nodes[node_number++] = NodeMap(PILLAR, x + GAP, y + GAP);
-			nodes[node_number++] = NodeMap(PILLAR, x + GAP, y - GAP);
-			nodes[node_number++] = NodeMap(PILLAR, x - GAP, y + GAP);
-			nodes[node_number++] = NodeMap(PILLAR, x - GAP, y - GAP);
+		switch (object->data[3*i]){
+			case ROBOT:
+				nodes[node_number++] = NodeMap(ROBOT, x, y);
+				break;
+			case BALL:
+				nodes[node_number++] = NodeMap(BALL, x, y);
+				ballX[ballCount] = x;
+				ballY[ballCount] = y;
+				ballCount++;
+				break;
+			case PILLAR:
+				nodes[node_number++] = NodeMap(PILLAR, x + GAP, y + GAP);
+				nodes[node_number++] = NodeMap(PILLAR, x + GAP, y - GAP);
+				nodes[node_number++] = NodeMap(PILLAR, x - GAP, y + GAP);
+				nodes[node_number++] = NodeMap(PILLAR, x - GAP, y - GAP);
+				pillarX[pillarCount] = x;
+				pillarY[pillarCount] = y;
+				pillarCount++;
+				break;
+			case GOAL:
+				nodes[node_number++] = NodeMap(GOAL, x, y);
+				goalX = x;
+				goalY = y;
+				break;		
+		}
+	}
+	return node_number;
+}
+
+
+void unknown_map_control(int robotX, int robotY){
+	if(visible_arbitrary(robotX, robotY, robotX, robotY + 30)) {
+		publish_wayp(robotX + 30, robotY, -1);
+	} else if (visible_arbitrary(robotX, robotY, robotX + 15, robotY + 15)) {
+		publish_wayp(robotX + 15, robotY + 15, -1);
+	} else if (visible_arbitrary(robotX, robotY, robotX + 30, robotY)) {
+		publish_wayp(robotX, robotY + 30, -1);
+	}
+}
+
+void ballharvest_control(int node_number, int target_ball_index, NodeMap* nodes){
+	int next_index = Astar_plan(node_number, target_ball_index, nodes); 
+	int nextX = nodes[next_index].x;
+	int nextY = nodes[next_index].y;
+
+	if (pow(nextX-robotX,2) + pow(nextY-robotY,2) < pow(THRESHOLD,2)){ // close enough?
+		NodeMap cur_node = nodes[target_ball_index];
+		int cur_idx = target_ball_index;
+		while (cur_node.prev_node_idx != next_index) {
+			cur_idx = cur_node.prev_node_idx;
+			cur_node = nodes[cur_idx];
+		}
+
+		publish_wayp(cur_node.x, cur_node.y, cur_node.type);
+
+	} else {
+		publish_wayp(nextX, nextY, nodes[next_index].type);
+	}
+
+}
+
+void goal_control(int size, NodeMap* nodes){
+	int goal_index = -1;
+	for(int i=0; i<size; i++){
+		NodeMap node = nodes[i];
+		if (node.type == GOAL) break;
+	}
+
+	if(goal_index == -1){ // GOAL not found...
+		cout << "[GOAL CONTROL ]ERROR: GOAL IS NOT FOUND..." << endl;
+	} else if(pow(nodes[goal_index].x-robotX,2) + pow(nodes[goal_index].y-robotY,2) < pow(THRESHOLD,2)){ // close enough
+		END = true;
+	} else {
+		int next_index = Astar_plan(size, goal_index, nodes); 
+		int nextX = nodes[next_index].x;
+		int nextY = nodes[next_index].y;
+
+		if (pow(nextX-robotX,2) + pow(nextY-robotY,2) < pow(THRESHOLD,2)){ // close enough?
+			NodeMap cur_node = nodes[goal_index];
+			int cur_idx = goal_index;
+			while (cur_node.prev_node_idx != next_index) {
+				cur_idx = cur_node.prev_node_idx;
+				cur_node = nodes[cur_idx];
+			}
+			publish_wayp(cur_node.x, cur_node.y, cur_node.type);
+		} else {
+			publish_wayp(nextX, nextY, nodes[next_index].type);
 		}
 	}
 
-	cout << "Mapping complete" << endl;
+}
+
+NodeMap nodes[20];
+void positions_callback(const core_msgs::multiarray::ConstPtr& object)
+{
+	if(END){
+		publish_wayp(-1,-1,-1);
+	}
+	int size = object->cols, node_number = 0;
+
+	cout << "[Callback] Position callback: " << size << " elements known" << endl;
+	node_lock.lock();
+	node_number = buildMap(size, nodes, object);
+	cout << "[Mapping] Mapping complete" << endl;
 
 	if (REMAINING_BALLS > 0){
 		int target_ball_index = get_shortest_index(node_number, nodes);
 		if (target_ball_index == -1){ // No balls are found
-
-			if(visible_arbitrary(robotX, robotY, robotX, robotY + 30)) {
-				publish_wayp(robotX + 30, robotY, -1);
-			} else if (visible_arbitrary(robotX, robotY, robotX + 15, robotY + 15)) {
-				publish_wayp(robotX + 15, robotY + 15, -1);
-			} else if (visible_arbitrary(robotX, robotY, robotX + 30, robotY)) {
-				publish_wayp(robotX, robotY + 30, -1);
-			}
-
+			cout << "No balls are detected..." << endl;
+			unknown_map_control(robotX, robotY);
 		} else { // make path_plan to nodes[i]
-			int next_index = Astar_plan(node_number, target_ball_index, nodes); 
-			int nextX = nodes[next_index].x;
-			int nextY = nodes[next_index].y;
-
-			if (pow(nextX-robotX,2) + pow(nextY-robotY,2) < pow(THRESHOLD,2)){ // close enough?
-				NodeMap cur_node = nodes[target_ball_index];
-				int cur_idx = target_ball_index;
-				while (cur_node.prev_node_idx != next_index) {
-					cur_idx = cur_node.prev_node_idx;
-					cur_node = nodes[cur_idx];
-				}
-
-				publish_wayp(cur_node.x, cur_node.y, cur_node.type);
-
-			} else {
-				publish_wayp(nextX, nextY, nodes[next_index].type);
-			}
+			ballharvest_control(node_number, target_ball_index, nodes);
 		}
 	} else { // Go to goal point
-		cout << "Go to goal: Not implemented yet.." << endl;
+		goal_control(node_number, nodes);
 	}
 
 	node_lock.unlock();
 }
 
+void ballcount_callback(const std_msgs::Int8::ConstPtr& count){
+	REMAINING_BALLS = 5 - count->data;
+}
 
 
 int main(int argc, char **argv)
@@ -269,6 +306,7 @@ int main(int argc, char **argv)
     ros::NodeHandle n;
 
     ros::Subscriber sub_positions = n.subscribe<core_msgs::multiarray>("/position", 100, positions_callback);
+    ros::Subscriber sub_harvested_balls = n.subscribe<std_msgs::Int8> ("/ball_count", 100, ballcount_callback);
 	waypoints_publisher = n.advertise<geometry_msgs::Vector3>("/waypoint", 10);
 
     while(ros::ok){
@@ -335,7 +373,7 @@ void update_visibility(int cur_idx, int goal_index, int size, NodeMap* node_list
 
 int Astar_plan(int size, int target_index, NodeMap* node_list){ 
 	// TODO: consider distance difference btw Collector & Lidar sensor when return
-	cout << "perform Astar" << endl;
+	cout << "[Astar] perform Astar" << endl;
 	std::vector<int> visible_queue;
 	int cur_idx = -1, min_idx, start_idx;
 	for(int i = 0; i < size; i++){
@@ -346,22 +384,22 @@ int Astar_plan(int size, int target_index, NodeMap* node_list){
 		}
 	}
 
-	cout << "start index: " << cur_idx << endl << "target index: " << target_index << endl;
+	// cout << "start index: " << cur_idx << endl << "target index: " << target_index << endl;
 	if(cur_idx == -1){
-		cout << "ERROR: ROBOT NOT FOUND" << endl;
+		cout << "[Astar] ERROR: ROBOT NOT FOUND" << endl;
 		return -1;
 	}
 
 	int xt = node_list[target_index].x, 	yt = node_list[target_index].y;
 	int xcur = node_list[cur_idx].x, 		ycur = node_list[cur_idx].y;
 	do{
-		cout << "Now: "<< cur_idx << " Goal: " << target_index << endl;
+		// cout << "Now: "<< cur_idx << " Goal: " << target_index << endl;
 		update_visibility(cur_idx, target_index, size, node_list, &visible_queue);
 		cur_idx = min_dist_idx(node_list, &visible_queue);
 		node_list[cur_idx].confirmed = true;
 	} while (cur_idx != target_index); // if target is reachable, end of astar.
 
-	cout << "Astar done. Do backtrace" << endl;
+	// cout << "Astar done. Do backtrace" << endl;
 
 	NodeMap cur_node = node_list[cur_idx];
 
@@ -370,14 +408,14 @@ int Astar_plan(int size, int target_index, NodeMap* node_list){
 		cur_node = node_list[cur_idx];
 	}
 
-	cout << "Backtrace done. move to " << cur_node.x << ", " << cur_node.y << endl;
+	cout << "[Astar] Backtrace done. move to " << cur_node.x << ", " << cur_node.y << endl;
 	visualize(size,	node_list, target_index);
 	return cur_idx;
 	// Compute visibility & iterate
 }
 
 void visualize(int size, NodeMap* nodes, int goal_index){
-	cout << "visualization" << endl;
+	cout << "Visualization" << endl;
     missionmap = cv::Mat::zeros(MAP_HEIGHT, MAP_WIDTH, CV_8UC3);
     int x,y;
     for(int i=0; i<size; i++){
@@ -407,7 +445,7 @@ void visualize(int size, NodeMap* nodes, int goal_index){
 		cur_idx = cur_node.prev_node_idx;
 		cur_node = nodes[cur_idx];
 	}
-	cout << "MAP CONFIGURATION DONE" << endl;
+	cout << "[Visualize] MAP CONFIGURATION DONE" << endl;
     imshow("BALL HARVESTING MAP", missionmap);
 	waitKey(10);
 

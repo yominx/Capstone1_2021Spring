@@ -11,17 +11,16 @@ function callback_cmdvel_sub(msg)
     sim.setJointMaxForce(joint13, 3.1)
     sim.setJointMaxForce(joint23, 3.1)
 
-    sim.setJointTargetVelocity(joint11,Vl - Vr)
-    sim.setJointTargetVelocity(joint21,Vl + Vr)
+    sim.setJointTargetVelocity(joint11,Vl - 1.83*Vr)
+    sim.setJointTargetVelocity(joint21,Vl + 1.83*Vr)
     sim.setJointTargetVelocity(joint12,Vl - 1.5*Vr)
     sim.setJointTargetVelocity(joint22,Vl + 1.5*Vr)
-    sim.setJointTargetVelocity(joint13,Vl - 2*Vr)
-    sim.setJointTargetVelocity(joint23,Vl + x2*Vr)
+    sim.setJointTargetVelocity(joint13,Vl - 1.83*Vr)
+    sim.setJointTargetVelocity(joint23,Vl + 1.83*Vr)
     
 
     sim.addStatusbarMessage(string.format("Vl:%f Vr:%f",Vl, Vr))
 end
-
 
 
 function callback_ball_delivery_sub(msg)
@@ -68,22 +67,34 @@ function callback_ball_delivery_sub(msg)
                 sim.setJointTargetVelocity(joint01, 0)
                 count=count+1
             end
-            
-            if( count>10 ) then
+            if( count>500) then
+		    angle2=sim.getJointPosition(joint012)
+		    if(math.abs(angle2)<1.5) then
+		        sim.setJointTargetVelocity(joint012, -velocity2)
+		    else 
+		        sim.setJointTargetVelocity(joint012, 0)
+		        count=count+1
+		    end
+            if( count>1000 ) then
                 if( angle>-0.01) then
                     sim.setJointTargetVelocity(joint01, 0)
                 elseif( angle>-1.8) then
                     sim.setJointTargetVelocity(joint01, velocity)
                 end
+                if( angle2>-0.01) then
+                    sim.setJointTargetVelocity(joint012, 0)
+                elseif( angle2>-1.8) then
+                    sim.setJointTargetVelocity(joint012, velocity)
+                end
             end
         elseif delivery_mode==0 then
             sim.setJointTargetVelocity(joint00, 0)
             sim.setJointTargetVelocity(joint01, 0)
+            sim.setJointTargetVelocity(joint012, 0)
             count=0
         end
 
 end
-
 
 
 
@@ -95,7 +106,8 @@ end
 function sysCall_init()
     -- do some initialization here
     joint00 = sim.getObjectHandle("collector_joint")
-    joint01 = sim.getObjectHandle("door_joint")
+    joint01 = sim.getObjectHandle("door_joint_r")
+    joint012= sim.getObjectHandle("door_joint_l")
 
     joint11 = sim.getObjectHandle("11_joint")
     joint21 = sim.getObjectHandle("21_joint")

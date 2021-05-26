@@ -59,6 +59,8 @@ float pos_y;
 float pos_o;
 float target_x;
 float target_y;
+float target_o;
+int waytype;
 float diff_o;
 float dist;
 
@@ -104,9 +106,10 @@ void position_Callback(const geometry_msgs::Vector3::ConstPtr& robot_pos) {
 	pos_y = robot_pos->y;
 	pos_o = robot_pos->z;
 }
-void target_Callback(const geometry_msgs::Vector3::ConstPtr& target_pos) {
-	target_x = target_pos->x;
-	target_y = target_pos->y;
+void target_Callback(const geometry_msgs::Vector3::ConstPtr& waypoint) {
+	target_x = waypoint->x;
+	target_y = waypoint->y;
+	waytype = waypoint->z;
 	diff_o = atan2(target_y-pos_y, target_x-pos_x) - pos_o; // while -pos_o, |diff_o| may become > pi
 	// atan2: -pi ~ pi, pos_o: 0 ~ 2pi => -3pi ~ pi
 	if (diff_o < -M_PI) diff_o = diff_o + 2*M_PI;
@@ -164,7 +167,7 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 {
 	float ANGLE_THRESHOLD = M_PI/60;
 	float DIST_THRESHOLD = 5;
-	int angle_sign = (diff_o > 0 ? 1 : -1);
+	int angle_sign = (diff_o > 0 ? -1 : 1);
 
 	cout << "Ball Harvesting Control" << endl;
 	if (fabs(diff_o) > ANGLE_THRESHOLD) {
@@ -205,6 +208,7 @@ int delivery=0;
 int delivery_count=0;
 int mode_input;
 int ball_count=0;
+int csg_count;
 //ball pickup&dumping part ended
 
 int main(int argc, char **argv)
@@ -236,7 +240,6 @@ int main(int argc, char **argv)
 
     	if (control_method == ENTRANCE) {
     		control_entrance(&targetVel);
-    		commandVel.publish(targetVel);
     	}
     	else if (control_method == BALLHARVESTING) {
     		control_ballharvesting(&targetVel);
@@ -264,7 +267,6 @@ int main(int argc, char **argv)
 				}
 			}
 			*/
-			commandVel.publish(targetVel);
     	}
     	else {
     		cout << "ERROR: NO CONTROL METHOD" << endl; // Unreachable statement
@@ -298,17 +300,49 @@ int main(int argc, char **argv)
 		// }
 	    
 		//Ball pickup/dumping part started
-		delivery=1;
+		delivery=0;
+		
+		if(waytype==1 || csg_count>0){
+			csg_count=1;
+			if(abs(pos_x-target_x)<5 && abs(pos_y-target_y)<5){
+				delivery=1;
+				targetVel.linear.x=0;
+				targetVel.angular.z=0;
+			}
+		}else if(waytype==3){
+			if(abs(pos_x-500)<20 && abs(pos_y-150)<20){
+				target_o=atan((150-pos_y)/(500-pos_x));
+				
+				if(target_o>0){
+					target_o=target_o+M_PI;
+				}else if(target_o<0){
+					target_o=2*M_PI+target_o;
+					target_o=target_o-M_PI;
+				}
+
+				if(abs(pos_o-target_o)>0.01){
+					targetVel.angular.z=1;
+				}else{
+					targetVel.angular.z=0;
+					delivery=2;
+				}
+				targetVel.linear.x=0;
+			}
+		}
 			
+	    
+	    
+	    
 		if(delivery!=0){
 			delivery_count++;
 		}
 
 		int th1=1000;
-		int th2=1000;
+		int th2=2000;
 		if(delivery_count>th1 && delivery==1){
 			delivery=0;
 			delivery_count=0;
+			csg_count=0;
 			ball_count++;
 		}else if(delivery_count>th2 && delivery==2){
 			delivery=0;
@@ -323,6 +357,8 @@ int main(int argc, char **argv)
 		std_msgs::Int8 ball_count_no;
 		ball_count_no.data=ball_count;
 		ball_number.publish(ball_count_no);
+	    
+		commandVel.publish(targetVel);
 		    
 		ros::Duration(0.025).sleep();
 		ros::spinOnce();
