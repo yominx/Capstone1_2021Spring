@@ -133,7 +133,7 @@ Zones::Zone::Zone(int r, int c, int type):type(type),nPoints(1),cenRow(r),cenCol
       break;
     case PILLAR:
       zoneSize = 20;
-      threshold = 0.1;
+      threshold = 0.01;
       break;
     case GOAL:
       zoneSize = 50;
@@ -220,7 +220,7 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
       msg.data.push_back(type);
       msg.data.push_back(zones.zoneList[j].cenCol);
       msg.data.push_back(zones.zoneList[j].cenRow);
-      circle(MAP, Point(zones.zoneList[j].cenCol, zones.zoneList[j].cenRow),5,color, -1);
+      circle(MAP, Point(zones.zoneList[j].cenCol, zones.zoneList[j].cenRow),2,color, -1);
       continue;
     }
   }
@@ -282,7 +282,7 @@ int main(int argc, char **argv)
       filtering(ballZones, nBalls, ballDist, ballAngle, BALL, msg);
       filtering(pillarZones, nPillars, pillarDist, pillarAngle, PILLAR, msg);
       filtering(goalZones, nGoals, goalDist, goalAngle, GOAL, msg);
-      circle(MAP, Point(50+int(round(X)), 350-int(round(Y))), 5, cv::Scalar(255,0,0), -1);
+      circle(MAP, Point(50+int(round(X)), 350-int(round(Y))), 2, cv::Scalar(255,0,0), -1);
       msg.data.push_back(VEHICLE);
       msg.data.push_back(50+int(round(X)));
       msg.data.push_back(350-int(round(Y)));
