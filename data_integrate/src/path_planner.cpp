@@ -36,16 +36,16 @@
 #define PILLAR_RADIUS 10
 #define	MARGIN 10
 
-#define ROBOT 	1
-#define BALL 	2
-#define PILLAR 	3
-#define GOAL 	4
+#define ROBOT 	0
+#define BALL 	1
+#define PILLAR 	2
+#define GOAL 	3
 
 #define MAP_WIDTH 	600
 #define MAP_HEIGHT 	400
 
 
-boost::mutex map_mutex;
+boost::mutex node_lock;
 using namespace std;
 using namespace cv;
 
@@ -196,14 +196,17 @@ int get_shortest_index(int size, NodeMap* node_list){ // '-1' means 'No balls ar
 
 
 
+NodeMap nodes[20];
 void positions_callback(const core_msgs::multiarray::ConstPtr& object)
 {
-	NodeMap nodes[20];
 	int size = object->cols, node_number = 0;
 	int GAP = ROBOT_SIZE + PILLAR_RADIUS + MARGIN;
 	int THRESHOLD = 10;
 
+	cout << "Position callback: " << size << "elements known" << endl;
 
+
+	node_lock.lock();
 	for (int i = 0; i < size; i++){ 
 		int x = object->data[3*i+1];
 		int y = object->data[3*i+2];
@@ -217,6 +220,8 @@ void positions_callback(const core_msgs::multiarray::ConstPtr& object)
 			nodes[node_number++] = NodeMap(PILLAR, x - GAP, y - GAP);
 		}
 	}
+
+	cout << "Mapping complete" << endl;
 
 	if (REMAINING_BALLS > 0){
 		int target_ball_index = get_shortest_index(node_number, nodes);
@@ -252,6 +257,8 @@ void positions_callback(const core_msgs::multiarray::ConstPtr& object)
 	} else { // Go to goal point
 		cout << "Go to goal: Not implemented yet.." << endl;
 	}
+
+	node_lock.unlock();
 }
 
 
@@ -293,10 +300,13 @@ int min_dist_idx(NodeMap* node_list, std::vector<int>* visible_queue){
 void update_visibility(int cur_idx, int goal_index, int size, NodeMap* node_list, std::vector<int>* visible_queue){
 	int xt = node_list[goal_index].x, 	yt = node_list[goal_index].y;
 
+	// cout << "Update visibility" << endl;
 	for(int i = 0; i < size; i++){
-		if (node_list[i].confirmed) continue;
+		if (i == cur_idx || node_list[i].confirmed) continue;
 		if (visible_arbitrary(node_list[cur_idx].x, node_list[cur_idx].y, 
 							  node_list[i].x,       node_list[i].y)){
+			// cout << i << "th object is visible!!" << endl;
+
 			int diffX = node_list[cur_idx].x - node_list[i].x;
 			int diffY = node_list[cur_idx].y - node_list[i].y;
 			float distance = sqrt(pow(diffX, 2) + pow(diffY,2));
@@ -310,19 +320,24 @@ void update_visibility(int cur_idx, int goal_index, int size, NodeMap* node_list
 			if(dist_exact + dist_h < node_list[i].dist_exact + node_list[i].dist_h){
 				node_list[i].dist_exact = dist_exact; 
 				node_list[i].dist_h		= dist_h;
+				node_list[i].prev_node_idx = cur_idx;
 			}
 
+			// cout << "contains?" << endl;
 			if(std::find(visible_queue->begin(), visible_queue->end(), i) == visible_queue->end()) {
 				visible_queue->push_back(i);// queue doesn't contains i
 			}
+			// cout << "visibility done." << endl;
 		}
 	}
 }
 
+
 int Astar_plan(int size, int target_index, NodeMap* node_list){ 
 	// TODO: consider distance difference btw Collector & Lidar sensor when return
+	cout << "perform Astar" << endl;
 	std::vector<int> visible_queue;
-	int cur_idx, min_idx, start_idx;
+	int cur_idx = -1, min_idx, start_idx;
 	for(int i = 0; i < size; i++){
 		if (node_list[i].type == ROBOT) {
 			cur_idx = i;
@@ -331,14 +346,22 @@ int Astar_plan(int size, int target_index, NodeMap* node_list){
 		}
 	}
 
+	cout << "start index: " << cur_idx << endl << "target index: " << target_index << endl;
+	if(cur_idx == -1){
+		cout << "ERROR: ROBOT NOT FOUND" << endl;
+		return -1;
+	}
+
 	int xt = node_list[target_index].x, 	yt = node_list[target_index].y;
 	int xcur = node_list[cur_idx].x, 		ycur = node_list[cur_idx].y;
-
 	do{
+		cout << "Now: "<< cur_idx << " Goal: " << target_index << endl;
 		update_visibility(cur_idx, target_index, size, node_list, &visible_queue);
 		cur_idx = min_dist_idx(node_list, &visible_queue);
 		node_list[cur_idx].confirmed = true;
 	} while (cur_idx != target_index); // if target is reachable, end of astar.
+
+	cout << "Astar done. Do backtrace" << endl;
 
 	NodeMap cur_node = node_list[cur_idx];
 
@@ -347,26 +370,45 @@ int Astar_plan(int size, int target_index, NodeMap* node_list){
 		cur_node = node_list[cur_idx];
 	}
 
+	cout << "Backtrace done. move to " << cur_node.x << ", " << cur_node.y << endl;
+	visualize(size,	node_list, target_index);
 	return cur_idx;
 	// Compute visibility & iterate
 }
 
 void visualize(int size, NodeMap* nodes, int goal_index){
-    missionmap = cv::Mat::zeros(MAP_WIDTH, MAP_HEIGHT, CV_8UC3);
+	cout << "visualization" << endl;
+    missionmap = cv::Mat::zeros(MAP_HEIGHT, MAP_WIDTH, CV_8UC3);
     int x,y;
     for(int i=0; i<size; i++){
-    	x = nodes[i].x; y = nodes[i].y;
-    	circle(missionmap, Point(x,y),5, Scalar(nodes[i].type * 100,0,0), 1, 8, 0);
+    	x = nodes[i].x; y = MAP_HEIGHT-50-nodes[i].y;
+    	Scalar color;
+    	switch (nodes[i].type){
+    		case ROBOT:
+    			color = Scalar(255,255,0);
+    			break;
+    		case BALL:
+    			color = Scalar(50,50,255);
+    			break;
+    		case PILLAR:
+    			color = Scalar(255,255,255);
+    			break;
+    		case GOAL:
+    			color = Scalar(0,255,0);
+    	}
+    	circle(missionmap, Point(x,y), 5, color, 2, 8, 0);
     }
 
    	NodeMap cur_node = nodes[goal_index];
    	int cur_idx = goal_index;
 	while (cur_node.prev_node_idx != -1) {
 		NodeMap prev = nodes[cur_node.prev_node_idx];
-		line(missionmap, Point(cur_node.x,cur_node.y), Point(prev.x, prev.y), Scalar(0,0,0), 1, 8, 0);
+		line(missionmap, Point(cur_node.x,MAP_HEIGHT-50-cur_node.y), Point(prev.x, MAP_HEIGHT-50-prev.y), Scalar(255,255,255), 1, 8, 0);
 		cur_idx = cur_node.prev_node_idx;
 		cur_node = nodes[cur_idx];
 	}
-
+	cout << "MAP CONFIGURATION DONE" << endl;
     imshow("BALL HARVESTING MAP", missionmap);
+	waitKey(10);
+
 }
