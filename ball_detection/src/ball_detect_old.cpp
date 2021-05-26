@@ -200,7 +200,7 @@ int main(int argc, char **argv)
    image_transport::ImageTransport it(nh); //create image transport and connect it to node hnalder
    image_transport::Subscriber sub_rgb = it.subscribe("/kinect_rgb", 1, imageCallback); //create subscriber
    image_transport::Subscriber sub_depth = it.subscribe("/kinect_depth", 1, depthCallback);
-   pubBall = nh.advertise<core_msgs::ball_position>("/position", 100); //setting publisher
+   pubBall = nh.advertise<core_msgs::ball_position>("/ball_position", 100); //setting publisher
    pubGoal = nh.advertise<core_msgs::goal_position>("/goal_position", 100); //setting publisher
 
    //pub_markers = nh.advertise<visualization_msgs::Marker>("/balls",1);
