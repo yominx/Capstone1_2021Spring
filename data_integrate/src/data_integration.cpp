@@ -59,6 +59,7 @@ float pos_y;
 float pos_o;
 float target_x;
 float target_y;
+float target_o;
 int waytype;
 float diff_o;
 float dist;
@@ -239,7 +240,6 @@ int main(int argc, char **argv)
 
     	if (control_method == ENTRANCE) {
     		control_entrance(&targetVel);
-    		commandVel.publish(targetVel);
     	}
     	else if (control_method == BALLHARVESTING) {
     		control_ballharvesting(&targetVel);
@@ -267,7 +267,6 @@ int main(int argc, char **argv)
 				}
 			}
 			*/
-			commandVel.publish(targetVel);
     	}
     	else {
     		cout << "ERROR: NO CONTROL METHOD" << endl; // Unreachable statement
@@ -307,8 +306,8 @@ int main(int argc, char **argv)
 			csg_count=1;
 			if(abs(pos_x-target_x)<5 && abs(pos_y-target_y)<5){
 				delivery=1;
-				targetVel->linear.z=0;
-				targetVel->angular.z=0;
+				targetVel.linear.x=0;
+				targetVel.angular.z=0;
 			}
 		}else if(waytype==3){
 			if(abs(pos_x-500)<20 && abs(pos_y-150)<20){
@@ -317,17 +316,17 @@ int main(int argc, char **argv)
 				if(target_o>0){
 					target_o=target_o+M_PI;
 				}else if(target_o<0){
-					target_o=2*pi+target_o;
+					target_o=2*M_PI+target_o;
 					target_o=target_o-M_PI;
 				}
 
 				if(abs(pos_o-target_o)>0.01){
-					targetVel->angular.z=1;
+					targetVel.angular.z=1;
 				}else{
-					targetVel->angular.z=0;
+					targetVel.angular.z=0;
 					delivery=2;
 				}
-				targetVel->linear.x=0;
+				targetVel.linear.x=0;
 			}
 		}
 			
@@ -358,6 +357,8 @@ int main(int argc, char **argv)
 		std_msgs::Int8 ball_count_no;
 		ball_count_no.data=ball_count;
 		ball_number.publish(ball_count_no);
+	    
+		commandVel.publish(targetVel);
 		    
 		ros::Duration(0.025).sleep();
 		ros::spinOnce();
