@@ -249,7 +249,7 @@ void odometry_Callback(const geometry_msgs::Vector3 odometry){
     O = odometry.z;
 }
 
-void pillarPos_Callback(const std_msgs::Int8MultiArray pos)
+void pillarPos_Callback(const std_msgs::Float32MultiArray pos)
 {
     nPillars = pos.data.size()/2;
     for (int i=0; i<nPillars; i++){

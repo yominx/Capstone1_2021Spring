@@ -164,7 +164,7 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 {
 	float ANGLE_THRESHOLD = M_PI/60;
 	float DIST_THRESHOLD = 5;
-	int angle_sign = (diff_o > 0 ? 1 : -1);
+	int angle_sign = (diff_o > 0 ? -1 : 1);
 
 	cout << "Ball Harvesting Control" << endl;
 	if (fabs(diff_o) > ANGLE_THRESHOLD) {
