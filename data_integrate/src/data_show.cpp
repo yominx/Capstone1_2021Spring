@@ -34,6 +34,7 @@ int MAP_WIDTH = 600;
 int MAP_HEIGHT = 400;
 int MAP_CENTER = 50;
 
+int nData = 0;
 int nBalls=0;
 float ballDist[20];
 float ballAngle[20];         // Ball position info
@@ -220,6 +221,7 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
       msg.data.push_back(type);
       msg.data.push_back(zones.zoneList[j].cenCol);
       msg.data.push_back(zones.zoneList[j].cenRow);
+      nData += 1;
       circle(MAP, Point(zones.zoneList[j].cenCol, zones.zoneList[j].cenRow),2,color, -1);
       continue;
     }
@@ -279,6 +281,7 @@ int main(int argc, char **argv)
 
     while(ros::ok){
       core_msgs::multiarray msg;
+      nData = 0;
       filtering(ballZones, nBalls, ballDist, ballAngle, BALL, msg);
       filtering(pillarZones, nPillars, pillarDist, pillarAngle, PILLAR, msg);
       filtering(goalZones, nGoals, goalDist, goalAngle, GOAL, msg);
@@ -286,7 +289,8 @@ int main(int argc, char **argv)
       msg.data.push_back(VEHICLE);
       msg.data.push_back(50+int(round(X)));
       msg.data.push_back(350-int(round(Y)));
-      msg.cols = 1+nBalls+nGoals+nPillars;
+      nData += 1;
+      msg.cols = nData;
       pub.publish(msg);
       imshow("map", MAP);
       waitKey(10);
