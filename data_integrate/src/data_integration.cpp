@@ -121,7 +121,7 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 	float threshold = 8, MIN_DIST_THRESHOLD = 0.05, RADIUS = 0.8;
 
 	map_mutex.lock();
-	left_points=0; right_points=0;
+	left_points=0; right_points=0; left_back_pts=0; right_back_pts=0; out_of_range_pts=0;
 	for (int i = 0; i < lidar_size; i++) {
         if (MIN_DIST_THRESHOLD < lidar_distance[i] && lidar_distance[i]< RADIUS
         	&& 0 < lidar_degree[i] && lidar_degree[i] < 90){
@@ -142,7 +142,7 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 
 	cout << "LEFT " << left_points << " RIGHT " << right_points << endl; 
 	cout <<" LB "<<left_back_pts<<" RB "<<right_back_pts<<endl;
-	cout <<" out of range "<<out_of_range_pts<<endl;
+	cout <<" OOR "<<out_of_range_pts<<endl;
 	int diff = left_points - right_points;
 	if (diff < -threshold) { // control to leftside
 		targetVel->linear.x  = 4;
@@ -204,6 +204,7 @@ int select_control_method(){
 int delivery=0;
 int delivery_count=0;
 int mode_input;
+int ball_count=0;
 //ball pickup&dumping part ended
 
 int main(int argc, char **argv)
@@ -212,13 +213,14 @@ int main(int argc, char **argv)
     ros::NodeHandle n;
 
     ros::Subscriber sub = n.subscribe<sensor_msgs::LaserScan>("/scan", 1000, lidar_Callback);
-    ros::Subscriber sub1 = n.subscribe<core_msgs::ball_position>("/position", 1000, camera_Callback);
-    /* // for ballharvesting motor control
+    // ros::Subscriber sub1 = n.subscribe<core_msgs::ball_position>("/position", 1000, camera_Callback);
+    // for ballharvesting motor control
 	ros::Subscriber sub_pos = n.subscribe<geometry_msgs::Vector3>("/robot_pos", 1000, position_Callback);
-	ros::Subscriber sub_target = n.subscribe<geometry_msgs::Vector3>("/target_pos", 1000, target_Callback);
-	*/
+	ros::Subscriber sub_target = n.subscribe<geometry_msgs::Vector3>("/waypoint", 1000, target_Callback);
+	
 	ros::Publisher commandVel = n.advertise<geometry_msgs::Twist>("/command_vel", 10);
 	ros::Publisher zone = n.advertise<std_msgs::Int8>("/zone", 10);
+	ros::Publisher ball_number = n.advertise<std_msgs::Int8>("/ball_number", 10);
 	ros::Publisher ball_delivery = n.advertise<std_msgs::Int8>("/ball_delivery", 10);//pickup & dumping
 
 	// ros::Publisher pub_left_wheel= n.advertise<std_msgs::Float64>("/turtlebot3_waffle_sim/left_wheel_velocity_controller/command", 10);
@@ -307,6 +309,7 @@ int main(int argc, char **argv)
 		if(delivery_count>th1 && delivery==1){
 			delivery=0;
 			delivery_count=0;
+			ball_count++;
 		}else if(delivery_count>th2 && delivery==2){
 			delivery=0;
 			delivery_count=0;
@@ -316,7 +319,10 @@ int main(int argc, char **argv)
 		delivery_mode.data=delivery;
 		ball_delivery.publish(delivery_mode);
 		//Ball pickup/dumping part ended
-
+	    
+		std_msgs::Int8 ball_count_no;
+		ball_count_no.data=ball_count;
+		ball_number.publish(ball_count_no);
 		    
 		ros::Duration(0.025).sleep();
 		ros::spinOnce();

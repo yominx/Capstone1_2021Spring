@@ -16,7 +16,6 @@
 #include "std_msgs/Int8.h"
 #include "std_msgs/MultiArrayLayout.h"
 #include "std_msgs/MultiArrayDimension.h"
-#include "std_msgs/Int8MultiArray.h"
 #include "std_msgs/Float32MultiArray.h"
 #include "sensor_msgs/LaserScan.h"
 #include "geometry_msgs/Vector3.h"
@@ -38,7 +37,7 @@ int MAP_CENTER = 50;
 
 
 geometry_msgs::Vector3 robot_pos;
-std_msgs::Int8MultiArray obs_pos;
+std_msgs::Float32MultiArray obs_pos;
 
 float pos_x;
 float pos_y;
@@ -426,10 +425,11 @@ void control_input_Callback(const geometry_msgs::Twist::ConstPtr& targetVel){
   angular_vel = targetVel->angular.z;
   
   Ts=0.0001;
-
+  if (zone_info==2 && initialization>10){
   robot_pos.x=robot_pos.x+linear_vel*cos(robot_pos.z)*Ts;
   robot_pos.y=robot_pos.y+linear_vel*sin(robot_pos.z)*Ts;
   robot_pos.z=robot_pos.z+angular_vel*Ts;
+  }
 }
 
 
@@ -570,6 +570,7 @@ int main(int argc, char **argv)
           robot_pos.x=-30;
           robot_pos.y=50;
           robot_pos.z=2*M_PI-0.2;
+          cout<<"localization not yet"<<endl;
         }else if (zone_info==2 && initialization<20){
           rectangular_map(lines, 25, 0.3);
           initialization++;
