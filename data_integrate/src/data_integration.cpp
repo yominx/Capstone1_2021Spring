@@ -126,10 +126,17 @@ void control_entrance(geometry_msgs::Twist *targetVel)
         } else if (MIN_DIST_THRESHOLD < lidar_distance[i] && lidar_distance[i] < RADIUS
         			&& 90 < lidar_degree[i] && lidar_degree[i] < 180){
 			left_points++;
-        }
+        } else if (MIN_DIST_THRESHOLD < lidar_distance[i] && lidar_distance[i]< RADIUS
+        	&& -90 < lidar_degree[i] && lidar_degree[i] < 0){
+			right_back_pts++;
+		} else if (3< lidar_distance[i]
+        	&& 0 < lidar_degree[i] && lidar_degree[i] < 180){
+			out_of_range_pts++;
 	}
 
 	cout << "LEFT " << left_points << " RIGHT " << right_points << endl; 
+	cout <<" LB "<<left_back_pts<<" RB "<<right_back_pts<<endl;
+	cout <<" out of range "<<out_of_range_pts<<endl;
 	int diff = left_points - right_points;
 	if (diff < -threshold) { // control to leftside
 		targetVel->linear.x  = 4;
@@ -141,6 +148,7 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 		targetVel->linear.x  = 4;
 		targetVel->angular.z = 0;
 	}
+	
 	map_mutex.unlock();
 
 }
@@ -203,7 +211,7 @@ int main(int argc, char **argv)
 	ros::Subscriber sub_target = n.subscribe<geometry_msgs::Vector3>("/target_pos", 1000, target_Callback);
 	*/
 	ros::Publisher commandVel = n.advertise<geometry_msgs::Twist>("/command_vel", 10);
-	
+	ros::Publisher zone = n.advertise<std_msgs::Int8>("/zone", 10);
 	ros::Publisher ball_delivery = n.advertise<std_msgs::Int8>("/ball_delivery", 10);//pickup & dumping
 
 	// ros::Publisher pub_left_wheel= n.advertise<std_msgs::Float64>("/turtlebot3_waffle_sim/left_wheel_velocity_controller/command", 10);
@@ -254,6 +262,18 @@ int main(int argc, char **argv)
     	}
 
 
+		std_msgs::Int8 zone_info;
+
+		if( (0<left_back_pts && left_back_pts<11 && out_of_range_pts>5) || control_method== BALLHARVESTING){
+			zone_info.data= BALLHARVESTING;
+			control_method= BALLHARVESTING;
+		}else{
+			zone_info.data=ENTRANCE;
+			control_method= ENTRANCE;
+		}
+		zone.publish(zone_info);
+
+
 		// std_msgs::Float64 left_wheel_msg;
 		// std_msgs::Float64 right_wheel_msg;
 		// left_wheel_msg.data=1;   // set left_wheel velocity
@@ -275,8 +295,8 @@ int main(int argc, char **argv)
 			delivery_count++;
 		}
 
-		int th1=600;
-		int th2=600;
+		int th1=1000;
+		int th2=1000;
 		if(delivery_count>th1 && delivery==1){
 			delivery=0;
 			delivery_count=0;
