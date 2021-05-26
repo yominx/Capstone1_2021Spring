@@ -15,8 +15,8 @@ function callback_cmdvel_sub(msg)
     sim.setJointTargetVelocity(joint21,Vl + 1.83*Vr)
     sim.setJointTargetVelocity(joint12,Vl - 1.5*Vr)
     sim.setJointTargetVelocity(joint22,Vl + 1.5*Vr)
-    sim.setJointTargetVelocity(joint13,Vl - 1.83**Vr)
-    sim.setJointTargetVelocity(joint23,Vl + 1.83**Vr)
+    sim.setJointTargetVelocity(joint13,Vl - 1.83*Vr)
+    sim.setJointTargetVelocity(joint23,Vl + 1.83*Vr)
     
 
     sim.addStatusbarMessage(string.format("Vl:%f Vr:%f",Vl, Vr))
