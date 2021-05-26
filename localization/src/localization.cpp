@@ -426,10 +426,11 @@ void control_input_Callback(const geometry_msgs::Twist::ConstPtr& targetVel){
   angular_vel = targetVel->angular.z;
   
   Ts=0.0001;
-
+  if (zone_info==2 && initialization>10){
   robot_pos.x=robot_pos.x+linear_vel*cos(robot_pos.z)*Ts;
   robot_pos.y=robot_pos.y+linear_vel*sin(robot_pos.z)*Ts;
   robot_pos.z=robot_pos.z+angular_vel*Ts;
+  }
 }
 
 
