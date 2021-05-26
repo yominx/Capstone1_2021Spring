@@ -105,9 +105,10 @@ void position_Callback(const geometry_msgs::Vector3::ConstPtr& robot_pos) {
 	pos_y = robot_pos->y;
 	pos_o = robot_pos->z;
 }
-void target_Callback(const geometry_msgs::Vector3::ConstPtr& target_pos) {
-	target_x = target_pos->x;
-	target_y = target_pos->y;
+void target_Callback(const geometry_msgs::Vector3::ConstPtr& waypoint) {
+	target_x = waypoint->x;
+	target_y = waypoint->y;
+	waytype = waypoint->z;
 	diff_o = atan2(target_y-pos_y, target_x-pos_x) - pos_o; // while -pos_o, |diff_o| may become > pi
 	// atan2: -pi ~ pi, pos_o: 0 ~ 2pi => -3pi ~ pi
 	if (diff_o < -M_PI) diff_o = diff_o + 2*M_PI;
