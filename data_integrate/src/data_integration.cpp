@@ -148,6 +148,7 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 void control_ballharvesting(geometry_msgs::Twist *targetVel)
 {
 	float ANGLE_THRESHOLD = M_PI/60;
+	float DIST_THRESHOLD = 5;
 	int angle_sign = (diff_o > 0 ? 1 : -1);
 
 	cout << "Ball Harvesting Control" << endl;
@@ -155,6 +156,10 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 		/* in place rotation ->should be modified*/
 		targetVel->linear.x  = 0;
 		targetVel->angular.z = angle_sign*2;
+	}
+	else if (dist < DIST_THRESHOLD) {
+		targetVel->linear.x  = 0;
+		targetVel->angular.z = 0;
 	}
 	else {
 		/* move forward ->should be modified*/
@@ -218,7 +223,7 @@ int main(int argc, char **argv)
     	}
     	else if (control_method == BALLHARVESTING) {
     		control_ballharvesting(&targetVel);
-    		
+    		/*
     		if (targetVel->linear.x == 0) {
 				t = (diff_o / targetVel->angular.z) * time_const_angular;
 				ros::Time beginTime = ros::Time::now();
@@ -241,6 +246,8 @@ int main(int argc, char **argv)
 					ros::Duration(0.001).sleep();
 				}
 			}
+			*/
+			commandVel.publish(targetVel);
     	}
     	else {
     		cout << "ERROR: NO CONTROL METHOD" << endl; // Unreachable statement
