@@ -25,6 +25,7 @@
 #include "core_msgs/goal_position.h"
 #include "core_msgs/multiarray.h"
 #include "geometry_msgs/Vector3.h"
+#include "std_msgs/Int8.h"
 
 
 #define RAD2DEG(x) ((x)*180./M_PI)
@@ -35,6 +36,7 @@
 #define ROBOT_SIZE 30 
 #define PILLAR_RADIUS 10
 #define	MARGIN 10
+#define	THRESHOLD 10
 
 #define ROBOT 	0
 #define BALL 	1
@@ -98,20 +100,20 @@ void publish_wayp(int x, int y, int z){
 	waypoints_publisher.publish(waypoint);
 }
 
-bool rotatable(int X, int Y){
-	for(int i=0;i<10;i++){
-		int diffX = ballX[i]-X, diffY = ballY[i]-Y;
-		if(ball_exist[i] && diffX*diffX + diffY*diffY <= ROBOT_SIZE*ROBOT_SIZE)
-			return false;
-	}
-	for(int i=0;i<5;i++){
-		int diffX = pillarX[i]-X, diffY = pillarY[i]-Y;
-		if(pillar_exist[i] && diffX*diffX + diffY*diffY <= ROBOT_SIZE*ROBOT_SIZE)
-			return false;
-	}
-	// TODO: check for the walls, too.
-	return true;
-}
+// bool rotatable(int X, int Y){
+// 	for(int i=0;i<10;i++){
+// 		int diffX = ballX[i]-X, diffY = ballY[i]-Y;
+// 		if(ball_exist[i] && diffX*diffX + diffY*diffY <= ROBOT_SIZE*ROBOT_SIZE)
+// 			return false;
+// 	}
+// 	for(int i=0;i<5;i++){
+// 		int diffX = pillarX[i]-X, diffY = pillarY[i]-Y;
+// 		if(pillar_exist[i] && diffX*diffX + diffY*diffY <= ROBOT_SIZE*ROBOT_SIZE)
+// 			return false;
+// 	}
+// 	// TODO: check for the walls, too.
+// 	return true;
+// }
 
 bool visible_arbitrary(int x1, int y1, int x2, int y2){
 	int diffX = x1 - x2, diffY = y1 - y2;
@@ -165,6 +167,7 @@ int get_shortest_index(int size, NodeMap* node_list){ // '-1' means 'No balls ar
 
 int buildMap(int size, NodeMap* nodes, const core_msgs::multiarray::ConstPtr& object){
 	int node_number = 0;
+	int GAP = ROBOT_SIZE + PILLAR_RADIUS + MARGIN;
 	// reset prev data
 	pillarCount = 0; ballCount = 0;
 
@@ -236,7 +239,7 @@ void ballharvest_control(int node_number, int target_ball_index, NodeMap* nodes)
 void goal_control(int size, NodeMap* nodes){
 	int goal_index = -1;
 	for(int i=0; i<size; i++){
-		NodeMap node = node_list[i];
+		NodeMap node = nodes[i];
 		if (node.type == GOAL) break;
 	}
 
@@ -271,8 +274,6 @@ void positions_callback(const core_msgs::multiarray::ConstPtr& object)
 		publish_wayp(-1,-1,-1);
 	}
 	int size = object->cols, node_number = 0;
-	int GAP = ROBOT_SIZE + PILLAR_RADIUS + MARGIN;
-	int THRESHOLD = 10;
 
 	cout << "[Callback] Position callback: " << size << " elements known" << endl;
 	node_lock.lock();
@@ -295,7 +296,7 @@ void positions_callback(const core_msgs::multiarray::ConstPtr& object)
 }
 
 void ballcount_callback(const std_msgs::Int8::ConstPtr& count){
-	REMAINING_BALLS = 5 - count.data;
+	REMAINING_BALLS = 5 - count->data;
 }
 
 
