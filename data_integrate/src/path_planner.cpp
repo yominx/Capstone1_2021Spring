@@ -34,7 +34,7 @@
 /// Belows are written in pixel unit. 1 pixel = 1 cm.
 /// MARGIN is similar to threshold.
 #define ROBOT_SIZE 20 
-#define PILLAR_RADIUS 7
+#define PILLAR_RADIUS 10
 #define	MARGIN 7
 #define	THRESHOLD 7
 

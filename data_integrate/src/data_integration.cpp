@@ -171,7 +171,7 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 
 void control_ballharvesting(geometry_msgs::Twist *targetVel)
 {
-	float ANGLE_THRESHOLD = M_PI/40;
+	float ANGLE_THRESHOLD = M_PI/80;
 	float DIST_THRESHOLD = 5;
 	int angle_sign = (diff_o > 0 ? 1 : -1);
 
