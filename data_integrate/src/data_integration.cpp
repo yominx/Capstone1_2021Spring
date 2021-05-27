@@ -59,13 +59,16 @@ float pos_y;
 float pos_o;
 float target_x;
 float target_y;
-float target_o;
 int waytype;
 float diff_o;
 float dist;
 
 #define ENTRANCE 1
 #define BALLHARVESTING 2
+
+#define BALL 	1
+#define PILLAR 	2
+#define GOAL 	3
 
 using namespace std;
 
@@ -262,14 +265,14 @@ int main(int argc, char **argv)
 		//Ball pickup/dumping part started
 		delivery=0;
 		
-		if(waytype==1 || csg_count>0){
+		if(waytype==BALL || csg_count>0){
 			csg_count=1;
 			if(abs(pos_x-target_x)<5 && abs(pos_y-target_y)<5){
 				delivery=1;
 				targetVel.linear.x=0;
 				targetVel.angular.z=0;
 			}
-		}else if(waytype==3){
+		}else if(waytype==GOAL){
 			if(abs(pos_x-500)<20 && abs(pos_y-150)<20){
 				target_o=atan((150-pos_y)/(500-pos_x));
 				
