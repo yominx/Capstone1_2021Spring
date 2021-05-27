@@ -58,9 +58,7 @@ bool filtering2(int row, int col, float r, float focalLen, Mat img, float& dist)
   float targetPointDist, angle;
   if (isBlack(row,col,img)){ // blocked by pillar or scooper
     angle = atan((2.5*(col-319.5)/320)/4.6621);
-    if (isBlack(row,col-rFloor,img)){
-      while
-    }
+    // if (isBlack(row,col-rFloor,img))
     targetPoint = (isBlack(row,col-rFloor,img)) ? col+rFloor : col-rFloor;
     targetPointDist = buffer_depth.at<float>(row,targetPoint)/cos(angle);
   }
