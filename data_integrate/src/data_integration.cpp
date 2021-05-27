@@ -113,7 +113,9 @@ void depth_Callback(const sensor_msgs::ImageConstPtr& msg)
    {
      buffer_depth = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::TYPE_16UC1)->image;
      buffer_depth.convertTo(buffer_depth, CV_32F, 0.001);
-
+		 if (buffer_depth.at<float>(479,320) < minValue) minValue = buffer_depth.at<float>(479,320);
+		 cout << buffer_depth.at<float>(479,320) << endl;
+		 cout << "min val = " << minValue << endl;
    }
    catch (cv_bridge::Exception& e)
    {
@@ -323,13 +325,15 @@ int main(int argc, char **argv)
 
 		if(waytype==BALL || csg_count>0){
 			csg_count=1;
-			if(abs(pos_x-target_x)<5 && abs(pos_y-target_y)<5){
+			int BALL_LIDAR_DIST = 18;
+			if(pow(pos_x-target_x, 2) + pow(pos_y-target_y,2) < pow(BALL_LIDAR_DIST, 2)){
 				delivery=1;
 				targetVel.linear.x=0;
 				targetVel.angular.z=0;
 			}
 		}else if(waytype==GOAL){
-			if(abs(pos_x-500)<20 && abs(pos_y-150)<20){
+			int GOAL_SIZE = 25;
+			if(pow(pos_x-500, 2) + pow(pos_y-150,2) < pow(GOAL_SIZE, 2)){
 				target_o=atan((150-pos_y)/(500-pos_x));
 
 				if(target_o>0){
