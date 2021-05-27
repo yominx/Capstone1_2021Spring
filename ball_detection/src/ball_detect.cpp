@@ -117,7 +117,7 @@ vector<Vec4f> filtering(vector<Vec3f> circles, Mat img){
     //r_pred = RADIUS*f/sqrt(distance*distance + dHeight*dHeight);
     r_pred = RADIUS*f/distance;
     cout << "(r_measured, r_pred) : (" << r << ", " << r_pred << ")" << endl;
-    if (abs(r_pred-r) < THRESHOLD){
+    if (abs(r_pred-r) < r/6){
       circle[0] = col;
       circle[1] = row;
       circle[2] = r;

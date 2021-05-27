@@ -138,7 +138,7 @@ Zones::Zone::Zone(int r, int c, int type):type(type),nPoints(1),cenRow(r),cenCol
       break;
     case GOAL:
       zoneSize = 50;
-      threshold = 0.3;
+      threshold = 0.5;
   }
 }
 Zones::Zone::~Zone(){}

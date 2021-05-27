@@ -424,7 +424,7 @@ void control_input_Callback(const geometry_msgs::Twist::ConstPtr& targetVel){
   linear_vel = targetVel->linear.x;
   angular_vel = targetVel->angular.z;
   
-  Ts=0.0001;
+  Ts=0.001;
   if (zone_info==2 && initialization>10){
   robot_pos.x=robot_pos.x+linear_vel*cos(robot_pos.z)*Ts;
   robot_pos.y=robot_pos.y+linear_vel*sin(robot_pos.z)*Ts;
@@ -569,22 +569,33 @@ int main(int argc, char **argv)
         if (zone_info==1){
           robot_pos.x=-30;
           robot_pos.y=50;
-          robot_pos.z=2*M_PI-0.2;
+          robot_pos.z=2*M_PI-0.4;
           cout<<"localization not yet"<<endl;
-        }else if (zone_info==2 && initialization<20){
+        }else if (zone_info==2 && initial_step<10){
           rectangular_map(lines, 25, 0.3);
-          initialization++;
+          initial_step++;
+          if( robot_pos.x==-30 && robot_pos.y==50 && robot_pos.z==2*M_PI-0.4){
+            robot_pos.x=-30;
+            robot_pos.y=50;
+            robot_pos.z=2*M_PI-0.09;
+            rectangular_map(lines, 25, 0.3);
+          }
+
         }else{
           rectangular_map(lines, 20, 0.2); //angle_threshold는 최대 0.7보다는 작아야 한다.
         }
-//
-
+        
+        
 
         //Getting obstacle location 
         obs_pos.data.clear();
-        for (int i=0; i<obs_distance.size(); i++){
-          obs_pos.data.push_back(obs_distance[i]);
-          obs_pos.data.push_back(obs_degree[i]);
+        
+        if(zone_info==2){
+
+            for (int i=0; i<obs_distance.size(); i++){
+              obs_pos.data.push_back(obs_distance[i]);
+              obs_pos.data.push_back(obs_degree[i]);
+            }
         }
 
 //Debugging:
