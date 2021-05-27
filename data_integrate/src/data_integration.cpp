@@ -94,14 +94,16 @@ void lidar_Callback(const sensor_msgs::LaserScan::ConstPtr& scan)
 	map_mutex.unlock();
 
 }
-
+float minValue = 10;
 void depthCallback(const sensor_msgs::ImageConstPtr& msg)
 {
    try
    {
      buffer_depth = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::TYPE_16UC1)->image;
      buffer_depth.convertTo(buffer_depth, CV_32F, 0.001);
-
+		 if (buffer_depth.at<float>(479,320) < minValue) minValue = buffer_depth.at<float>(479,320);
+		 cout << buffer_depth.at<float>(479,320) << endl;
+		 cout << "min val = " << minValue << endl;
    }
    catch (cv_bridge::Exception& e)
    {
