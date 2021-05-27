@@ -16,6 +16,7 @@
 #include "geometry_msgs/Vector3.h"
 #include "core_msgs/multiarray.h"
 #include "std_msgs/Float32MultiArray.h"
+#include "std_msgs/Int8.h"
 
 #include "opencv2/opencv.hpp"
 #include <opencv2/highgui.hpp>
@@ -37,6 +38,8 @@ float DCL = 0.25; //distance between camara and lidar
 
 int nData = 0;
 int nBalls=0;
+int remainBalls = 5;
+
 float ballDist[20];
 float ballAngle[20];         // Ball position info
 
@@ -81,6 +84,7 @@ public:
   ~Zones();
   int size();
   void addZone(int r, int c, int type);
+  void removeZone(int r, int c, int type);
   void removeZone(int i, int type);
 };
 
@@ -104,6 +108,17 @@ void Zones::addZone(int r, int c, int type)
     }
   }
   zoneList.push_back(Zone(r,c,type));
+}
+
+void Zones::removeZone(int r, int c, int type)
+{
+  int n = zoneList.size();
+  for (int i=0;i<n;i++){
+    if (zoneList[i].insideZone(r,c)) {
+      removeZone(i,type);
+      return;
+    }
+  }
 }
 
 void Zones::removeZone(int i, int type)
@@ -132,11 +147,11 @@ Zones::Zone::Zone(int r, int c, int type):type(type),nPoints(1),cenRow(r),cenCol
   switch(type){
     case BALL:
       zoneSize = 20;
-      threshold = 0.3;
+      threshold = 0.5;
       break;
     case PILLAR:
       zoneSize = 20;
-      threshold = 0.3;
+      threshold = 0.5;
       break;
     case GOAL:
       zoneSize = 50;
@@ -261,6 +276,15 @@ void pillarPos_Callback(const std_msgs::Float32MultiArray pos)
     }
 }
 
+void goalNum_Callback(const std_msgs::Int8 msg)
+{
+    int tmp = msg.data;
+    if (remainBalls != tmp){
+      ballZones.removeZone(Y,X,BALL);
+      remainBalls--;
+    }
+}
+
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "data_show_node");
@@ -271,6 +295,7 @@ int main(int argc, char **argv)
     ros::Subscriber subBall = n.subscribe<core_msgs::goal_position>("/goal_position", 1000, goalPos_Callback);
     ros::Subscriber subGoal = n.subscribe<core_msgs::ball_position>("/ball_position", 1000, ballPos_Callback);
     ros::Subscriber subPillar = n.subscribe<std_msgs::Float32MultiArray>("/obs_pos", 1000, pillarPos_Callback);
+    ros::Subscriber subGoalNum = n.subscribe<std_msgs::Int8>("/ball_number", 10, goalNum_Callback);
     ros::Rate loop_rate(10);
     line(MAP, Point(50, 50), Point(550, 50), Scalar(255,255,255), 1);
     line(MAP, Point(50, 50), Point(50, 250), Scalar(255,255,255), 1);
