@@ -68,8 +68,8 @@ bool filtering2(int row, int col, float r, float focalLen, Mat img, float& dist)
   }
   float centerDist = sqrt(targetPointDist*targetPointDist + dHeight*dHeight);
   float r_pred = RADIUS*FOCAL_LENGTH/centerDist;
-  Point center(col,row);
-  circle(buffer,center,r_pred,Scalar(255,0,0),2);
+  // Point center(col,row);
+  // circle(buffer,center,r_pred,Scalar(255,0,0),2);
   cout << "(r_pred, r_measured)= (" << r_pred << ", " << r << ")" << endl;
   if (abs(r_pred-r) < THRESHOLD){
     dist = targetPointDist;
@@ -110,14 +110,14 @@ vector<Vec4f> filtering(vector<Vec3f> circles, Mat img){
     if (filtering1(row,col,r,img)){ // in case of detecing floor as a ball
       continue;
     }
-    f = sqrt(pow(FOCAL_LENGTH,2)+pow((WIDTH/2.-col),2)+pow((HEIGHT/2.-row),2));
+    f = sqrt(pow(FOCAL_LENGTH,2)+pow((WIDTH/2.-col),2));
     angle = atan((2.5*(col-319.5)/320)/4.6621);
     distance = (buffer_depth.at<float>(row, col) + RADIUS) / cos(angle);
     cout << "distance = " << distance <<endl;
     //r_pred = RADIUS*f/sqrt(distance*distance + dHeight*dHeight);
     r_pred = RADIUS*f/distance;
     cout << "(r_measured, r_pred) : (" << r << ", " << r_pred << ")" << endl;
-    if (abs(r_pred-r) < r/6){
+    if (abs(r_pred-r) < r/7){
       circle[0] = col;
       circle[1] = row;
       circle[2] = r;
@@ -173,7 +173,7 @@ void ball_detect(){
      GaussianBlur(hsvCh[1],hsvCh[1], Size(5,5), 2.5, 2.5);
      // cv::imshow("Gaussian Blurred", hsvCh[0]);
      // waitKey(10);
-     threshold(hsvCh[1], gray, 50, 255, THRESH_BINARY);
+     threshold(hsvCh[1], gray, 100, 255, THRESH_BINARY);
      // cv::imshow("Binary", gray);
      // waitKey(10);
      // cv::imshow("h", hsvCh[0]);
@@ -246,8 +246,8 @@ void ball_detect(){
      }
      cout << endl;
      pubBall.publish(msgBall);  //publish a message
-     cv::imshow("view", buffer);  //show the image with a window
-     cv::waitKey(1);
+     // cv::imshow("view", buffer);  //show the image with a window
+     // cv::waitKey(1);
 }
 
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)
@@ -273,7 +273,6 @@ void depthCallback(const sensor_msgs::ImageConstPtr& msg)
    {
      buffer_depth = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::TYPE_16UC1)->image;
      buffer_depth.convertTo(buffer_depth, CV_32F, 0.001);
-     cout << buffer_depth.size() << endl;
    }
    catch (cv_bridge::Exception& e)
    {

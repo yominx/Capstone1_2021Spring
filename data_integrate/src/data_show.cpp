@@ -33,6 +33,7 @@ using namespace cv;
 int MAP_WIDTH = 600;
 int MAP_HEIGHT = 400;
 int MAP_CENTER = 50;
+float DCL = 0.25; //distance between camara and lidar
 
 int nData = 0;
 int nBalls=0;
@@ -75,14 +76,15 @@ class Zones
 
 public:
   vector<Zone> zoneList;
-  Zones();
+  int max;
+  Zones(int goal);
   ~Zones();
   int size();
   void addZone(int r, int c, int type);
   void removeZone(int i, int type);
 };
 
-Zones::Zones(){}
+Zones::Zones(int goal):max(goal){}
 
 Zones::~Zones(){}
 
@@ -161,6 +163,7 @@ void Zones::Zone::add(int r, int c, int type)
     case GOAL:
       map = mapGoal;
   }
+  map.at<int>(r,c) += 1;
   if (map.at<int>(r,c) > map.at<int>(cenRow,cenCol)){
     circle(MAP, Point(cenCol, cenRow),2,Scalar(0,0,0), -1);
     cenRow = r;
@@ -169,9 +172,9 @@ void Zones::Zone::add(int r, int c, int type)
   ++nPoints;
 }
 
-Zones ballZones;
-Zones pillarZones;
-Zones goalZones;
+Zones ballZones(5);
+Zones pillarZones(3);
+Zones goalZones(1);
 
 void filtering(Zones& zones, int size, float* dist, float* angle, int type, core_msgs::multiarray& msg)
 {
@@ -179,25 +182,21 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
   Scalar color;
   switch(type){
     case BALL:
-      map = mapBall;
       color = Scalar(0,0,255);
       break;
     case PILLAR:
-      map = mapPillar;
       color = Scalar(0,255,255);
       break;
     case GOAL:
-      map = mapGoal;
       color = Scalar(0,255,0);
   }
 
   for (int i=0; i<size; i++){ //ball_dist[i], ball_angle[i]
-    int x = 50 + (int)round(X + (dist[i]*cos(angle[i] + O)*100));
-    int y = 350 - (int)round(Y + (dist[i]*sin(angle[i] + O)*100));
+    int x = 50 + (int)round(X + (DCL*cos(O)*100) + (dist[i]*cos(angle[i] + O)*100));
+    int y = 350 - (int)round(Y + (DCL*sin(O)*100) + (dist[i]*sin(angle[i] + O)*100));
     if (!(x>50 && x<=550 && y>50 && y<350)){
       continue;
     }
-    map.at<int>(y,x) += 1;
     zones.addZone(y,x,type);
   }
 
@@ -207,7 +206,7 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
     // cout << "(" << j << "-th zone) nPoints: " << zones.zoneList[j].nPoints << ", cnt: "<< zones.zoneList[j].cnt << endl;
     // cout << "(" << j << "-th zone) is reliable : " << zones.zoneList[j].reliable << endl;
     // cout << "(" << j << "-th zone) cnt*threshold = " << zones.zoneList[j].cnt << " * " << zones.zoneList[j].threshold << " = " << zones.zoneList[j].cnt * zones.zoneList[j].threshold <<endl;
-    if ((zones.zoneList[j].cnt % 30) == 0 && zones.zoneList[i].nPoints < 200){
+    if ((zones.zoneList[j].cnt % 10) == 0 && zones.zoneList[i].nPoints < 100){
       if (zones.zoneList[j].nPoints > zones.zoneList[j].cnt * zones.zoneList[j].threshold){
         zones.zoneList[j].reliable = true;
         // cout << "(" << j << "-th zone) is reliable" << endl;
