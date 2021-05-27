@@ -59,6 +59,7 @@ float pos_y;
 float pos_o;
 float target_x;
 float target_y;
+float target_o;
 int waytype;
 float diff_o;
 float dist;

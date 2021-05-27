@@ -26,7 +26,7 @@
 using namespace cv;
 using namespace std;
 
-int initialization=1;
+int initial_step=1;
 
 float MAP_CX = 500; 
 float MAP_CY = 500;
@@ -326,7 +326,18 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
 
 //Debugging: cout<<"oridata/x/y/line number "<<oridata.size()<<"/"<<xdata.size()<<"/"<<ydata.size()<<"/"<<lines.size()<<endl;
 
+    cout<<oridata.size()<<"/"<<lines.size()<<endl;
+
     int button=1;
+
+    if(pos_o==M_PI/2 || pos_o==M_PI || pos_o==1.5*M_PI || pos_o==2*M_PI){
+      pos_o=pos_o-0.01;
+      cout<<"oops!"<<endl;
+    }else if(pos_o==0){
+      pos_o=pos_o+0.01;
+      cout<<"oops!"<<endl;
+    }
+
     if(lines.size()>0){
 
       
@@ -425,11 +436,12 @@ void control_input_Callback(const geometry_msgs::Twist::ConstPtr& targetVel){
   angular_vel = targetVel->angular.z;
   
   Ts=0.001;
-  if (zone_info==2 && initialization>10){
+  if (zone_info==2 && initial_step>10){
   robot_pos.x=robot_pos.x+linear_vel*cos(robot_pos.z)*Ts;
   robot_pos.y=robot_pos.y+linear_vel*sin(robot_pos.z)*Ts;
   robot_pos.z=robot_pos.z+angular_vel*Ts;
   }
+  cout<<"vel"<<angular_vel*Ts<<endl;
 }
 
 
@@ -606,8 +618,6 @@ int main(int argc, char **argv)
 // Debugging: circle(map,Point(MAP_WIDTH/2,MAP_HEIGHT/2),10, cv::Scalar(0,0,255), -1);   
 // circle(zone, Point(50+int(robot_pos.x), 350-int(robot_pos.y)), 3, cv::Scalar(255,0,0), -1);
 // cv::imshow("Harvesting zone map",zone);
-// cv::imshow("Harvesting zone map",map);
-// cv::waitKey(50);
 
       	pub.publish(robot_pos);
         pub1.publish(obs_pos);
