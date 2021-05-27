@@ -72,14 +72,14 @@ using namespace std;
 void lidar_Callback(const sensor_msgs::LaserScan::ConstPtr& scan)
 {
 	map_mutex.lock();
-	cout << "LIDAR CALLBACK" << endl;
+	// cout << "LIDAR CALLBACK" << endl;
 	int count = (scan->angle_max - scan->angle_min) / scan->angle_increment + 1;
     lidar_size=count;
     for(int i = 0; i < count; i++)
     {
         lidar_degree[i] = RAD2DEG(scan->angle_min + scan->angle_increment * i);
         lidar_distance[i]=scan->ranges[i];
-        std::cout << "(deg, dist): "<< lidar_degree[i] << ", " << lidar_distance[i] << endl;
+        // std::cout << "(deg, dist): "<< lidar_degree[i] << ", " << lidar_distance[i] << endl;
 
     }
 
@@ -102,17 +102,23 @@ void camera_Callback(const core_msgs::ball_position::ConstPtr& position)
 
 }
 void position_Callback(const geometry_msgs::Vector3::ConstPtr& robot_pos) {
-	pos_x = robot_pos->x;
-	pos_y = robot_pos->y;
+	pos_x = 50 + robot_pos->x;
+	pos_y = 50 + robot_pos->y;
 	pos_o = robot_pos->z;
 }
 void target_Callback(const geometry_msgs::Vector3::ConstPtr& waypoint) {
 	target_x = waypoint->x;
 	target_y = waypoint->y;
 	waytype = waypoint->z;
-	diff_o = atan2(target_y-pos_y, target_x-pos_x) - pos_o; // while -pos_o, |diff_o| may become > pi
+	float target_o = atan2(target_y-pos_y, target_x-pos_x);
+	diff_o = target_o - pos_o; // while -pos_o, |diff_o| may become > pi
+	cout << "Target orientation is " << target_o << endl <<  "Current orientation is" << pos_o << endl;
+	cout << "diff x,y is " << target_x-pos_x <<  ", " << target_y-pos_y << endl;
+
 	// atan2: -pi ~ pi, pos_o: 0 ~ 2pi => -3pi ~ pi
-	if (diff_o < -M_PI) diff_o = diff_o + 2*M_PI;
+	while (diff_o < -M_PI) diff_o = diff_o + 2*M_PI;
+	while (diff_o >= M_PI) diff_o = diff_o - 2*M_PI;
+
 	dist = sqrt(pow(target_y-pos_y, 2) + pow(target_x-pos_x, 2));
 }
 
@@ -143,9 +149,9 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 			out_of_range_pts++;
 	}
 
-	cout << "LEFT " << left_points << " RIGHT " << right_points << endl; 
-	cout <<" LB "<<left_back_pts<<" RB "<<right_back_pts<<endl;
-	cout <<" OOR "<<out_of_range_pts<<endl;
+	// cout << "LEFT " << left_points << " RIGHT " << right_points << endl; 
+	// cout <<" LB "<<left_back_pts<<" RB "<<right_back_pts<<endl;
+	// cout <<" OOR "<<out_of_range_pts<<endl;
 	int diff = left_points - right_points;
 	if (diff < -threshold) { // control to leftside
 		targetVel->linear.x  = 4;
@@ -165,11 +171,12 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 
 void control_ballharvesting(geometry_msgs::Twist *targetVel)
 {
-	float ANGLE_THRESHOLD = M_PI/60;
+	float ANGLE_THRESHOLD = M_PI/40;
 	float DIST_THRESHOLD = 5;
-	int angle_sign = (diff_o > 0 ? -1 : 1);
+	int angle_sign = (diff_o > 0 ? 1 : -1);
 
-	cout << "Ball Harvesting Control" << endl;
+	// cout << "Ball Harvesting Control" << endl;
+	// cout << "[CONTROL] Angle difference is " << diff_o << endl;
 	if (fabs(diff_o) > ANGLE_THRESHOLD) {
 		/* in place rotation ->should be modified*/
 		targetVel->linear.x  = 0;
@@ -184,16 +191,6 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 		targetVel->linear.x  = 4;
 		targetVel->angular.z = 0;
 	}
-	return;
-}
-
-void in_place_turn() {
-	return;
-}
-void move_forward() {
-	return;
-}
-void stop() {
 	return;
 }
 
@@ -235,6 +232,8 @@ int main(int argc, char **argv)
 	double time_const_linear = 1; // to be midified with experiments
 	double time_const_angular = 1; // to be midified with experiments
 
+    ros::Rate loop_rate(10);
+
     while(ros::ok){
     	geometry_msgs::Twist targetVel;
 
@@ -243,30 +242,6 @@ int main(int argc, char **argv)
     	}
     	else if (control_method == BALLHARVESTING) {
     		control_ballharvesting(&targetVel);
-    		/*
-    		if (targetVel->linear.x == 0) {
-				t = (diff_o / targetVel->angular.z) * time_const_angular;
-				ros::Time beginTime = ros::Time::now();
-				ros::Duration delta_t = ros::Duration(t);
-				ros::Time endTime = beginTime + delta_t;
-				while(ros::Time::now() < endTime)
-				{
-					commandVel.publish(targetVel);
-					ros::Duration(0.001).sleep();
-				}
-			}
-			else {
-				t = (dist / targetVel->linear.z) * time_const_linear;
-				ros::Time beginTime = ros::Time::now();
-				ros::Duration delta_t = ros::Duration(t);
-				ros::Time endTime = beginTime + delta_t;
-				while(ros::Time::now() < endTime)
-				{
-					commandVel.publish(targetVel);
-					ros::Duration(0.001).sleep();
-				}
-			}
-			*/
     	}
     	else {
     		cout << "ERROR: NO CONTROL METHOD" << endl; // Unreachable statement
@@ -284,21 +259,6 @@ int main(int argc, char **argv)
 		}
 		zone.publish(zone_info);
 
-
-		// std_msgs::Float64 left_wheel_msg;
-		// std_msgs::Float64 right_wheel_msg;
-		// left_wheel_msg.data=1;   // set left_wheel velocity
-		// right_wheel_msg.data=1;  // set right_wheel velocity
-		// pub_left_wheel.publish(left_wheel_msg);   // publish left_wheel velocity
-		// pub_right_wheel.publish(right_wheel_msg);  // publish right_wheel velocity
-
-		// for(int i = 0; i < lidar_size; i++) {
-		//     cout << "degree : " << lidar_degree[i] << "  distance : " << lidar_distance[i] << endl;
-		// }
-		// for(int i = 0; i < ball_number; i++) {
-		// 	cout << "ball_X : " << ball_X[i] << "  ball_Y : " << ball_Y[i] << endl;
-		// }
-	    
 		//Ball pickup/dumping part started
 		delivery=0;
 		
@@ -330,9 +290,6 @@ int main(int argc, char **argv)
 			}
 		}
 			
-	    
-	    
-	    
 		if(delivery!=0){
 			delivery_count++;
 		}
@@ -360,7 +317,7 @@ int main(int argc, char **argv)
 	    
 		commandVel.publish(targetVel);
 		    
-		ros::Duration(0.025).sleep();
+	    loop_rate.sleep();
 		ros::spinOnce();
     }
 
