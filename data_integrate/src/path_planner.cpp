@@ -33,7 +33,7 @@
 /// MAP INFOS
 /// Belows are written in pixel unit. 1 pixel = 1 cm.
 /// MARGIN is similar to threshold.
-#define ROBOT_SIZE 20 
+#define ROBOT_SIZE 20
 #define PILLAR_RADIUS 10
 #define	MARGIN 7
 #define	THRESHOLD 7
@@ -118,24 +118,28 @@ void publish_wayp(int x, int y, int z){
 // 	return true;
 // }
 bool visible_arbitrary(int x1, int y1, int x2, int y2){
-	int diffX = x2 - x1, diffY = y2 - y1, ITER = 100;
+	int diffX = x2 - x1, diffY = y2 - y1, ITER = 30;
 	float stepX = diffX/ITER, stepY = diffY/ITER;
 	float posX, posY, distsq;
+
 	for(int i=0; i<ITER; i++){ // check collision for 100 steps (discrete)
 		posX = x1+i*stepX;
 		posY = y1+i*stepY;
-		for(int i=0;i < pillarCount;i++){ // check pillar-collision
-			distsq = pow(posX-pillarX[i], 2) + pow(posY-pillarY[i],2);
+		for(int j=0;j < pillarCount;j++){ // check pillar-collision
+			distsq = pow(posX-pillarX[j], 2) + pow(posY-pillarY[j],2);
+			cout << "ITER "  << i << " posX " << posX << " posY " << posY <<
+			endl << "pillX " << pillarX[j] << " pillY " << pillarY[j] << endl << distsq << endl;
 			if(distsq < pow(PILLAR_RADIUS+ROBOT_SIZE, 2)) return false;
 		}
-		for(int i=0;i<ballCount;i++){ // check ball-collision
-			if((ballX[i] == x1 && ballY[i] == y1) 
-				|| (ballX[i] == x2 && ballY[i] == y2))
+		for(int j=0;j<ballCount;j++){ // check ball-collision
+			if((ballX[j] == x1 && ballY[j] == y1) 
+				|| (ballX[j] == x2 && ballY[j] == y2))
 					continue;
-			distsq = pow(posX-ballX[i], 2) + pow(posY-ballY[i],2);
+			distsq = pow(posX-ballX[j], 2) + pow(posY-ballY[j],2);
 			if(distsq < pow(MARGIN+ROBOT_SIZE,2)) return false;
 		}
 	}
+	cout << x1 << ", " << y1 << " to " << x2 << ", " << y2 << " is available" << endl;
 	return true;
 }
 

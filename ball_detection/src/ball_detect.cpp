@@ -246,8 +246,8 @@ void ball_detect(){
      }
      cout << endl;
      pubBall.publish(msgBall);  //publish a message
-     cv::imshow("view", buffer);  //show the image with a window
-     cv::waitKey(1);
+     // cv::imshow("view", buffer);  //show the image with a window
+     // cv::waitKey(1);
 }
 
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)
