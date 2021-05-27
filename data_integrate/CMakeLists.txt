@@ -9,19 +9,19 @@ add_compile_options(-std=c++11)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   roscpp
+  image_transport
   sensor_msgs
   std_msgs
   core_msgs
 )
 
 find_package(OpenCV REQUIRED )
+find_package( cv_bridge REQUIRED )
+
 catkin_package(
-#  INCLUDE_DIRS include
-#  CATKIN_DEPENDS roscpp
-#  sensor_msgs
-#  std_msgs
-#  core_msgs
-#  DEPENDS system_lib
+  CATKIN_DEPENDS roscpp
+  core_msgs
+  image_transport
 )
 
 ###########
