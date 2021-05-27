@@ -113,18 +113,29 @@ vector<Vec4f> filtering(vector<Vec3f> circles, Mat img){
     f = sqrt(pow(FOCAL_LENGTH,2)+pow((WIDTH/2.-col),2)+pow((HEIGHT/2.-row),2));
     angle = atan((2.5*(col-319.5)/320)/4.6621);
     distance = (buffer_depth.at<float>(row, col) + RADIUS) / cos(angle);
-    r_pred = RADIUS*FOCAL_LENGTH/sqrt(distance*distance + dHeight*dHeight);
-
-    if (r_pred > r){ // blocked by another ball or pillar or scooper
-      if (filtering2(row,col,r,f,img,distance)){
-        circle[0] = col;
-        circle[1] = row;
-        circle[2] = r;
-        circle[3] = distance;
-        filtered.push_back(circle);
-        continue;
-      }
+    cout << "distance = " << distance <<endl;
+    //r_pred = RADIUS*f/sqrt(distance*distance + dHeight*dHeight);
+    r_pred = RADIUS*f/distance;
+    cout << "(r_measured, r_pred) : (" << r << ", " << r_pred << ")" << endl;
+    if (abs(r_pred-r) < THRESHOLD){
+      circle[0] = col;
+      circle[1] = row;
+      circle[2] = r;
+      circle[3] = distance;
+      filtered.push_back(circle);
+      continue;
     }
+
+    // if (abs(buffer_depth.at<float>(row,col-r*0.7) - buffer_depth.at<float>(row,col+r*0.7)) > RADIUS){ // blocked by another ball or pillar or scooper
+    //   if (filtering2(row,col,r,f,img,distance)){
+    //     circle[0] = col;
+    //     circle[1] = row;
+    //     circle[2] = r;
+    //     circle[3] = distance;
+    //     filtered.push_back(circle);
+    //     continue;
+    //   }
+    // }
 
     // if (row >= HEIGHT-1){  // right before harvesting the ball
     //   if (filtering3(row,col,cvFloor(circle[2]),img, distance)){
@@ -138,13 +149,7 @@ vector<Vec4f> filtering(vector<Vec3f> circles, Mat img){
     // }
     // cout << "(r,c): (" <<row << ", " << col << "), rad:" << r << ", f: " << f << ", dist: " << distance << endl;
     // cout << "r_predictd: " << r_pred << ", r_pixel: " << r << endl;
-    if (abs(r_pred-r) < THRESHOLD){
-      circle[0] = col;
-      circle[1] = row;
-      circle[2] = r;
-      circle[3] = distance;
-      filtered.push_back(circle);
-    }
+
   }
   return filtered;
 }
@@ -186,7 +191,7 @@ void ball_detect(){
          float r=cvRound(params[2]); //radius
 
          Point center(c_c,c_r);  //declare a Point Point(coloum, row)
-         circle(buffer,center,r,Scalar(255,0,255),1); //draw a circle on 'frame' based on the information given,   r = radius, Scalar(0,0,255) means color, 10 means lineWidth
+         circle(buffer,center,r,Scalar(255,0,255),2); //draw a circle on 'frame' based on the information given,   r = radius, Scalar(0,0,255) means color, 10 means lineWidth
      }
      filteredCircles = filtering(circles, gray);
      Vec4f params; //assign a memory to save the information of circles
