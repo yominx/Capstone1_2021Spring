@@ -31,7 +31,6 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <cv_bridge/cv_bridge.h>
 
-#include <sensor_msgs/Imu.h>
 
 #define RAD2DEG(x) ((x)*180./M_PI)
 
@@ -68,8 +67,8 @@ int waytype;
 float diff_o;
 float dist;
 
-// cv::Mat buffer_depth;
-// sensor_msgs::Imu imu_val;
+bool PASSED_STEP = false;
+cv::Mat buffer_depth;
 
 #define ENTRANCE 1
 #define BALLHARVESTING 2
@@ -97,32 +96,26 @@ void lidar_Callback(const sensor_msgs::LaserScan::ConstPtr& scan)
 	map_mutex.unlock();
 
 }
-/*
-void imu_Callback(const sensor_msgs::Imu::ConstPtr& imu_msg) {
-	imu_val.header = imu_msg->header;
-	imu_val.linear_acceleration.x = imu_msg->linear_acceleration.x;
-    imu_val.linear_acceleration.y = imu_msg->linear_acceleration.y;
-    imu_val.linear_acceleration.z = imu_msg->linear_acceleration.z;
-}
-*/
 
-/*
+
+float minValue = 10;
 void depth_Callback(const sensor_msgs::ImageConstPtr& msg)
 {
    try
    {
-     buffer_depth = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::TYPE_16UC1)->image;
-     buffer_depth.convertTo(buffer_depth, CV_32F, 0.001);
-		 if (buffer_depth.at<float>(479,320) < minValue) minValue = buffer_depth.at<float>(479,320);
-		 cout << buffer_depth.at<float>(479,320) << endl;
-		 cout << "min val = " << minValue << endl;
+	    buffer_depth = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::TYPE_16UC1)->image;
+	    buffer_depth.convertTo(buffer_depth, CV_32F, 0.001);
+	    float target = buffer_depth.at<float>(479,320);
+		if (target < minValue && target > 0.15) minValue = buffer_depth.at<float>(479,320);
+		cout << buffer_depth.at<float>(479,320) << endl;
+		cout << "min val = " << minValue << endl;
    }
    catch (cv_bridge::Exception& e)
    {
-     ROS_ERROR("Could not convert from '%s' to '16UC1'.", msg->encoding.c_str());
+    	ROS_ERROR("Could not convert from '%s' to '16UC1'.", msg->encoding.c_str());
    }
 }
-*/
+
 
 void position_Callback(const geometry_msgs::Vector3::ConstPtr& robot_pos) {
 	pos_x = 50 + robot_pos->x;
@@ -172,7 +165,7 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 			out_of_range_pts++;
 	}
 
-	cout << "LEFT " << left_points << " RIGHT " << right_points << endl;
+	// cout << "LEFT " << left_points << " RIGHT " << right_points << endl;
 	// cout <<" LB "<<left_back_pts<<" RB "<<right_back_pts<<endl;
 	// cout <<" OOR "<<out_of_range_pts<<endl;
 	int diff = left_points - right_points;
@@ -220,26 +213,16 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 
 bool meet_step()
 { // Image Size = 480 X 640
-	/*
 	if (buffer_depth.empty()){
 		cout << "NO IMAGE!" << endl;
 		return false;
 	}
-	float upDist = buffer_depth.at<float>(320,400);
-	float downDist = buffer_depth.at<float>(320,450);
-	cout << upDist << endl;
-	cout << downDist << endl;
-	if (fabs(upDist-downDist)<0.005 && downDist < 0.3) {
+	if (minValue<0.21 && minValue>0.15) {
 		cout << "THE ROBOT MEET THE STEP!!" << endl;
 		return true;
 	}
 	cout << "NOT YET!" << endl;
 	return false;
-	*/
-	cout << "x: " << imu_val.linear_acceleration.x << endl;
-	cout << "y: " << imu_val.linear_acceleration.y << endl;
-	cout << "z: " << imu_val.linear_acceleration.z << endl << endl;
-	return true;
 }
 
 //ball pickup&dumping part started
@@ -255,13 +238,12 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "data_integation");
     ros::NodeHandle n;
 	
-	// image_transport::ImageTransport it(n); //create image transport and connect it to node hnalder
-	// image_transport::Subscriber sub_depth = it.subscribe("/kinect_depth", 1, depth_Callback);
-    // ros::Subscriber sub_imuimu = n.subscribe("/imu", 1000, imu_Callback);
+	image_transport::ImageTransport it(n); //create image transport and connect it to node hnalder
+	image_transport::Subscriber sub_depth = it.subscribe("/kinect_depth", 1, depth_Callback);
 
     ros::Subscriber sub = n.subscribe<sensor_msgs::LaserScan>("/scan", 1000, lidar_Callback);
     // ros::Subscriber sub1 = n.subscribe<core_msgs::ball_position>("/position", 1000, camera_Callback);
-    // for ballharvesting motor control
+    
 	ros::Subscriber sub_pos = n.subscribe<geometry_msgs::Vector3>("/robot_pos", 1000, position_Callback);
 	ros::Subscriber sub_target = n.subscribe<geometry_msgs::Vector3>("/waypoint", 1000, target_Callback);
 
@@ -270,8 +252,6 @@ int main(int argc, char **argv)
 	ros::Publisher ball_number = n.advertise<std_msgs::Int8>("/ball_number", 10);
 	ros::Publisher ball_delivery = n.advertise<std_msgs::Int8>("/ball_delivery", 10);//pickup & dumping
 
-	// ros::Publisher pub_left_wheel= n.advertise<std_msgs::Float64>("/turtlebot3_waffle_sim/left_wheel_velocity_controller/command", 10);
-	// ros::Publisher pub_right_wheel= n.advertise<std_msgs::Float64>("/turtlebot3_waffle_sim/right_wheel_velocity_controller/command", 10);
 
 	int control_method = ENTRANCE;
 	double t;
@@ -286,19 +266,20 @@ int main(int argc, char **argv)
     	if (control_method == ENTRANCE) {
     		control_entrance(&targetVel);
     		targetVel.angular.x = -50;
-    		if (meet_step()) {
-    // 			int t = 2;
-    // 			targetVel.linear.x  = 4;
-				// targetVel.angular.z = 0;
-    // 			targetVel.angular.x = 50; // collector velocity: angular.x
-    // 			ros::Time beginTime=ros::Time::now();
-				// ros::Duration delta_t = ros::Duration(t);
-				// ros::Time endTime=beginTime + delta_t;
-				// while(ros::Time::now()<endTime)
-				// {
-				// 	commandVel.publish(targetVel);
-				// 	ros::Duration(0.1).sleep();
-				// }
+    		if (!PASSED_STEP && meet_step()) {
+    			int t = 20;
+    			targetVel.linear.x  = 4;
+				targetVel.angular.z = 0;
+    			targetVel.angular.x = 50; // collector velocity: angular.x
+    			ros::Time beginTime=ros::Time::now();
+				ros::Duration delta_t = ros::Duration(t);
+				ros::Time endTime=beginTime + delta_t;
+				while(ros::Time::now()<endTime)
+				{
+					commandVel.publish(targetVel);
+					ros::Duration(0.1).sleep();
+				}
+				PASSED_STEP = true;
     		}
     	}
     	else if (control_method == BALLHARVESTING) {
