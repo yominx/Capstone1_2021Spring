@@ -61,7 +61,6 @@ int robotX, 	robotY,
 
 int REMAINING_BALLS = 5;
 bool END = false;
-int size = -1;
 
 class NodeMap{
 public:
@@ -88,7 +87,7 @@ public:
 	}
 };
 
-NodeMap nodes[20];
+NodeMap nodes[40];
 
 
 int Astar_plan(int size, int target_index, NodeMap* node_list);
@@ -126,12 +125,8 @@ bool visible_arbitrary(int x1, int y1, int x2, int y2){
 		posX = x1+i*stepX;
 		posY = y1+i*stepY;
 		for(int i=0;i < pillarCount;i++){ // check pillar-collision
-			if((pillarX[i] == x1 && pillarY[i] == y1) 
-				|| (pillarX[i] == x2 && pillarY[i] == y2))
-					continue;
 			distsq = pow(posX-pillarX[i], 2) + pow(posY-pillarY[i],2);
-
-			if(distsq < pow(PILLAR_RADIUS+ROBOT_SIZE,2)) return false;
+			if(distsq < pow(PILLAR_RADIUS+ROBOT_SIZE, 2)) return false;
 		}
 		for(int i=0;i<ballCount;i++){ // check ball-collision
 			if((ballX[i] == x1 && ballY[i] == y1) 
@@ -243,17 +238,17 @@ int buildMap(int size, NodeMap* nodes, const core_msgs::multiarray::ConstPtr& ob
 }
 
 
-void unknown_map_control(){
+void unknown_map_control(int node_number){
 	cout << "Robot Position:" << robotX << ", " << robotY << endl;
 	if(visible_arbitrary(robotX, robotY, robotX, robotY + 30)) {
 		publish_wayp(robotX + 30, robotY, -1);
-		visualize(size, nodes, -1, robotX + 30, robotY);
+		visualize(node_number, nodes, -1, robotX + 30, robotY);
 	} else if (visible_arbitrary(robotX, robotY, robotX + 15, robotY + 15)) {
 		publish_wayp(robotX + 15, robotY + 15, -1);
-		visualize(size, nodes, -1, robotX + 15, robotY + 15);
+		visualize(node_number, nodes, -1, robotX + 15, robotY + 15);
 	} else if (visible_arbitrary(robotX, robotY, robotX + 30, robotY)) {
 		publish_wayp(robotX, robotY + 30, -1);
-		visualize(size, nodes, -1, robotX, robotY + 30);
+		visualize(node_number, nodes, -1, robotX, robotY + 30);
 	} else{
 		cout << "ERROR: No points to move" << endl;
 	}
@@ -263,7 +258,7 @@ void ballharvest_control(int node_number, int target_ball_index, NodeMap* nodes)
 	int next_index = Astar_plan(node_number, target_ball_index, nodes); 
 	if (next_index == -1){
 		cout << "????????????????" << endl;
-		unknown_map_control();		
+		unknown_map_control(node_number);		
 	}
 	int nextX = nodes[next_index].x;
 	int nextY = nodes[next_index].y;
@@ -322,20 +317,22 @@ void positions_callback(const core_msgs::multiarray::ConstPtr& object)
 	if(END){
 		publish_wayp(-1,-1,-1);
 	}
-	size = (object->data.size())/3;
+	int size = (object->data.size())/3;
 	int node_number = 0;
 
 	cout << "[Callback] Position callback: " << size << " elements known" << endl;
 	node_lock.lock();
 	node_number = buildMap(size, nodes, object);
 	cout << "[Mapping] Mapping complete" << endl;
+	cout << "	PILLAR NUMBER: " << pillarCount << endl;
+	cout << "	BALL   NUMBER: " << ballCount   << endl;
 	// visualize(size, nodes, -1, 0, 0);
 
 	if (REMAINING_BALLS > 0){
 		int target_ball_index = get_shortest_index(node_number, nodes);
 		if (target_ball_index == -1){ // No balls are found
 			cout << "No balls are detected..." << endl;
-			unknown_map_control();
+			unknown_map_control(node_number);
 		} else { // make path_plan to nodes[i]
 			ballharvest_control(node_number, target_ball_index, nodes);
 		}
@@ -394,7 +391,7 @@ void update_visibility(int cur_idx, int goal_index, int size, NodeMap* node_list
 		if (i == cur_idx || node_list[i].confirmed) continue;
 		if (visible_arbitrary(node_list[cur_idx].x, node_list[cur_idx].y, 
 							  node_list[i].x,       node_list[i].y)){
-			cout << i << "th object is visible from " << cur_idx << "th object." << endl;
+			// cout << i << "th object is visible from " << cur_idx << "th object." << endl;
 
 			int diffX = node_list[cur_idx].x - node_list[i].x;
 			int diffY = node_list[cur_idx].y - node_list[i].y;
@@ -423,7 +420,6 @@ void update_visibility(int cur_idx, int goal_index, int size, NodeMap* node_list
 
 
 int Astar_plan(int size, int target_index, NodeMap* node_list){ 
-	// TODO: consider distance difference btw Collector & Lidar sensor when return
 	cout << "[Astar] perform Astar" << endl;
 	std::vector<int> visible_queue;
 	visible_queue.clear();
@@ -457,6 +453,7 @@ int Astar_plan(int size, int target_index, NodeMap* node_list){
 	NodeMap cur_node = node_list[cur_idx];
 
 	while (cur_node.prev_node_idx != start_idx) {
+		cout << "Move " << cur_idx << " obj to " << cur_node.prev_node_idx << " obj." << endl;
 		if (cur_node.prev_node_idx == -1){
 			cout << "ERROR : No where to move for object " << cur_idx << endl;
 			return -1;
@@ -474,7 +471,7 @@ int Astar_plan(int size, int target_index, NodeMap* node_list){
 void visualize(int size, NodeMap* nodes, int goal_index, int targetX, int targetY){
 	cout << "Visualization" << endl;
     missionmap = cv::Mat::zeros(MAP_HEIGHT, MAP_WIDTH, CV_8UC3);
-    int x,y;
+    int x,y, robot_index;
     // int GAP = 50;
 
     circle(missionmap, Point(targetX, targetY), 10, Scalar(255,255,255), 2, -1, 0);
@@ -485,6 +482,7 @@ void visualize(int size, NodeMap* nodes, int goal_index, int targetX, int target
     	switch (nodes[i].type){
     		case ROBOT:
     			color = Scalar(255,255,0);
+    			robot_index = i;
     			break;
     		case BALL:
     			color = Scalar(50,50,255);
@@ -497,15 +495,27 @@ void visualize(int size, NodeMap* nodes, int goal_index, int targetX, int target
     	}
     	circle(missionmap, Point(x,y), 5, color, 2, 8, 0);
     }
+    for (int i=0; i<pillarCount; i++){
+    	circle(missionmap, Point(pillarX[i], pillarY[i]), 18, Scalar(255,255,255), 2, -1, 0);    	
+    }
 
- //   	NodeMap cur_node = nodes[goal_index];
- //   	int cur_idx = goal_index;
-	// while (cur_node.prev_node_idx != -1) {
-	// 	NodeMap prev = nodes[cur_node.prev_node_idx];
-	// 	line(missionmap, Point(cur_node.x,MAP_HEIGHT-50-cur_node.y), Point(prev.x, MAP_HEIGHT-50-prev.y), Scalar(255,255,255), 1, 8, 0);
-	// 	cur_idx = cur_node.prev_node_idx;
-	// 	cur_node = nodes[cur_idx];
-	// }
+
+   	int cur_idx = goal_index;
+   	if (cur_idx == -1){
+	    imshow("BALL HARVESTING MAP", missionmap);
+		waitKey(10);   		
+   		return;
+   	}
+   	NodeMap cur_node = nodes[goal_index];
+   	cout << "GOAL INDEX " << goal_index << endl;
+   	cout << "PREV INDEX " << cur_node.prev_node_idx << endl;
+	while (cur_idx != robot_index && cur_node.prev_node_idx != -1) {
+		// cout << "Index :" << cur_idx << endl;
+		NodeMap prev = nodes[cur_node.prev_node_idx];
+		line(missionmap, Point(cur_node.x, cur_node.y), Point(prev.x, prev.y), Scalar(255,255,255), 1, 8, 0);
+		cur_idx = cur_node.prev_node_idx;
+		cur_node = nodes[cur_idx];
+	}
 	cout << "[Visualize] MAP CONFIGURATION DONE" << endl;
     imshow("BALL HARVESTING MAP", missionmap);
 	waitKey(10);
