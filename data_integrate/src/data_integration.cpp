@@ -95,7 +95,7 @@ void lidar_Callback(const sensor_msgs::LaserScan::ConstPtr& scan)
 
 }
 
-void depthCallback(const sensor_msgs::ImageConstPtr& msg)
+void depth_Callback(const sensor_msgs::ImageConstPtr& msg)
 {
    try
    {
@@ -209,8 +209,14 @@ int select_control_method(){
 
 bool meet_step()
 { // Image Size = 480 X 640
+	if (buffer_depth.empty()){
+		cout << "NO IMAGE!" << endl;
+		return false;
+	}
 	float dist = buffer_depth.at<float>(320,450);
+	cout << "THE ROBOT MEET THE STEP!!" << endl;
 	if (dist < 0.5) return true;
+	cout << "NOT YET!" << endl;
 	return false;
 }
 
@@ -226,8 +232,9 @@ int main(int argc, char **argv)
 {
     ros::init(argc, argv, "data_integation");
     ros::NodeHandle n;
-		image_transport::ImageTransport it(n); //create image transport and connect it to node hnalder
-		image_transport::Subscriber sub_depth = it.subscribe("/kinect_depth", 1, depthCallback);
+	
+	image_transport::ImageTransport it(n); //create image transport and connect it to node hnalder
+	image_transport::Subscriber sub_depth = it.subscribe("/kinect_depth", 1, depth_Callback);
     ros::Subscriber sub = n.subscribe<sensor_msgs::LaserScan>("/scan", 1000, lidar_Callback);
     // ros::Subscriber sub1 = n.subscribe<core_msgs::ball_position>("/position", 1000, camera_Callback);
     // for ballharvesting motor control
@@ -254,6 +261,21 @@ int main(int argc, char **argv)
 
     	if (control_method == ENTRANCE) {
     		control_entrance(&targetVel);
+    		targetVel.angular.x = -100;
+    		if (meet_step()) {
+    			int t = 2;
+    			targetVel.linear.x  = 4;
+				targetVel.angular.z = 0;
+    			targetVel.angular.x = 100; // collector velocity: angular.x
+    			ros::Time beginTime=ros::Time::now();
+				ros::Duration delta_t = ros::Duration(t);
+				ros::Time endTime=beginTime + delta_t;
+				while(ros::Time::now()<endTime)
+				{
+					commandVel.publish(targetVel);
+					ros::Duration(0.1).sleep();
+				}
+    		}
     	}
     	else if (control_method == BALLHARVESTING) {
     		control_ballharvesting(&targetVel);
