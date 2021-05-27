@@ -139,12 +139,12 @@ if __name__=="__main__":
         while(1):
             key = getKey()
             if key == 'x' :
-                linear_vel -= 2
+                linear_vel -= 1
                 message.linear.x = linear_vel 
                 status = status + 1
                 print(vels(linear_vel,angular_vel))
             elif key == 'w' :
-                linear_vel += 2
+                linear_vel += 1
                 message.linear.x = linear_vel 
                 status = status + 1
                 print(vels(linear_vel,angular_vel))
