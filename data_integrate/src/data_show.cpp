@@ -134,11 +134,11 @@ Zones::Zone::Zone(int r, int c, int type):type(type),nPoints(1),cenRow(r),cenCol
       break;
     case PILLAR:
       zoneSize = 20;
-      threshold = 0.01;
+      threshold = 0.3;
       break;
     case GOAL:
       zoneSize = 50;
-      threshold = 0.01;
+      threshold = 0.3;
   }
 }
 Zones::Zone::~Zone(){}
@@ -207,7 +207,7 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
     // cout << "(" << j << "-th zone) nPoints: " << zones.zoneList[j].nPoints << ", cnt: "<< zones.zoneList[j].cnt << endl;
     // cout << "(" << j << "-th zone) is reliable : " << zones.zoneList[j].reliable << endl;
     // cout << "(" << j << "-th zone) cnt*threshold = " << zones.zoneList[j].cnt << " * " << zones.zoneList[j].threshold << " = " << zones.zoneList[j].cnt * zones.zoneList[j].threshold <<endl;
-    if ((zones.zoneList[j].cnt % 30) == 0){
+    if ((zones.zoneList[j].cnt % 30) == 0 && zones.zoneList[i].nPoints < 200){
       if (zones.zoneList[j].nPoints > zones.zoneList[j].cnt * zones.zoneList[j].threshold){
         zones.zoneList[j].reliable = true;
         // cout << "(" << j << "-th zone) is reliable" << endl;
@@ -231,6 +231,7 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
 void ballPos_Callback(const core_msgs::ball_position::ConstPtr& pos)
 {
     nBalls = pos->size;
+    if (nBalls > 20) nBalls = 20;
     for(int i = 0; i < nBalls; i++)
     {
         ballAngle[i] = pos->angle[i];
@@ -254,6 +255,7 @@ void odometry_Callback(const geometry_msgs::Vector3 odometry){
 void pillarPos_Callback(const std_msgs::Float32MultiArray pos)
 {
     nPillars = pos.data.size()/2;
+    if (nPillars > 10) nPillars;
     for (int i=0; i<nPillars; i++){
       pillarDist[i] = pos.data[2*i];
       pillarAngle[i] = pos.data[2*i+1];

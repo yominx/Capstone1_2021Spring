@@ -37,6 +37,7 @@ int HEIGHT = 479;
 float RADIUS = 0.15/2; //[m]
 float THRESHOLD = 3;
 float FOV = 28.5*M_PI/180;
+float dHeight = 0.178 - RADIUS;
 
 bool isBlack(int row, int col, Mat img){
   return img.at<uchar>(row,col)<100;
@@ -54,19 +55,24 @@ bool filtering1(int row, int col, int r, Mat img){
 bool filtering2(int row, int col, float r, float focalLen, Mat img, float& dist){
   int rFloor = (int)cvFloor(r);
   int targetPoint;
-  float targetPointDist;
+  float targetPointDist, angle;
   if (isBlack(row,col,img)){ // blocked by pillar or scooper
+    angle = atan((2.5*(col-319.5)/320)/4.6621);
+    // if (isBlack(row,col-rFloor,img))
     targetPoint = (isBlack(row,col-rFloor,img)) ? col+rFloor : col-rFloor;
-    targetPointDist = buffer_depth.at<float>(row,targetPoint);
+    targetPointDist = buffer_depth.at<float>(row,targetPoint)/cos(angle);
   }
   else {
     targetPoint = row - rFloor;
-    targetPointDist = buffer_depth.at<float>(targetPoint,col);
+    targetPointDist = buffer_depth.at<float>(targetPoint,col) / cos(angle);
   }
-  float centerDist = sqrt(targetPointDist*targetPointDist + RADIUS*RADIUS);
+  float centerDist = sqrt(targetPointDist*targetPointDist + dHeight*dHeight);
   float r_pred = RADIUS*FOCAL_LENGTH/centerDist;
+  Point center(col,row);
+  circle(buffer,center,r_pred,Scalar(255,0,0),2);
+  cout << "(r_pred, r_measured)= (" << r_pred << ", " << r << ")" << endl;
   if (abs(r_pred-r) < THRESHOLD){
-    dist = centerDist;
+    dist = targetPointDist;
     return true;
   }
   return false;
@@ -96,7 +102,7 @@ vector<Vec4f> filtering(vector<Vec3f> circles, Mat img){
   Vec4f circle;
   int size = circles.size();
   int col, row;
-  float r, r_pred, distance, f;
+  float r, r_pred, distance, f, angle;
   for (int i=0; i<size; i++){
     col = (int)cvRound(circles[i][0]);
     row = (int)cvRound(circles[i][1]);
@@ -105,19 +111,31 @@ vector<Vec4f> filtering(vector<Vec3f> circles, Mat img){
       continue;
     }
     f = sqrt(pow(FOCAL_LENGTH,2)+pow((WIDTH/2.-col),2)+pow((HEIGHT/2.-row),2));
-    distance = buffer_depth.at<float>(row, col) + RADIUS;
-    r_pred = RADIUS*FOCAL_LENGTH/distance;
-
-    if (r_pred > r){ // blocked by another ball or pillar or scooper
-      if (filtering2(row,col,r,f,img,distance)){
-        circle[0] = col;
-        circle[1] = row;
-        circle[2] = r;
-        circle[3] = distance;
-        filtered.push_back(circle);
-        continue;
-      }
+    angle = atan((2.5*(col-319.5)/320)/4.6621);
+    distance = (buffer_depth.at<float>(row, col) + RADIUS) / cos(angle);
+    cout << "distance = " << distance <<endl;
+    //r_pred = RADIUS*f/sqrt(distance*distance + dHeight*dHeight);
+    r_pred = RADIUS*f/distance;
+    cout << "(r_measured, r_pred) : (" << r << ", " << r_pred << ")" << endl;
+    if (abs(r_pred-r) < THRESHOLD){
+      circle[0] = col;
+      circle[1] = row;
+      circle[2] = r;
+      circle[3] = distance;
+      filtered.push_back(circle);
+      continue;
     }
+
+    // if (abs(buffer_depth.at<float>(row,col-r*0.7) - buffer_depth.at<float>(row,col+r*0.7)) > RADIUS){ // blocked by another ball or pillar or scooper
+    //   if (filtering2(row,col,r,f,img,distance)){
+    //     circle[0] = col;
+    //     circle[1] = row;
+    //     circle[2] = r;
+    //     circle[3] = distance;
+    //     filtered.push_back(circle);
+    //     continue;
+    //   }
+    // }
 
     // if (row >= HEIGHT-1){  // right before harvesting the ball
     //   if (filtering3(row,col,cvFloor(circle[2]),img, distance)){
@@ -131,13 +149,7 @@ vector<Vec4f> filtering(vector<Vec3f> circles, Mat img){
     // }
     // cout << "(r,c): (" <<row << ", " << col << "), rad:" << r << ", f: " << f << ", dist: " << distance << endl;
     // cout << "r_predictd: " << r_pred << ", r_pixel: " << r << endl;
-    if (abs(r_pred-r) < THRESHOLD){
-      circle[0] = col;
-      circle[1] = row;
-      circle[2] = r;
-      circle[3] = distance+RADIUS;
-      filtered.push_back(circle);
-    }
+
   }
   return filtered;
 }
@@ -179,7 +191,7 @@ void ball_detect(){
          float r=cvRound(params[2]); //radius
 
          Point center(c_c,c_r);  //declare a Point Point(coloum, row)
-         circle(buffer,center,r,Scalar(255,0,255),3); //draw a circle on 'frame' based on the information given,   r = radius, Scalar(0,0,255) means color, 10 means lineWidth
+         circle(buffer,center,r,Scalar(255,0,255),2); //draw a circle on 'frame' based on the information given,   r = radius, Scalar(0,0,255) means color, 10 means lineWidth
      }
      filteredCircles = filtering(circles, gray);
      Vec4f params; //assign a memory to save the information of circles
