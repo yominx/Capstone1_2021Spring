@@ -379,6 +379,10 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
       }
     }
 
+
+
+
+
 //Debugging:
 cout<<"output xyo is "<<pos_x<<"/"<<pos_y<<"/"<<pos_o<<endl;
 
@@ -387,6 +391,8 @@ cout<<"output xyo is "<<pos_x<<"/"<<pos_y<<"/"<<pos_o<<endl;
     robot_pos.z=pos_o;
     
 }
+
+
 
 void lidar_Callback(const sensor_msgs::LaserScan::ConstPtr& scan) //LiDAR scan으로부터 lidar 각도에 따른 거리 배정
 {
@@ -418,7 +424,7 @@ void control_input_Callback(const geometry_msgs::Twist::ConstPtr& targetVel){
   linear_vel = targetVel->linear.x;
   angular_vel = targetVel->angular.z;
   
-  Ts=0.0001;
+  Ts=0.001;
   if (zone_info==2 && initialization>10){
   robot_pos.x=robot_pos.x+linear_vel*cos(robot_pos.z)*Ts;
   robot_pos.y=robot_pos.y+linear_vel*sin(robot_pos.z)*Ts;
@@ -556,25 +562,40 @@ int main(int argc, char **argv)
       line(map, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(255,0,0), 1);
     }
 
+
+
+
 //테스트 용으로 사용시 아래 단락을 주석처리하고 robot_pos의 초기값을 main함수 밖에서 설정
         if (zone_info==1){
           robot_pos.x=-30;
           robot_pos.y=50;
-          robot_pos.z=2*M_PI-0.09;
+          robot_pos.z=2*M_PI-0.4;
           cout<<"localization not yet"<<endl;
-        }else if (zone_info==2 && initialization<20){
-          rectangular_map(lines, 25, 0.4);
-          initialization++;
+        }else if (zone_info==2 && initial_step<10){
+          rectangular_map(lines, 25, 0.3);
+          initial_step++;
+          if( robot_pos.x==-30 && robot_pos.y==50 && robot_pos.z==2*M_PI-0.4){
+            robot_pos.x=-30;
+            robot_pos.y=50;
+            robot_pos.z=2*M_PI-0.09;
+            rectangular_map(lines, 25, 0.3);
+          }
+
         }else{
           rectangular_map(lines, 20, 0.2); //angle_threshold는 최대 0.7보다는 작아야 한다.
         }
+        
+        
+
         //Getting obstacle location 
         obs_pos.data.clear();
-        if (zone_info == 2){
-          for (int i=0; i<obs_distance.size(); i++){
-            obs_pos.data.push_back(obs_distance[i]);
-            obs_pos.data.push_back(obs_degree[i]);
-          }  
+        
+        if(zone_info==2){
+
+            for (int i=0; i<obs_distance.size(); i++){
+              obs_pos.data.push_back(obs_distance[i]);
+              obs_pos.data.push_back(obs_degree[i]);
+            }
         }
 
 //Debugging:
