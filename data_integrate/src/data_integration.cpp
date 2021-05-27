@@ -235,6 +235,8 @@ int main(int argc, char **argv)
 	double time_const_linear = 1; // to be midified with experiments
 	double time_const_angular = 1; // to be midified with experiments
 
+    ros::Rate loop_rate(40);
+
     while(ros::ok){
     	geometry_msgs::Twist targetVel;
 
@@ -284,21 +286,6 @@ int main(int argc, char **argv)
 		}
 		zone.publish(zone_info);
 
-
-		// std_msgs::Float64 left_wheel_msg;
-		// std_msgs::Float64 right_wheel_msg;
-		// left_wheel_msg.data=1;   // set left_wheel velocity
-		// right_wheel_msg.data=1;  // set right_wheel velocity
-		// pub_left_wheel.publish(left_wheel_msg);   // publish left_wheel velocity
-		// pub_right_wheel.publish(right_wheel_msg);  // publish right_wheel velocity
-
-		// for(int i = 0; i < lidar_size; i++) {
-		//     cout << "degree : " << lidar_degree[i] << "  distance : " << lidar_distance[i] << endl;
-		// }
-		// for(int i = 0; i < ball_number; i++) {
-		// 	cout << "ball_X : " << ball_X[i] << "  ball_Y : " << ball_Y[i] << endl;
-		// }
-	    
 		//Ball pickup/dumping part started
 		delivery=0;
 		
@@ -360,7 +347,7 @@ int main(int argc, char **argv)
 	    
 		commandVel.publish(targetVel);
 		    
-		ros::Duration(0.025).sleep();
+	    loop_rate.sleep();
 		ros::spinOnce();
     }
 

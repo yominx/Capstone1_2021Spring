@@ -293,7 +293,8 @@ int main(int argc, char **argv)
       msg.cols = nData;
       pub.publish(msg);
       imshow("map", MAP);
-      waitKey(10);
+      // destroyAllWindows();
+      waitKey(1);
       loop_rate.sleep();
       ros::spinOnce();
     }
