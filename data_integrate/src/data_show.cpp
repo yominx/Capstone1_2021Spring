@@ -293,9 +293,9 @@ int main(int argc, char **argv)
       nData += 1;
       msg.cols = nData;
       pub.publish(msg);
-      imshow("map", MAP);
+      // imshow("map", MAP);
       // destroyAllWindows();
-      waitKey(1);
+      // waitKey(1);
       loop_rate.sleep();
       ros::spinOnce();
     }

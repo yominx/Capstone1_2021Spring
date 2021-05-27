@@ -17,6 +17,7 @@ function callback_cmdvel_sub(msg)
     sim.setJointTargetVelocity(joint22,Vl + 1.5*Vr)
     sim.setJointTargetVelocity(joint13,Vl - 1.83*Vr)
     sim.setJointTargetVelocity(joint23,Vl + 1.83*Vr)
+    sim.setJointTargetVelocity(joint00, msg.angular.x)
     
 
     sim.addStatusbarMessage(string.format("Vl:%f Vr:%f",Vl, Vr))

@@ -211,8 +211,14 @@ int select_control_method(){
 
 bool meet_step()
 { // Image Size = 480 X 640
+	if (buffer_depth.empty()){
+		cout << "NO IMAGE!" << endl;
+		return false;
+	}
 	float dist = buffer_depth.at<float>(320,450);
+	cout << "THE ROBOT MEET THE STEP!!" << endl;
 	if (dist < 0.5) return true;
+	cout << "NOT YET!" << endl;
 	return false;
 }
 
@@ -228,8 +234,9 @@ int main(int argc, char **argv)
 {
     ros::init(argc, argv, "data_integation");
     ros::NodeHandle n;
-		image_transport::ImageTransport it(n); //create image transport and connect it to node hnalder
-		image_transport::Subscriber sub_depth = it.subscribe("/kinect_depth", 1, depthCallback);
+
+	image_transport::ImageTransport it(n); //create image transport and connect it to node hnalder
+	image_transport::Subscriber sub_depth = it.subscribe("/kinect_depth", 1, depth_Callback);
     ros::Subscriber sub = n.subscribe<sensor_msgs::LaserScan>("/scan", 1000, lidar_Callback);
     // ros::Subscriber sub1 = n.subscribe<core_msgs::ball_position>("/position", 1000, camera_Callback);
     // for ballharvesting motor control
@@ -256,6 +263,21 @@ int main(int argc, char **argv)
 
     	if (control_method == ENTRANCE) {
     		control_entrance(&targetVel);
+    		targetVel.angular.x = -100;
+    		if (meet_step()) {
+    			int t = 2;
+    			targetVel.linear.x  = 4;
+				targetVel.angular.z = 0;
+    			targetVel.angular.x = 100; // collector velocity: angular.x
+    			ros::Time beginTime=ros::Time::now();
+				ros::Duration delta_t = ros::Duration(t);
+				ros::Time endTime=beginTime + delta_t;
+				while(ros::Time::now()<endTime)
+				{
+					commandVel.publish(targetVel);
+					ros::Duration(0.1).sleep();
+				}
+    		}
     	}
     	else if (control_method == BALLHARVESTING) {
     		control_ballharvesting(&targetVel);
@@ -281,13 +303,15 @@ int main(int argc, char **argv)
 
 		if(waytype==BALL || csg_count>0){
 			csg_count=1;
-			if(abs(pos_x-target_x)<5 && abs(pos_y-target_y)<5){
+			int BALL_LIDAR_DIST = 18;
+			if(pow(pos_x-target_x, 2) + pow(pos_y-target_y,2) < pow(BALL_LIDAR_DIST, 2)){
 				delivery=1;
 				targetVel.linear.x=0;
 				targetVel.angular.z=0;
 			}
 		}else if(waytype==GOAL){
-			if(abs(pos_x-500)<20 && abs(pos_y-150)<20){
+			int GOAL_SIZE = 25;
+			if(pow(pos_x-500, 2) + pow(pos_y-150,2) < pow(GOAL_SIZE, 2)){
 				target_o=atan((150-pos_y)/(500-pos_x));
 
 				if(target_o>0){
