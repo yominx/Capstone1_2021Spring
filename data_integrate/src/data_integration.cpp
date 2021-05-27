@@ -27,7 +27,9 @@
 #include "geometry_msgs/Twist.h"
 
 #include "opencv2/opencv.hpp"
-
+#include <image_transport/image_transport.h>
+#include <opencv2/highgui/highgui.hpp>
+#include <cv_bridge/cv_bridge.h>
 
 #define RAD2DEG(x) ((x)*180./M_PI)
 
@@ -59,9 +61,12 @@ float pos_y;
 float pos_o;
 float target_x;
 float target_y;
+float target_o;
 int waytype;
 float diff_o;
 float dist;
+
+cv::Mat buffer_depth;
 
 #define ENTRANCE 1
 #define BALLHARVESTING 2
@@ -89,21 +94,21 @@ void lidar_Callback(const sensor_msgs::LaserScan::ConstPtr& scan)
 	map_mutex.unlock();
 
 }
-void camera_Callback(const core_msgs::ball_position::ConstPtr& position)
+
+void depthCallback(const sensor_msgs::ImageConstPtr& msg)
 {
+   try
+   {
+     buffer_depth = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::TYPE_16UC1)->image;
+     buffer_depth.convertTo(buffer_depth, CV_32F, 0.001);
 
-    int count = position->size;
-    ball_number=count;
-    for(int i = 0; i < count; i++)
-    {
-        ball_X[i] = position->angle[i];
-        ball_Y[i] = position->dist[i];
-        // std::cout << "degree : "<< ball_degree[i];
-        // std::cout << "   distance : "<< ball_distance[i]<<std::endl;
-		ball_distance[i] = ball_X[i]*ball_X[i]+ball_Y[i]*ball_X[i];
-    }
-
+   }
+   catch (cv_bridge::Exception& e)
+   {
+     ROS_ERROR("Could not convert from '%s' to '16UC1'.", msg->encoding.c_str());
+   }
 }
+
 void position_Callback(const geometry_msgs::Vector3::ConstPtr& robot_pos) {
 	pos_x = 50 + robot_pos->x;
 	pos_y = 50 + robot_pos->y;
@@ -113,9 +118,9 @@ void target_Callback(const geometry_msgs::Vector3::ConstPtr& waypoint) {
 	target_x = waypoint->x;
 	target_y = waypoint->y;
 	waytype = waypoint->z;
-	float target_o = atan2(target_y-pos_y, target_x-pos_x);
-	diff_o = target_o - pos_o; // while -pos_o, |diff_o| may become > pi
-	cout << "Target orientation is " << target_o << endl <<  "Current orientation is" << pos_o << endl;
+	float target_ori = atan2(target_y-pos_y, target_x-pos_x);
+	diff_o = target_ori - pos_o; // while -pos_o, |diff_o| may become > pi
+	cout << "Target orientation is " << target_ori << endl <<  "Current orientation is" << pos_o << endl;
 	cout << "diff x,y is " << target_x-pos_x <<  ", " << target_y-pos_y << endl;
 
 	// atan2: -pi ~ pi, pos_o: 0 ~ 2pi => -3pi ~ pi
@@ -129,7 +134,7 @@ void target_Callback(const geometry_msgs::Vector3::ConstPtr& waypoint) {
 void control_entrance(geometry_msgs::Twist *targetVel)
 {
 	//cout << "Entrance Zone Control" << endl;
-	
+
 	float threshold = 8, MIN_DIST_THRESHOLD = 0.05, RADIUS = 0.8;
 
 	map_mutex.lock();
@@ -152,7 +157,7 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 			out_of_range_pts++;
 	}
 
-	// cout << "LEFT " << left_points << " RIGHT " << right_points << endl; 
+	// cout << "LEFT " << left_points << " RIGHT " << right_points << endl;
 	// cout <<" LB "<<left_back_pts<<" RB "<<right_back_pts<<endl;
 	// cout <<" OOR "<<out_of_range_pts<<endl;
 	int diff = left_points - right_points;
@@ -167,7 +172,7 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 		targetVel->angular.z = 0;
 	}
 	}
-	
+
 	map_mutex.unlock();
 
 }
@@ -202,6 +207,12 @@ int select_control_method(){
 	else return BALLHARVESTING;
 }
 
+bool meet_step()
+{ // Image Size = 480 X 640
+	float dist = buffer_depth.at<float>(320,450);
+	if (dist < 0.5) return true;
+	return false;
+}
 
 //ball pickup&dumping part started
 int delivery=0;
@@ -215,13 +226,14 @@ int main(int argc, char **argv)
 {
     ros::init(argc, argv, "data_integation");
     ros::NodeHandle n;
-
+		image_transport::ImageTransport it(n); //create image transport and connect it to node hnalder
+		image_transport::Subscriber sub_depth = it.subscribe("/kinect_depth", 1, depthCallback);
     ros::Subscriber sub = n.subscribe<sensor_msgs::LaserScan>("/scan", 1000, lidar_Callback);
     // ros::Subscriber sub1 = n.subscribe<core_msgs::ball_position>("/position", 1000, camera_Callback);
     // for ballharvesting motor control
 	ros::Subscriber sub_pos = n.subscribe<geometry_msgs::Vector3>("/robot_pos", 1000, position_Callback);
 	ros::Subscriber sub_target = n.subscribe<geometry_msgs::Vector3>("/waypoint", 1000, target_Callback);
-	
+
 	ros::Publisher commandVel = n.advertise<geometry_msgs::Twist>("/command_vel", 10);
 	ros::Publisher zone = n.advertise<std_msgs::Int8>("/zone", 10);
 	ros::Publisher ball_number = n.advertise<std_msgs::Int8>("/ball_number", 10);
@@ -264,7 +276,7 @@ int main(int argc, char **argv)
 
 		//Ball pickup/dumping part started
 		delivery=0;
-		
+
 		if(waytype==BALL || csg_count>0){
 			csg_count=1;
 			if(abs(pos_x-target_x)<5 && abs(pos_y-target_y)<5){
@@ -275,7 +287,7 @@ int main(int argc, char **argv)
 		}else if(waytype==GOAL){
 			if(abs(pos_x-500)<20 && abs(pos_y-150)<20){
 				target_o=atan((150-pos_y)/(500-pos_x));
-				
+
 				if(target_o>0){
 					target_o=target_o+M_PI;
 				}else if(target_o<0){
@@ -292,7 +304,7 @@ int main(int argc, char **argv)
 				targetVel.linear.x=0;
 			}
 		}
-			
+
 		if(delivery!=0){
 			delivery_count++;
 		}
@@ -313,13 +325,13 @@ int main(int argc, char **argv)
 		delivery_mode.data=delivery;
 		ball_delivery.publish(delivery_mode);
 		//Ball pickup/dumping part ended
-	    
+
 		std_msgs::Int8 ball_count_no;
 		ball_count_no.data=ball_count;
 		ball_number.publish(ball_count_no);
-	    
+
 		commandVel.publish(targetVel);
-		    
+
 	    loop_rate.sleep();
 		ros::spinOnce();
     }

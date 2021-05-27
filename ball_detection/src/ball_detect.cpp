@@ -246,7 +246,7 @@ void ball_detect(){
      }
      cout << endl;
      pubBall.publish(msgBall);  //publish a message
-     // cv::imshow("view", buffer);  //show the image with a window
+     cv::imshow("view", buffer);  //show the image with a window
      cv::waitKey(1);
 }
 
@@ -273,7 +273,7 @@ void depthCallback(const sensor_msgs::ImageConstPtr& msg)
    {
      buffer_depth = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::TYPE_16UC1)->image;
      buffer_depth.convertTo(buffer_depth, CV_32F, 0.001);
-
+     cout << buffer_depth.size() << endl;
    }
    catch (cv_bridge::Exception& e)
    {
