@@ -45,7 +45,7 @@ bool isBlack(int row, int col, Mat img){
 
 bool goal_check(int row, int col, int r, Mat img){
   // return (img.at<uchar>(row-r+1,col) > 45 && img.at<uchar>(row-r+1,col) < 75 && img.at<uchar>(row,col) > 45 && img.at<uchar>(row,col) < 75);
-  return (img.at<uchar>(row,col) > 40 || img.at<uchar>(row-r/2,col) > 40);
+  return (img.at<uchar>(row-r*0.7,col) > 40);
 }
 
 bool filtering1(int row, int col, int r, Mat img){
