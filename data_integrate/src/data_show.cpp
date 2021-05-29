@@ -140,7 +140,7 @@ void Zones::removeZone(int i, int type)
   map(roi) = Scalar(0);
   circle(MAP, Point(zone.cenCol, zone.cenRow),2,Scalar(0,0,0), -1);
   zoneList.erase(zoneList.begin()+i);
-  // cout << "zone " << i << "-th removed" << endl;
+  cout << "zone " << i << "-th removed" << endl;
 }
 
 Zones::Zone::Zone(int r, int c, int type):type(type),nPoints(1),cenRow(r),cenCol(c),cnt(1),reliable(false)
@@ -308,7 +308,7 @@ void pillarPos_Callback(const std_msgs::Float32MultiArray pos)
 void goalNum_Callback(const std_msgs::Int8 msg)
 {
     int remainBalls_callback = 5 - msg.data;
-    cout << "remainBalls : " << remainBalls_callback << endl;
+    // cout << "remainBalls : " << remainBalls_callback << endl;
     if (remainBalls != remainBalls_callback){
       float xBall = 50  + X + DLB * cos(O);
       float yBall = 350 - Y + DLB * sin(O);

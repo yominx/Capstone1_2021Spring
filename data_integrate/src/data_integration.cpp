@@ -177,8 +177,8 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 		}
 
 		// cout << "LEFT " << left_points << " RIGHT " << right_points << endl;
-		cout <<" LB "<<left_back_pts<<" RB "<<right_back_pts<<endl;
-		cout <<" OOR "<<out_of_range_pts<<endl;
+		// cout <<" LB "<<left_back_pts<<" RB "<<right_back_pts<<endl;
+		// cout <<" OOR "<<out_of_range_pts<<endl;
 		int diff = left_points - right_points;
 		if (diff < -threshold) { // control to leftside
 			targetVel->linear.x  = 4;
@@ -378,7 +378,6 @@ void update_delivery_info(){
 
 	int th1=210;
 	int th2=2000;
-	cout<<"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"<<delivery_count<<endl;
 	if(delivery_count>th1 && delivery==1){
 		delivery=0;
 		delivery_count=0;

@@ -288,7 +288,10 @@ void goal_control(int size, NodeMap* nodes){
 	int goal_index = -1;
 	for(int i=0; i<size; i++){
 		NodeMap node = nodes[i];
-		if (node.type == GOAL) break;
+		if (node.type == GOAL) {
+			goal_index = i;
+			break;
+		}
 	}
 
 	if(goal_index == -1){ // GOAL not found...
@@ -308,10 +311,13 @@ void goal_control(int size, NodeMap* nodes){
 				cur_node = nodes[cur_idx];
 			}
 			publish_wayp(cur_node.x, cur_node.y, cur_node.type);
+			visualize(size, nodes, goal_index, cur_node.x, cur_node.y);
 		} else {
 			publish_wayp(nextX, nextY, nodes[next_index].type);
+			visualize(size, nodes, next_index, nextX, nextY);
 		}
 	}
+
 
 }
 
@@ -332,6 +338,7 @@ void positions_callback(const core_msgs::multiarray::ConstPtr& object)
 	// visualize(size, nodes, -1, 0, 0);
 
 	if (REMAINING_BALLS > 0){
+		cout << REMAINING_BALLS << " Balls are remaining..." << endl;
 		int target_ball_index = get_shortest_index(node_number, nodes);
 		if (target_ball_index == -1){ // No balls are found
 			cout << "No balls are detected..." << endl;
@@ -348,7 +355,7 @@ void positions_callback(const core_msgs::multiarray::ConstPtr& object)
 }
 
 void ballcount_callback(const std_msgs::Int8::ConstPtr& count){
-	int TOTAL_BALLS = 5;
+	int TOTAL_BALLS = 1;
 	REMAINING_BALLS = TOTAL_BALLS - count->data;
 }
 
