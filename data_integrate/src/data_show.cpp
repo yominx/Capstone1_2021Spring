@@ -146,7 +146,7 @@ Zones::Zone::Zone(int r, int c, int type):type(type),nPoints(1),cenRow(r),cenCol
 {
   switch(type){
     case BALL:
-      zoneSize = 20;
+      zoneSize = 40;
       threshold = 0.5;
       break;
     case PILLAR:
@@ -162,7 +162,7 @@ Zones::Zone::~Zone(){}
 
 bool Zones::Zone::insideZone(int r, int c)
 {
-  return (r >= cenRow-zoneSize && r <= cenRow+zoneSize && c >= cenCol-zoneSize && c <= cenCol+zoneSize);
+  return ( pow(cenRow-r, 2) + pow(cenCol-c,2) <= pow(zoneSize,2) );
 }
 
 void Zones::Zone::add(int r, int c, int type)
@@ -278,8 +278,8 @@ void pillarPos_Callback(const std_msgs::Float32MultiArray pos)
 
 void goalNum_Callback(const std_msgs::Int8 msg)
 {
-    int tmp = msg.data;
-    if (remainBalls != tmp){
+    int remainBalls_callback = 5 - msg.data;
+    if (remainBalls != remainBalls_callback){
       ballZones.removeZone(Y,X,BALL);
       remainBalls--;
     }
