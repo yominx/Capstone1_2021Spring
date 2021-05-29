@@ -51,6 +51,8 @@ int action;
 
 int len;
 int n;
+int diff_points;
+int prev_diff_points = 0;
 int left_points,right_points;
 
 int left_back_pts, right_back_pts;
@@ -163,22 +165,27 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 		} else if (3< lidar_distance[i]
         	&& 0 < lidar_degree[i] && lidar_degree[i] < 180){
 			out_of_range_pts++;
-	}
+		}
 
-	// cout << "LEFT " << left_points << " RIGHT " << right_points << endl;
-	// cout <<" LB "<<left_back_pts<<" RB "<<right_back_pts<<endl;
-	// cout <<" OOR "<<out_of_range_pts<<endl;
-	int diff = left_points - right_points;
-	if (diff < -threshold) { // control to leftside
-		targetVel->linear.x  = 4;
-		targetVel->angular.z = -(diff+threshold)*0.05;  // TODO: change to PID control (Now P control)
-	} else if (diff > threshold) { // control to rightside
-		targetVel->linear.x  = 4;
-		targetVel->angular.z = -(diff-threshold)*0.05;  // TODO: change to PID control (Now P control)
-	} else { // Just move forward
-		targetVel->linear.x  = 4;
-		targetVel->angular.z = 0;
-	}
+		// cout << "LEFT " << left_points << " RIGHT " << right_points << endl;
+		// cout <<" LB "<<left_back_pts<<" RB "<<right_back_pts<<endl;
+		// cout <<" OOR "<<out_of_range_pts<<endl;
+		diff_points = left_points - right_points;
+		if (diff_points < -threshold) { // control to leftside
+			targetVel->linear.x  = 4;
+			targetVel->angular.z = -(diff_points+threshold)*0.04 + (diff_points-prev_diff_points)*2;  // TODO: change to PID control (Now P control)
+		} else if (diff_points > threshold) { // control to rightside
+			targetVel->linear.x  = 4;
+			targetVel->angular.z = -(diff_points-threshold)*0.04 - (diff_points-prev_diff_points)*2;  // TODO: change to PID control (Now P control)
+		} else { // Just move forward
+			targetVel->linear.x  = 5;
+			targetVel->angular.z = 0;
+		}
+
+		if (targetVel->angular.z > 1.6) targetVel->angular.z = 1.7;
+		else if (targetVel->angular.z < -1.6) targetVel->angular.z = -1.7;
+
+		prev_diff_points = diff_points;
 	}
 
 	map_mutex.unlock();
@@ -265,10 +272,10 @@ int main(int argc, char **argv)
 
     	if (control_method == ENTRANCE) {
     		control_entrance(&targetVel);
-    		targetVel.angular.x = -50;
+    		targetVel.angular.x = 0;
     		if (!PASSED_STEP && meet_step()) {
-    			int t = 20;
-    			targetVel.linear.x  = 4;
+    			int t = 15;
+    			targetVel.linear.x  = 5;
 				targetVel.angular.z = 0;
     			targetVel.angular.x = 50; // collector velocity: angular.x
     			ros::Time beginTime=ros::Time::now();
