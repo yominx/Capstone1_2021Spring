@@ -48,35 +48,37 @@ bool goal_check(int row, int col, int r, Mat img){
   return (img.at<uchar>(row-r*0.7,col) > 40);
 }
 
+void print(int index, int row, int col, int phase, bool flag)
+{
+  char str[30];
+  if (flag){
+    snprintf(str, sizeof(str), "[%d-th] SUCCESS at %d", index, phase);
+    putText(buffer, str, Point(col, row), 1, 1, Scalar(0, 0, 255), 1, 8);
+  }
+  else {
+    snprintf(str, sizeof(str), "[%d-th] filterted at %d", index, phase);
+    putText(buffer, str, Point(col, row), 1, 1, Scalar(255, 0, 0), 1, 8);
+  }
+}
+
 bool filtering1(int row, int col, int r, Mat img){
   return (isBlack(row,col-r/2,img) && isBlack(row,col+r/2,img) && isBlack(row,col,img));
 }
 
-bool filtering2(int row, int col, float r, float focalLen, Mat img, float& dist){
-  int rFloor = (int)cvFloor(r);
+bool filtering2(int row, int col, float r, Mat img){
   int targetPoint;
-  float targetPointDist, angle;
-  if (isBlack(row,col,img)){ // blocked by pillar or scooper
-    angle = atan((2.5*(col-319.5)/320)/4.6621);
-    // if (isBlack(row,col-rFloor,img))
-    targetPoint = (isBlack(row,col-rFloor,img)) ? col+rFloor : col-rFloor;
-    targetPointDist = buffer_depth.at<float>(row,targetPoint)/cos(angle);
+  int rFloor = (int)cvFloor(r);
+  if (isBlack(row,col,img)){
+    targetPoint = (isBlack(row,col-rFloor,img)) ? col + rFloor : col - rFloor;
+    if (buffer_depth.at<float>(row,col)-buffer_depth.at<float>(row,targetPoint) <= RADIUS) {return false;}
   }
   else {
     targetPoint = row - rFloor;
-    targetPointDist = buffer_depth.at<float>(targetPoint,col) / cos(angle);
+    if (buffer_depth.at<float>(targetPoint+THRESHOLD,col)-buffer_depth.at<float>(row,col) < 2*RADIUS) {return false;}
   }
-  float centerDist = sqrt(targetPointDist*targetPointDist + dHeight*dHeight);
-  float r_pred = RADIUS*FOCAL_LENGTH/centerDist;
-  // Point center(col,row);
-  // circle(buffer,center,r_pred,Scalar(255,0,0),2);
-  cout << "(r_pred, r_measured)= (" << r_pred << ", " << r << ")" << endl;
-  if (abs(r_pred-r) < THRESHOLD){
-    dist = targetPointDist;
-    return true;
-  }
-  return false;
+  return true;
 }
+
 
 bool filtering3(int row, int col, int r, Mat img, float& dist){ // too close to detect
   if (isBlack(row,col-r,img) || isBlack(row,col+r,img)) return false;
@@ -108,33 +110,64 @@ vector<Vec4f> filtering(vector<Vec3f> circles, Mat img){
     row = (int)cvRound(circles[i][1]);
     r = circles[i][2];
     if (filtering1(row,col,r,img)){ // in case of detecing floor as a ball
+      print(i, row, col, 1, false);
       continue;
     }
+
     f = sqrt(pow(FOCAL_LENGTH,2)+pow((WIDTH/2.-col),2));
     angle = atan((2.5*(col-319.5)/320)/4.6621);
     distance = (buffer_depth.at<float>(row, col) + RADIUS) / cos(angle);
     cout << "distance = " << distance <<endl;
-    //r_pred = RADIUS*f/sqrt(distance*distance + dHeight*dHeight);
     r_pred = RADIUS*f/distance;
     cout << "(r_measured, r_pred) : (" << r << ", " << r_pred << ")" << endl;
+
+    if (filtering2(row,col,r,img)){ // block by pillar of other balls
+      int rFloor = (int)cvFloor(r);
+      int targetPoint;
+      float targetPointDist, angle;
+      if (isBlack(row,col,img)){ // blocked by pillar or scooper
+        if (isBlack(row,col-rFloor,img)) {
+          targetPoint = col + rFloor;
+          angle = atan((2.5*(col+rFloor-319.5)/320)/4.6621);
+        }
+        else {
+          targetPoint = col - rFloor;
+          angle = atan((2.5*(col-rFloor-319.5)/320)/4.6621);
+        }
+        targetPointDist = buffer_depth.at<float>(row,targetPoint)/cos(angle);
+      }
+      else {
+        targetPoint = row - rFloor;
+        angle = atan((2.5*(col-319.5)/320)/4.6621);
+        targetPointDist = buffer_depth.at<float>(targetPoint,col) / cos(angle);
+      }
+      float r_pred = RADIUS*FOCAL_LENGTH/targetPointDist;
+      // Point center(col,row);
+      // circle(buffer,center,r_pred,Scalar(255,0,0),2);
+      cout << "(r_pred, r_measured)= (" << r_pred << ", " << r << ")" << endl;
+      if (abs(r_pred-r) < r/6){
+        circle[0] = col;
+        circle[1] = row;
+        circle[2] = r;
+        circle[3] = targetPointDist;
+        filtered.push_back(circle);
+        print(i, row, col, 2, true);
+      }
+      print(i, row, col, 2, false);
+      continue;
+    }
+
     if (abs(r_pred-r) < r/7){
       circle[0] = col;
       circle[1] = row;
       circle[2] = r;
       circle[3] = distance;
       filtered.push_back(circle);
+      print(i, row, col, 3, true);
       continue;
     }
-
+    print(i,row,col,3,false);
     // if (abs(buffer_depth.at<float>(row,col-r*0.7) - buffer_depth.at<float>(row,col+r*0.7)) > RADIUS){ // blocked by another ball or pillar or scooper
-    //   if (filtering2(row,col,r,f,img,distance)){
-    //     circle[0] = col;
-    //     circle[1] = row;
-    //     circle[2] = r;
-    //     circle[3] = distance;
-    //     filtered.push_back(circle);
-    //     continue;
-    //   }
     // }
 
     // if (row >= HEIGHT-1){  // right before harvesting the ball
@@ -157,7 +190,7 @@ vector<Vec4f> filtering(vector<Vec3f> circles, Mat img){
 void ball_detect(){
      Mat hsv, gray;  //assign a memory to save the edge images
      Mat hsvCh[3];
-     Mat frame;  //assign a memory to save the images
+     // Mat frame;  //assign a memory to save the images
      //Mat mask,mask1, mask2;
      // cv::imshow("raw_rgb", buffer);
      // waitKey(10);
@@ -229,9 +262,13 @@ void ball_detect(){
          // cx = (0.002667*cy+0.0003)*cx-(0.9275*cy+0.114);
          if (k == goalIndex){
            circle(buffer,center,r,Scalar(0,255,0),3); //draw a circle on 'frame' based on the information given,   r = radius, Scalar(0,0,255) means color, 10 means lineWidth
-           msgGoal.angle = atan((2.5*(c_c-319.5)/320)/4.6621); // [rad]
+           while(gray.at<uchar>(c_r-0.7*r-1,c_c) != 0){
+             c_r -= 1;
+           }
+           float goalAng = atan((2.5*(c_c-319.5)/320)/4.6621); // [rad]
+           msgGoal.angle = goalAng;
+           msgGoal.dist = buffer_depth.at<float>(c_r,c_c) / cos(goalAng);
            // msgGoal.angle = atan((c_c-319.5)/320*tan(FOV)); // [rad]
-           msgGoal.dist = params[3];
            pubGoal.publish(msgGoal);
            cout << "Goal(row,col) : (" << c_r << ", " << c_c << "), dist= " << msgGoal.dist << ", angle= " << msgGoal.angle << endl;
            continue;
@@ -246,8 +283,8 @@ void ball_detect(){
      }
      cout << endl;
      pubBall.publish(msgBall);  //publish a message
-     // cv::imshow("view", buffer);  //show the image with a window
-     // cv::waitKey(1);
+     cv::imshow("view", buffer);  //show the image with a window
+     cv::waitKey(1);
 }
 
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)

@@ -150,7 +150,7 @@ Zones::Zone::Zone(int r, int c, int type):type(type),nPoints(1),cenRow(r),cenCol
       break;
     case PILLAR:
       zoneSize = 20;
-      threshold = 0.5;
+      threshold = 0.7;
       break;
     case GOAL:
       zoneSize = 50;
@@ -201,7 +201,7 @@ void sort(vector<int>& reliableList, const Zones& zones)
     while (j >= 0 && targetVal < keyVal){
       reliableList[j+1] = reliableList[j];
       j -= 1;
-      targetVel = zones.zoneList[reliableList[j]].nPoints / zones.zoneList[reliableList[j]].cnt;
+      targetVal = zones.zoneList[reliableList[j]].nPoints / zones.zoneList[reliableList[j]].cnt;
     }
     reliableList[j] = reliableList[i];
   }
@@ -239,7 +239,7 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
     // cout << "(" << j << "-th zone) nPoints: " << zones.zoneList[j].nPoints << ", cnt: "<< zones.zoneList[j].cnt << endl;
     // cout << "(" << j << "-th zone) is reliable : " << zones.zoneList[j].reliable << endl;
     // cout << "(" << j << "-th zone) cnt*threshold = " << zones.zoneList[j].cnt << " * " << zones.zoneList[j].threshold << " = " << zones.zoneList[j].cnt * zones.zoneList[j].threshold <<endl;
-    if ((zones.zoneList[j].cnt % 10) == 0 && zones.zoneList[i].nPoints < 100){
+    if ((zones.zoneList[j].cnt % 10) == 0 && zones.zoneList[i].cnt < 100){
       if (zones.zoneList[j].nPoints > zones.zoneList[j].cnt * zones.zoneList[j].threshold){
         zones.zoneList[j].reliable = true;
         // cout << "(" << j << "-th zone) is reliable" << endl;
@@ -345,9 +345,9 @@ int main(int argc, char **argv)
       nData += 1;
       msg.cols = nData;
       pub.publish(msg);
-      // imshow("map", MAP);
+      imshow("map", MAP);
       // destroyAllWindows();
-      // waitKey(1);
+      waitKey(1);
       loop_rate.sleep();
       ros::spinOnce();
     }
