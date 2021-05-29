@@ -140,7 +140,7 @@ void Zones::removeZone(int i, int type)
   map(roi) = Scalar(0);
   circle(MAP, Point(zone.cenCol, zone.cenRow),2,Scalar(0,0,0), -1);
   zoneList.erase(zoneList.begin()+i);
-  // cout << "zone " << i << "-th removed" << endl;
+  cout << "zone " << i << "-th removed" << endl;
 }
 
 Zones::Zone::Zone(int r, int c, int type):type(type),nPoints(1),cenRow(r),cenCol(c),cnt(1),reliable(false)
@@ -148,11 +148,11 @@ Zones::Zone::Zone(int r, int c, int type):type(type),nPoints(1),cenRow(r),cenCol
   switch(type){
     case BALL:
       zoneSize = 40;
-      threshold = 0.5;
+      threshold = 0.3;
       break;
     case PILLAR:
       zoneSize = 20;
-      threshold = 0.7;
+      threshold = 0.85;
       break;
     case GOAL:
       zoneSize = 50;
@@ -308,7 +308,7 @@ void pillarPos_Callback(const std_msgs::Float32MultiArray pos)
 void goalNum_Callback(const std_msgs::Int8 msg)
 {
     int remainBalls_callback = 5 - msg.data;
-    cout << "remainBalls : " << remainBalls_callback << endl;
+    // cout << "remainBalls : " << remainBalls_callback << endl;
     if (remainBalls != remainBalls_callback){
       float xBall = 50  + X + DLB * cos(O);
       float yBall = 350 - Y + DLB * sin(O);
@@ -343,11 +343,16 @@ int main(int argc, char **argv)
       nData = 0;
       filtering(ballZones, nBalls, ballDist, ballAngle, BALL, msg);
       filtering(pillarZones, nPillars, pillarDist, pillarAngle, PILLAR, msg);
-      filtering(goalZones, nGoals, goalDist, goalAngle, GOAL, msg);
+      //filtering(goalZones, nGoals, goalDist, goalAngle, GOAL, msg);
       circle(MAP, Point(50+int(round(X)), 350-int(round(Y))), 2, cv::Scalar(255,0,0), -1);
       msg.data.push_back(VEHICLE);
       msg.data.push_back(50+int(round(X)));
       msg.data.push_back(350-int(round(Y)));
+      nData += 1;
+      //set the goal position
+      msg.data.push_back(GOAL);
+      msg.data.push_back(550);
+      msg.data.push_back(200);
       nData += 1;
       msg.cols = nData;
       pub.publish(msg);

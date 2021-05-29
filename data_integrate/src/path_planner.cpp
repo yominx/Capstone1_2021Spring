@@ -117,6 +117,7 @@ void publish_wayp(int x, int y, int z){
 // 	// TODO: check for the walls, too.
 // 	return true;
 // }
+
 bool visible_arbitrary(int x1, int y1, int x2, int y2){
 	int diffX = x2 - x1, diffY = y2 - y1, ITER = 100;
 	float stepX = diffX/ITER, stepY = diffY/ITER;
@@ -129,7 +130,7 @@ bool visible_arbitrary(int x1, int y1, int x2, int y2){
 			distsq = pow(posX-pillarX[j], 2) + pow(posY-pillarY[j],2);
 			// cout << "ITER "  << i << " posX " << posX << " posY " << posY <<
 			// endl << "pillX " << pillarX[j] << " pillY " << pillarY[j] << endl << distsq << endl;
-			if(distsq < pow(PILLAR_RADIUS+ROBOT_SIZE+MARGIN, 2)) return false;
+			if(distsq < pow(PILLAR_RADIUS+ROBOT_SIZE, 2)) return false;
 		}
 		for(int j=0;j<ballCount;j++){ // check ball-collision
 			if((ballX[j] == x1 && ballY[j] == y1) 
@@ -142,40 +143,6 @@ bool visible_arbitrary(int x1, int y1, int x2, int y2){
 	// cout << x1 << ", " << y1 << " to " << x2 << ", " << y2 << " is available" << endl;
 	return true;
 }
-
-
-// bool visible_arbitrary(int x1, int y1, int x2, int y2){
-// 	int diffX = x1 - x2, diffY = y1 - y2;
-// 	float a,b, num, den;
-	
-// 	if (diffX == 0){ // x+c=0
-// 		for(int i=0;i<pillarCount;i++){
-// 			if (abs(pillarX[i]-x1) < (PILLAR_RADIUS + ROBOT_SIZE + MARGIN)) return false;
-// 		}
-// 		for(int i=0;i<ballCount;i++){
-// 			if (abs(ballX[i]-x1)   < (ROBOT_SIZE + MARGIN)) return false;
-// 		}
-// 		return true;
-// 	} else { 
-// 		// y=ax+b
-// 		a = diffY/diffX; // slope
-// 		b = y1-a*x1;
-// 		den = sqrt(a*a+1);
-// 		for(int i=0;i < pillarCount;i++){ // check pillar-collision
-// 			num = a*pillarX[i] + b - pillarY[i];
-// 			cout << "distance for "<<i<< "th pillar is " << abs(num/den) <<endl;
-// 			if (abs(num/den) < (PILLAR_RADIUS + ROBOT_SIZE)) return false; // num/den == distance
-// 		}
-// 		for(int i=0;i<ballCount;i++){ // check ball-collision
-// 			num = a*ballX[i] + b - ballY[i];
-// 			cout << "distance for "<<i<< "th ball is " << abs(num/den) <<endl;
-// 			if (abs(num/den) < (ROBOT_SIZE + MARGIN)) return false; // num/den == distance. ignore radius of the ball.
-// 		}
-
-// 		return true; 
-// 	}
-// }
-
 
 int get_shortest_index(int size, NodeMap* node_list){ // '-1' means 'No balls are detected'
 	// TODO: use A* to calculate more EXACT distance
@@ -244,15 +211,15 @@ int buildMap(int size, NodeMap* nodes, const core_msgs::multiarray::ConstPtr& ob
 
 void unknown_map_control(int node_number){
 	// cout << "Robot Position:" << robotX << ", " << robotY << endl;
-	if(visible_arbitrary(robotX, robotY, robotX, robotY + 30)) {
+	if (visible_arbitrary(robotX, robotY, robotX + 15, robotY - 15)) {
+		publish_wayp(robotX + 15, robotY - 15, -1);
+		visualize(node_number, nodes, -1, robotX + 15, robotY - 15);
+	} else if(visible_arbitrary(robotX, robotY, robotX + 30, robotY)) {
 		publish_wayp(robotX + 30, robotY, -1);
 		visualize(node_number, nodes, -1, robotX + 30, robotY);
-	} else if (visible_arbitrary(robotX, robotY, robotX + 15, robotY + 15)) {
-		publish_wayp(robotX + 15, robotY + 15, -1);
-		visualize(node_number, nodes, -1, robotX + 15, robotY + 15);
-	} else if (visible_arbitrary(robotX, robotY, robotX + 30, robotY)) {
-		publish_wayp(robotX, robotY + 30, -1);
-		visualize(node_number, nodes, -1, robotX, robotY + 30);
+	} else if (visible_arbitrary(robotX, robotY, robotX, robotY -30)) {
+		publish_wayp(robotX, robotY - 30, -1);
+		visualize(node_number, nodes, -1, robotX, robotY - 30);
 	} else{
 		cout << "ERROR: No points to move" << endl;
 	}
@@ -288,7 +255,10 @@ void goal_control(int size, NodeMap* nodes){
 	int goal_index = -1;
 	for(int i=0; i<size; i++){
 		NodeMap node = nodes[i];
-		if (node.type == GOAL) break;
+		if (node.type == GOAL) {
+			goal_index = i;
+			break;
+		}
 	}
 
 	if(goal_index == -1){ // GOAL not found...
@@ -308,18 +278,19 @@ void goal_control(int size, NodeMap* nodes){
 				cur_node = nodes[cur_idx];
 			}
 			publish_wayp(cur_node.x, cur_node.y, cur_node.type);
+			visualize(size, nodes, goal_index, cur_node.x, cur_node.y);
 		} else {
 			publish_wayp(nextX, nextY, nodes[next_index].type);
+			visualize(size, nodes, next_index, nextX, nextY);
 		}
 	}
+
 
 }
 
 void positions_callback(const core_msgs::multiarray::ConstPtr& object)
 {
-	if(END){
-		publish_wayp(-1,-1,-1);
-	}
+	if (END) publish_wayp(-1,-1,-1);
 	int size = (object->data.size())/3;
 	int node_number = 0;
 
@@ -332,6 +303,7 @@ void positions_callback(const core_msgs::multiarray::ConstPtr& object)
 	// visualize(size, nodes, -1, 0, 0);
 
 	if (REMAINING_BALLS > 0){
+		cout << REMAINING_BALLS << " Balls are remaining..." << endl;
 		int target_ball_index = get_shortest_index(node_number, nodes);
 		if (target_ball_index == -1){ // No balls are found
 			cout << "No balls are detected..." << endl;
@@ -340,6 +312,7 @@ void positions_callback(const core_msgs::multiarray::ConstPtr& object)
 			ballharvest_control(node_number, target_ball_index, nodes);
 		}
 	} else { // Go to goal point
+		cout << "Goal control" << endl;
 		goal_control(node_number, nodes);
 	}
 
@@ -347,7 +320,8 @@ void positions_callback(const core_msgs::multiarray::ConstPtr& object)
 }
 
 void ballcount_callback(const std_msgs::Int8::ConstPtr& count){
-	REMAINING_BALLS = 5 - count->data;
+	int TOTAL_BALLS = 5;
+	REMAINING_BALLS = TOTAL_BALLS - count->data;
 }
 
 
@@ -357,7 +331,7 @@ int main(int argc, char **argv)
     ros::NodeHandle n;
 
     ros::Subscriber sub_positions = n.subscribe<core_msgs::multiarray>("/position", 100, positions_callback);
-    ros::Subscriber sub_harvested_balls = n.subscribe<std_msgs::Int8> ("/ball_count", 100, ballcount_callback);
+    ros::Subscriber sub_harvested_balls = n.subscribe<std_msgs::Int8> ("/ball_number", 100, ballcount_callback);
 	waypoints_publisher = n.advertise<geometry_msgs::Vector3>("/waypoint", 10);
 
     while(ros::ok){
