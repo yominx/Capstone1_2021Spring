@@ -111,20 +111,25 @@ void Zones::addZone(int r, int c, int type)
 
 void Zones::removeZone(int r, int c, int type)
 {
+  cout << "REMOVE1 CALL" << endl;
   int n = zoneList.size();
   for (int i=0;i<n;i++){
     if (zoneList[i].insideZone(r,c) && zoneList[i].reliable && zoneList[i].type == type ) {
       cout << "Remove \n\ttype:" << zoneList[i].type <<
       "(x, y): " << zoneList[i].cenCol<< ", " << zoneList[i].cenRow << endl;
       removeZone(i,type);
+      cout << "REMOVE1 END" << endl;
       return;
     }
   }
+  cout << "REMOVE1 END" << endl;
 }
 
 void Zones::removeZone(int i, int type)
 {
   Mat map;
+  cout << "REMOVE2 START" << endl;
+
   switch(type){
     case BALL:
       map = mapBall;
@@ -141,6 +146,7 @@ void Zones::removeZone(int i, int type)
   circle(MAP, Point(zone.cenCol, zone.cenRow),2,Scalar(0,0,0), -1);
   zoneList.erase(zoneList.begin()+i);
   cout << "zone " << i << "-th removed" << endl;
+  cout << "REMOVE2 END" << endl;
 }
 
 Zones::Zone::Zone(int r, int c, int type):type(type),nPoints(1),cenRow(r),cenCol(c),cnt(1),reliable(false)
@@ -198,6 +204,7 @@ void sort(vector<int>& reliableList, const Zones& zones)
 {
   float keyVal, targetVal;
   int j;
+  cout << "SORT START" << endl;
   for (int i=1; i<reliableList.size(); i++){
     keyVal = zones.zoneList[reliableList[i]].nPoints / zones.zoneList[reliableList[i]].cnt;
     j=i-1;
@@ -209,10 +216,13 @@ void sort(vector<int>& reliableList, const Zones& zones)
     }
     reliableList[j] = reliableList[i];
   }
+  cout << "SORT DONE" << endl;
 }
 
 void filtering(Zones& zones, int size, float* dist, float* angle, int type, core_msgs::multiarray& msg)
 {
+  int i =0;
+  cout << "FILT " << i++ << endl;
   Mat map;
   Scalar color;
   switch(type){
@@ -226,6 +236,8 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
       color = Scalar(0,255,0);
   }
 
+  cout << "FILT " << i++ << endl;
+
   for (int i=0; i<size; i++){ //ball_dist[i], ball_angle[i]
     int x = (type==PILLAR) ? 50+(int)round(X +(dist[i]*cos(angle[i]+O)*100)) : 50+(int)round(X+(DLC*cos(O)*100)+(dist[i]*cos(angle[i]+O)*100));
     int y = (type==PILLAR) ? 350-(int)round(Y+(dist[i]*sin(angle[i]+O)*100)) : 350-(int)round(Y+(DLC*sin(O)*100)+(dist[i]*sin(angle[i]+O)*100));
@@ -235,9 +247,11 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
     zones.addZone(y,x,type);
   }
 
+  cout << "FILT " << i++ << endl;
   int zSize = zones.zoneList.size();
   vector<int> reliableList;
   reliableList.clear();
+  cout << "FILT " << i++ << endl;
   for (int i=0,j=0; i<zSize; i++, j++){
     zones.zoneList[j].cnt++;
     // cout << "(" << j << "-th zone) nPoints: " << zones.zoneList[j].nPoints << ", cnt: "<< zones.zoneList[j].cnt << endl;
@@ -255,67 +269,79 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
     }
     if (zones.zoneList[j].reliable) {reliableList.push_back(j);}
   }
+  cout << "FILT " << i++ << endl;
 
   if (reliableList.size() > zones.max){
     sort(reliableList, zones); // sorting by the value of (nPoints/cnt)
   }
 
   int repeat = (reliableList.size()>zones.max) ? zones.max : reliableList.size();
+  cout << "FILT " << i++ << endl;
   for (int i=0; i<repeat; i++){
     msg.data.push_back(type);
     msg.data.push_back(zones.zoneList[reliableList[i]].cenCol);
     msg.data.push_back(zones.zoneList[reliableList[i]].cenRow);
     nData += 1;
     circle(MAP, Point(zones.zoneList[reliableList[i]].cenCol, zones.zoneList[reliableList[i]].cenRow),2,color, -1);
-    continue;
   }
+  cout << "FILT END" << endl;
 }
 
 void ballPos_Callback(const core_msgs::ball_position::ConstPtr& pos)
 {
-    nBalls = pos->size;
-    if (nBalls > 20) nBalls = 20;
-    for(int i = 0; i < nBalls; i++)
-    {
-        ballAngle[i] = pos->angle[i];
-        ballDist[i] = pos->dist[i];
-    }
+  cout << "BALL POS CALLBACK START" << endl;
+  nBalls = pos->size;
+  if (nBalls > 20) nBalls = 20;
+  for(int i = 0; i < nBalls; i++)
+  {
+    ballAngle[i] = pos->angle[i];
+    ballDist[i] = pos->dist[i];
+  }
+  cout << "BALL POS CALLBACK END" << endl;
 }
 void goalPos_Callback(const core_msgs::goal_position::ConstPtr& pos)
 {
-    nGoals = 1;
-    goalAngle[0] = pos->angle;
-    goalDist[0] = pos->dist;
+  cout << "GOAL POS CALLBACK START" << endl;
+  nGoals = 1;
+  goalAngle[0] = pos->angle;
+  goalDist[0] = pos->dist;
+  cout << "GOAL POS CALLBACK END" << endl;
 }
 
 void odometry_Callback(const geometry_msgs::Vector3 odometry){
     //cout << "(X,Y,O)= (" << X << ", " << Y << ", " << O << ")"  << endl;
-    X = odometry.x;
-    Y = odometry.y;
-    O = odometry.z;
+  cout << "ODOMETRY CALLBACK START" << endl;
+  X = odometry.x;
+  Y = odometry.y;
+  O = odometry.z;
+  cout << "ODOMETRY CALLBACK END" << endl;
 }
 
 void pillarPos_Callback(const std_msgs::Float32MultiArray pos)
 {
-    nPillars = pos.data.size()/2;
-    if (nPillars > 10) nPillars;
-    for (int i=0; i<nPillars; i++){
-      pillarDist[i] = pos.data[2*i];
-      pillarAngle[i] = pos.data[2*i+1];
-    }
+  cout << "PILLAR POS CALLBACK START" << endl;
+  nPillars = pos.data.size()/2;
+  if (nPillars > 10) nPillars=10;
+  for (int i=0; i<nPillars; i++){
+    pillarDist[i] = pos.data[2*i];
+    pillarAngle[i] = pos.data[2*i+1];
+  }
+  cout << "PILLAR POS CALLBACK END" << endl;
 }
 
 void goalNum_Callback(const std_msgs::Int8 msg)
 {
-    int remainBalls_callback = 5 - msg.data;
-    // cout << "remainBalls : " << remainBalls_callback << endl;
-    if (remainBalls != remainBalls_callback){
-      float xBall = 50  + X + DLB * cos(O);
-      float yBall = 350 - Y + DLB * sin(O);
-      cout << "Remove near " << xBall << ", " << yBall << endl;
-      ballZones.removeZone(yBall,xBall,BALL);
-      remainBalls--;
-    }
+  cout << "GOAL NUM CALLBACK START" << endl;
+  int remainBalls_callback = 5 - msg.data;
+  // cout << "remainBalls : " << remainBalls_callback << endl;
+  if (remainBalls != remainBalls_callback){
+    float xBall = 50  + X + DLB * cos(O);
+    float yBall = 350 - Y + DLB * sin(O);
+    cout << "Remove near " << xBall << ", " << yBall << endl;
+    ballZones.removeZone(yBall,xBall,BALL);
+    remainBalls--;
+  }
+  cout << "GOAL NUM CALLBACK END" << endl;
 }
 
 int main(int argc, char **argv)
@@ -341,24 +367,38 @@ int main(int argc, char **argv)
     while(ros::ok){
       core_msgs::multiarray msg;
       nData = 0;
+      
+      int k =0;
+      cout << "SHIT  " << k++ << endl;
+      cout << "NBALLS : " << nBalls;
       filtering(ballZones, nBalls, ballDist, ballAngle, BALL, msg);
+
+      cout << "SHIT  " << k++ << endl;
       filtering(pillarZones, nPillars, pillarDist, pillarAngle, PILLAR, msg);
+      cout << "SHIT  " << k++ << endl;
       //filtering(goalZones, nGoals, goalDist, goalAngle, GOAL, msg);
       circle(MAP, Point(50+int(round(X)), 350-int(round(Y))), 2, cv::Scalar(255,0,0), -1);
+      cout << "SHIT  " << k++ << endl;
       msg.data.push_back(VEHICLE);
       msg.data.push_back(50+int(round(X)));
       msg.data.push_back(350-int(round(Y)));
       nData += 1;
       //set the goal position
+      cout << "SHIT  " << k++ << endl;
       msg.data.push_back(GOAL);
       msg.data.push_back(550);
       msg.data.push_back(200);
+      cout << "SHIT  " << k++ << endl;
       nData += 1;
       msg.cols = nData;
+      cout << "SHIT  " << k++ << endl;
       pub.publish(msg);
+      cout << "SHIT  " << k++ << endl;
       imshow("map", MAP);
       // destroyAllWindows();
       waitKey(1);
+      cout << "SHIT  " << k++ << endl;
+      cout << "SHIT END" << endl;
       loop_rate.sleep();
       ros::spinOnce();
     }

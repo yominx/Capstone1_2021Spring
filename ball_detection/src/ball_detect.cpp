@@ -14,7 +14,7 @@
 #include <math.h>
 
 // #define DEBUG
-// #define DEBUG_IMG
+#define DEBUG_IMG
 
 using namespace cv;
 using namespace std;

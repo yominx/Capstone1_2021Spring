@@ -57,7 +57,7 @@ int waytype;
 //ball pickup&dumping part started
 int delivery=0;
 int delivery_count=0;
-int ball_count=5;
+int ball_count=0;
 //ball pickup&dumping part ended
 ros::Publisher commandVel;
 ros::Publisher zone;
@@ -79,7 +79,7 @@ int control_method = ENTRANCE;
 #define PILLAR 	2
 #define GOAL 	3
 
-#define DEBUG_HARVEST true
+#define DEBUG_HARVEST false
 
 using namespace std;
 
