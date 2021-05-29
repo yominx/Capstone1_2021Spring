@@ -41,7 +41,6 @@ float lidar_distance[400];
 float lidar_obs;
 
 int left_points,right_points;
-int diff_points;
 int prev_diff_points = 0;
 int left_back_pts, right_back_pts;
 int out_of_range_pts;
@@ -171,13 +170,13 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 		// cout <<" LB "<<left_back_pts<<" RB "<<right_back_pts<<endl;
 		// cout <<" OOR "<<out_of_range_pts<<endl;
 
-		diff_points = left_points - right_points;
-		if (diff_points < -threshold) { // control to leftside
+		int diff = left_points - right_points;
+		if (diff < -threshold) { // control to leftside
 			targetVel->linear.x  = 4;
-			targetVel->angular.z = -(diff_points+threshold)*0.04 + (diff_points-prev_diff_points)*2;  // TODO: change to PID control (Now P control)
-		} else if (diff_points > threshold) { // control to rightside
+			targetVel->angular.z = -(diff+threshold)*0.04 + (diff-prev_diff_points)*2;  // TODO: change to PID control (Now P control)
+		} else if (diff > threshold) { // control to rightside
 			targetVel->linear.x  = 4;
-			targetVel->angular.z = -(diff_points-threshold)*0.04 - (diff_points-prev_diff_points)*2;  // TODO: change to PID control (Now P control)
+			targetVel->angular.z = -(diff-threshold)*0.04 - (diff-prev_diff_points)*2;  // TODO: change to PID control (Now P control)
 		} else { // Just move forward
 			targetVel->linear.x  = 5;
 			targetVel->angular.z = 0;
@@ -186,7 +185,7 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 		if (targetVel->angular.z > 1.6) targetVel->angular.z = 1.7;
 		else if (targetVel->angular.z < -1.6) targetVel->angular.z = -1.7;
 
-		prev_diff_points = diff_points;
+		prev_diff_points = diff;
 	}
 	targetVel->angular.x = -50;
 
