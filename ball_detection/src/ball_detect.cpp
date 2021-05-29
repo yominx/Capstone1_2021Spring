@@ -14,7 +14,7 @@
 #include <math.h>
 
 // #define DEBUG
-#define DEBUG_IMG
+// #define DEBUG_IMG
 
 using namespace cv;
 using namespace std;
@@ -76,25 +76,25 @@ bool filtering2(int row, int col, float r, Mat img){
   return true;
 }
 
-
-bool filtering3(int row, int col, int r, Mat img, float& dist){ // too close to detect
-  if (isBlack(row,col-r,img) || isBlack(row,col+r,img)) return false;
-  int lWalk=0, rWalk=0, uWalk=0;
-  while (!isBlack(row,col-r-(lWalk+1),img)){
-    ++lWalk;
-  }
-  while (!isBlack(row,col+r+rWalk+1,img)){
-    ++rWalk;
-  }
-  if ((!isBlack(row-r,col,img)) && abs(lWalk-rWalk) < THRESHOLD){
-    while(!isBlack(row-r-(uWalk+1),col,img)){
-      ++uWalk;
-    }
-    dist = img.at<uchar>(row-r-uWalk,col);
-    return true;
-  }
-  return false;
-}
+//
+// bool filtering3(int row, int col, int r, Mat img, float& dist){ // too close to detect
+//   if (isBlack(row,col-r,img) || isBlack(row,col+r,img)) return false;
+//   int lWalk=0, rWalk=0, uWalk=0;
+//   while (!isBlack(row,col-r-(lWalk+1),img)){
+//     ++lWalk;
+//   }
+//   while (!isBlack(row,col+r+rWalk+1,img)){
+//     ++rWalk;
+//   }
+//   if ((!isBlack(row-r,col,img)) && abs(lWalk-rWalk) < THRESHOLD){
+//     while(!isBlack(row-r-(uWalk+1),col,img)){
+//       ++uWalk;
+//     }
+//     dist = img.at<uchar>(row-r-uWalk,col);
+//     return true;
+//   }
+//   return false;
+// }
 
 vector<Vec4f> filtering(vector<Vec3f> circles, Mat img){
   vector<Vec4f> filtered; // 0:col, 1:radius, 2:distance
@@ -125,15 +125,6 @@ vector<Vec4f> filtering(vector<Vec3f> circles, Mat img){
       if (isBlack(row,col,img)){ // blocked by pillar or scooper
         targetPoint = (isBlack(row,col-rFloor+THRESHOLD,img)) ? col+rFloor-THRESHOLD : col-rFloor+THRESHOLD;
         angle = atan((col-319.5)/320*tan(FOV));
-        // angle = atan((2.5*(col-319.5)/320)/4.6621);
-        // if (isBlack(row,col-rFloor,img)) {
-        //   targetPoint = col + rFloor;
-        //   angle = atan((2.5*(col+rFloor-319.5)/320)/4.6621);
-        // }
-        // else {
-        //   targetPoint = col - rFloor;
-        //   angle = atan((2.5*(col-rFloor-319.5)/320)/4.6621);
-        // }
         targetPointDist = buffer_depth.at<float>(row,targetPoint)/cos(angle);
       }
       else {
@@ -142,8 +133,6 @@ vector<Vec4f> filtering(vector<Vec3f> circles, Mat img){
         targetPointDist = buffer_depth.at<float>(targetPoint,col) / cos(angle);
       }
       float r_pred = RADIUS*FOCAL_LENGTH/targetPointDist;
-      // Point center(col,row);
-      // circle(buffer,center,r_pred,Scalar(255,0,0),2);
       if (abs(r_pred-r) < r/5){
         circle[0] = col;
         circle[1] = row;
@@ -176,8 +165,6 @@ vector<Vec4f> filtering(vector<Vec3f> circles, Mat img){
 #ifdef DEBUG
     print(i,row,col,3,false, r, r_pred, distance);
 #endif
-    // if (abs(buffer_depth.at<float>(row,col-r*0.7) - buffer_depth.at<float>(row,col+r*0.7)) > RADIUS){ // blocked by another ball or pillar or scooper
-    // }
 
     // if (row >= HEIGHT-1){  // right before harvesting the ball
     //   if (filtering3(row,col,cvFloor(circle[2]),img, distance)){
@@ -199,42 +186,41 @@ vector<Vec4f> filtering(vector<Vec3f> circles, Mat img){
 void ball_detect(){
      Mat hsv, gray;  //assign a memory to save the edge images
      Mat hsvCh[3];
-     // Mat frame;  //assign a memory to save the images
-     //Mat mask,mask1, mask2;
-     // cv::imshow("raw_rgb", buffer);
-     // waitKey(10);
      cvtColor(buffer, hsv, CV_BGR2HSV);
      split(hsv, hsvCh);
-     // cv::imshow("h", hsvCh[0]);
-     // waitKey(10);
-     // cv::imshow("s", hsvCh[1]);
-     // waitKey(10);
-     // cv::imshow("v", hsvCh[2]);
-     // waitKey(10);
-
+// #ifdef DEBUG_IMG
+//      cv::imshow("h", hsvCh[0]);
+//      waitKey(10);
+//      cv::imshow("s", hsvCh[1]);
+//      waitKey(10);
+//      cv::imshow("v", hsvCh[2]);
+//      waitKey(10);
+// #endif
      GaussianBlur(hsvCh[1],hsvCh[1], Size(5,5), 2.5, 2.5);
      // cv::imshow("Gaussian Blurred", hsvCh[0]);
      // waitKey(10);
      threshold(hsvCh[1], gray, 100, 255, THRESH_BINARY);
-     // cv::imshow("Binary", gray);
-     // waitKey(10);
-     // cv::imshow("h", hsvCh[0]);
-     // waitKey(10);
+// #ifdef DEBUG_IMG
+//      cv::imshow("Binary", gray);
+//      waitKey(10);
+//      cv::imshow("h", hsvCh[0]);
+//      waitKey(10);
+// #endif
      vector<Vec3f> circles; //assign a memory to save the result of circle detection
      vector<Vec4f> filteredCircles; //<row,col,r,dist>
      HoughCircles(gray,circles,HOUGH_GRADIENT, 1, gray.rows/30, 30, 10, 7, 200); //proceed circle detection
      //Circles (Cx, Cy, r)
 
      //before Filtering
-     for(int k=0,i=0;k<circles.size();k++){
-         Vec3f params = circles[k];  //the information of k-th circle
-         float c_c=cvRound(params[0]);  //x position of k-th circle
-         float c_r=cvRound(params[1]);  //y position
-         float r=cvRound(params[2]); //radius
-
-         Point center(c_c,c_r);  //declare a Point Point(coloum, row)
-         circle(buffer,center,r,Scalar(255,0,255),2); //draw a circle on 'frame' based on the information given,   r = radius, Scalar(0,0,255) means color, 10 means lineWidth
-     }
+     // for(int k=0,i=0;k<circles.size();k++){
+     //     Vec3f params = circles[k];  //the information of k-th circle
+     //     float c_c=cvRound(params[0]);  //x position of k-th circle
+     //     float c_r=cvRound(params[1]);  //y position
+     //     float r=cvRound(params[2]); //radius
+     //
+     //     Point center(c_c,c_r);  //declare a Point Point(coloum, row)
+     //     circle(buffer,center,r,Scalar(255,0,255),2); //draw a circle on 'frame' based on the information given,   r = radius, Scalar(0,0,255) means color, 10 means lineWidth
+     // }
      filteredCircles = filtering(circles, gray);
      Vec4f params; //assign a memory to save the information of circles
      int c_c,c_r,r;
@@ -280,7 +266,7 @@ void ball_detect(){
 #endif
            continue;
          }
-         circle(buffer,center,r,Scalar(0,0,255),3); //draw a circle on 'frame' based on the information given,   r = radius, Scalar(0,0,255) means color, 10 means lineWidth
+         circle(buffer,center,r,Scalar(0,0,255),2); //draw a circle on 'frame' based on the information given,   r = radius, Scalar(0,0,255) means color, 10 means lineWidth
          msgBall.angle[i]=atan((c_c-319.5)/320*tan(FOV));  //[rad]
          // msgBall.angle[i] = atan((2.5*(c_c-319.5)/320)/4.6621); // [rad]
          msgBall.dist[i]=params[3];   //[m]
@@ -331,8 +317,8 @@ int main(int argc, char **argv)
    image_transport::ImageTransport it(nh); //create image transport and connect it to node hnalder
    image_transport::Subscriber sub_rgb = it.subscribe("/kinect_rgb", 1, imageCallback); //create subscriber
    image_transport::Subscriber sub_depth = it.subscribe("/kinect_depth", 1, depthCallback);
-   pubBall = nh.advertise<core_msgs::ball_position>("/ball_position", 5); //setting publisher
-   pubGoal = nh.advertise<core_msgs::goal_position>("/goal_position", 5); //setting publisher
+   pubBall = nh.advertise<core_msgs::ball_position>("/ball_position", 10); //setting publisher
+   pubGoal = nh.advertise<core_msgs::goal_position>("/goal_position", 10); //setting publisher
    ros::Rate loop_rate(10);
    while (ros::ok()){
      if(!buffer.empty() && !buffer_depth.empty()){

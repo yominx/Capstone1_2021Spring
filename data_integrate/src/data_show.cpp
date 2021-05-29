@@ -34,8 +34,8 @@ using namespace cv;
 int MAP_WIDTH = 600;
 int MAP_HEIGHT = 400;
 int MAP_CENTER = 50;
-float DLC = 0.17; //distance between camara and lidar
-float DLB = 0.35; //distance between lidar and ball
+float DLC = 0.27; //distance between camara and lidar
+float DLB = 0.45; //distance between lidar and ball
 int nData = 0;
 int nBalls=0;
 int remainBalls = 5;
