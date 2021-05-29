@@ -75,6 +75,8 @@ int control_method = ENTRANCE;
 #define PILLAR 	2
 #define GOAL 	3
 
+#define DEBUG_HARVEST true
+
 using namespace std;
 
 
@@ -126,8 +128,8 @@ void target_Callback(const geometry_msgs::Vector3::ConstPtr& waypoint) {
 	waytype = waypoint->z;
 	float target_o = atan2(target_y-pos_y, target_x-pos_x);
 	diff_o = target_o - pos_o; // while -pos_o, |diff_o| may become > pi
-	cout << "Target orientation is " << target_o << endl <<  "Current orientation is" << pos_o << endl;
-	cout << "diff x,y is " << target_x-pos_x <<  ", " << target_y-pos_y << endl;
+	// cout << "Target orientation is " << target_o << endl <<  "Current orientation is" << pos_o << endl;
+	// cout << "diff x,y is " << target_x-pos_x <<  ", " << target_y-pos_y << endl;
 
 	// atan2: -pi ~ pi, pos_o: 0 ~ 2pi => -3pi ~ pi
 	while (diff_o < -M_PI) diff_o = diff_o + 2*M_PI;
@@ -165,8 +167,8 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 		}
 
 		// cout << "LEFT " << left_points << " RIGHT " << right_points << endl;
-		// cout <<" LB "<<left_back_pts<<" RB "<<right_back_pts<<endl;
-		// cout <<" OOR "<<out_of_range_pts<<endl;
+		 cout <<" LB "<<left_back_pts<<" RB "<<right_back_pts<<endl;
+		 cout <<" OOR "<<out_of_range_pts<<endl;
 		int diff = left_points - right_points;
 		if (diff < -threshold) { // control to leftside
 			targetVel->linear.x  = 4;
@@ -257,6 +259,14 @@ void select_control(){
 
 
 
+void showControlMethod(){
+	if(control_method == ENTRANCE)
+		cout << "[CONTROL] Entrance Control" << endl;
+	else
+		cout << "[CONTROL] Ball harvesting control" << endl;
+}
+
+
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "data_integation");
@@ -286,13 +296,11 @@ int main(int argc, char **argv)
     while(ros::ok){
     	geometry_msgs::Twist targetVel;
 
-    	if 			(control_method == ENTRANCE) 		{
+    	if 	(control_method == ENTRANCE) 		{
     		control_entrance(&targetVel);
-    	} else if 	(control_method == BALLHARVESTING) 	{
-	    	control_ballharvesting(&targetVel);
 	    	// Handling step obstacle
-			if (!PASSED_STEP && meet_step()) {
-				int t = 20;
+			if (!DEBUG_HARVEST && !PASSED_STEP && meet_step()) {
+				int t = 10;
 				targetVel.linear.x  = 4;
 				targetVel.angular.z = 0;
 				targetVel.angular.x = 50; // collector velocity: angular.x
@@ -306,9 +314,13 @@ int main(int argc, char **argv)
 				}
 				PASSED_STEP = true;
 			}
+    	} else if 	(control_method == BALLHARVESTING) 	{
+	    	control_ballharvesting(&targetVel);
     	}
     	else cout << "ERROR: NO CONTROL METHOD" << endl; // Unreachable statement
 		
+
+    	showControlMethod();
 		select_control();
 		//Ball pickup/dumping part started
     	control_harvest(&targetVel);
