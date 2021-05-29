@@ -326,7 +326,7 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
 
 //Debugging: cout<<"oridata/x/y/line number "<<oridata.size()<<"/"<<xdata.size()<<"/"<<ydata.size()<<"/"<<lines.size()<<endl;
 
-    cout<<oridata.size()<<"/"<<lines.size()<<endl;
+    //cout<<oridata.size()<<"/"<<lines.size()<<endl;
 
     int button=1;
 
@@ -441,7 +441,6 @@ void control_input_Callback(const geometry_msgs::Twist::ConstPtr& targetVel){
   robot_pos.y=robot_pos.y+linear_vel*sin(robot_pos.z)*Ts;
   robot_pos.z=robot_pos.z+angular_vel*Ts;
   }
-  cout<<"vel"<<angular_vel*Ts<<endl;
 }
 
 
@@ -579,12 +578,12 @@ int main(int argc, char **argv)
 
 //테스트 용으로 사용시 아래 단락을 주석처리하고 robot_pos의 초기값을 main함수 밖에서 설정
         if (zone_info==1){
-          robot_pos.x=-30;
+          robot_pos.x=-10;
           robot_pos.y=50;
           robot_pos.z=2*M_PI-0.4;
           cout<<"localization not yet"<<endl;
         }else if (zone_info==2 && initial_step<10){
-          rectangular_map(lines, 25, 0.3);
+          rectangular_map(lines, 30, 0.3);
           initial_step++;
           if( robot_pos.x==-30 && robot_pos.y==50 && robot_pos.z==2*M_PI-0.4){
             robot_pos.x=-30;

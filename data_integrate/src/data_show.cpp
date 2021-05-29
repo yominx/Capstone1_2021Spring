@@ -113,7 +113,9 @@ void Zones::removeZone(int r, int c, int type)
 {
   int n = zoneList.size();
   for (int i=0;i<n;i++){
-    if (zoneList[i].insideZone(r,c) && zoneList[i].reliable) {
+    if (zoneList[i].insideZone(r,c) && zoneList[i].reliable && zoneList[i].type == type ) {
+      cout << "Remove \n\ttype:" << zoneList[i].type <<
+      "(x, y): " << zoneList[i].cenCol<< ", " << zoneList[i].cenRow << endl;
       removeZone(i,type);
       return;
     }
@@ -138,14 +140,14 @@ void Zones::removeZone(int i, int type)
   map(roi) = Scalar(0);
   circle(MAP, Point(zone.cenCol, zone.cenRow),2,Scalar(0,0,0), -1);
   zoneList.erase(zoneList.begin()+i);
-  cout << "zone " << i << "-th removed" << endl;
+  // cout << "zone " << i << "-th removed" << endl;
 }
 
 Zones::Zone::Zone(int r, int c, int type):type(type),nPoints(1),cenRow(r),cenCol(c),cnt(1),reliable(false)
 {
   switch(type){
     case BALL:
-      zoneSize = 20;
+      zoneSize = 40;
       threshold = 0.5;
       break;
     case PILLAR:
@@ -161,7 +163,9 @@ Zones::Zone::~Zone(){}
 
 bool Zones::Zone::insideZone(int r, int c)
 {
-  return (r >= cenRow-zoneSize && r <= cenRow+zoneSize && c >= cenCol-zoneSize && c <= cenCol+zoneSize);
+  int ball_dist_sq = pow(cenRow-r, 2) + pow(cenCol-c,2);
+  // cout << "DISTANCE IS "<<  ball_dist_sq << endl;
+  return (ball_dist_sq  <= pow(zoneSize,2) );
 }
 
 void Zones::Zone::add(int r, int c, int type)
@@ -303,10 +307,12 @@ void pillarPos_Callback(const std_msgs::Float32MultiArray pos)
 
 void goalNum_Callback(const std_msgs::Int8 msg)
 {
-    int tmp = msg.data;
-    if (remainBalls != tmp){
-      float xBall = X + DLB * cos(O);
-      float yBall = Y + DLB * sin(O);
+    int remainBalls_callback = 5 - msg.data;
+    cout << "remainBalls : " << remainBalls_callback << endl;
+    if (remainBalls != remainBalls_callback){
+      float xBall = 50  + X + DLB * cos(O);
+      float yBall = 350 - Y + DLB * sin(O);
+      cout << "Remove near " << xBall << ", " << yBall << endl;
       ballZones.removeZone(yBall,xBall,BALL);
       remainBalls--;
     }
