@@ -152,7 +152,7 @@ Zones::Zone::Zone(int r, int c, int type):type(type),nPoints(1),cenRow(r),cenCol
       break;
     case PILLAR:
       zoneSize = 20;
-      threshold = 0.7;
+      threshold = 0.85;
       break;
     case GOAL:
       zoneSize = 50;
@@ -243,7 +243,7 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
     // cout << "(" << j << "-th zone) nPoints: " << zones.zoneList[j].nPoints << ", cnt: "<< zones.zoneList[j].cnt << endl;
     // cout << "(" << j << "-th zone) is reliable : " << zones.zoneList[j].reliable << endl;
     // cout << "(" << j << "-th zone) cnt*threshold = " << zones.zoneList[j].cnt << " * " << zones.zoneList[j].threshold << " = " << zones.zoneList[j].cnt * zones.zoneList[j].threshold <<endl;
-    if ((zones.zoneList[j].cnt % 10) == 0 && zones.zoneList[i].cnt < 80){
+    if ((zones.zoneList[j].cnt % 10) == 0 && zones.zoneList[i].cnt < 100){
       if (zones.zoneList[j].nPoints > zones.zoneList[j].cnt * zones.zoneList[j].threshold){
         zones.zoneList[j].reliable = true;
         // cout << "(" << j << "-th zone) is reliable" << endl;
@@ -343,11 +343,16 @@ int main(int argc, char **argv)
       nData = 0;
       filtering(ballZones, nBalls, ballDist, ballAngle, BALL, msg);
       filtering(pillarZones, nPillars, pillarDist, pillarAngle, PILLAR, msg);
-      filtering(goalZones, nGoals, goalDist, goalAngle, GOAL, msg);
+      //filtering(goalZones, nGoals, goalDist, goalAngle, GOAL, msg);
       circle(MAP, Point(50+int(round(X)), 350-int(round(Y))), 2, cv::Scalar(255,0,0), -1);
       msg.data.push_back(VEHICLE);
       msg.data.push_back(50+int(round(X)));
       msg.data.push_back(350-int(round(Y)));
+      nData += 1;
+      //set the goal position
+      msg.data.push_back(GOAL);
+      msg.data.push_back(550);
+      msg.data.push_back(200);
       nData += 1;
       msg.cols = nData;
       pub.publish(msg);

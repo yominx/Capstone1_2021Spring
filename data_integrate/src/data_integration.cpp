@@ -57,7 +57,7 @@ int waytype;
 //ball pickup&dumping part started
 int delivery=0;
 int delivery_count=0;
-int ball_count=0;
+int ball_count=4;
 int csg_count=0;
 //ball pickup&dumping part ended
 ros::Publisher commandVel;
@@ -80,7 +80,7 @@ int control_method = ENTRANCE;
 #define PILLAR 	2
 #define GOAL 	3
 
-#define DEBUG_HARVEST true
+#define DEBUG_HARVEST false
 
 using namespace std;
 
@@ -177,8 +177,8 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 		}
 
 		// cout << "LEFT " << left_points << " RIGHT " << right_points << endl;
-		// cout <<" LB "<<left_back_pts<<" RB "<<right_back_pts<<endl;
-		// cout <<" OOR "<<out_of_range_pts<<endl;
+		cout <<" LB "<<left_back_pts<<" RB "<<right_back_pts<<endl;
+		cout <<" OOR "<<out_of_range_pts<<endl;
 		int diff = left_points - right_points;
 		if (diff < -threshold) { // control to leftside
 			targetVel->linear.x  = 4;
@@ -203,7 +203,7 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 
 void control_ballharvesting(geometry_msgs::Twist *targetVel)
 {
-	float ANGLE_THRESHOLD = M_PI/80;
+	float ANGLE_THRESHOLD = M_PI/100;
 	float DIST_THRESHOLD = 5;
 	int angle_sign = (diff_o > 0 ? 1 : -1);
 
@@ -212,12 +212,12 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 	if (fabs(diff_o) > ANGLE_THRESHOLD) {
 		/* in place rotation ->should be modified*/
 		targetVel->linear.x  = 0;
-		targetVel->angular.z = angle_sign*2;
+		targetVel->angular.z = angle_sign;
 		// MOVING = true;
 	}
 	else if (dist < DIST_THRESHOLD) {
 		targetVel->linear.x  = -v_linear/2;
-		targetVel->angular.z = -v_angular/2;
+		targetVel->angular.z = -v_angular/4;
 	}
 	else {
 		/* move forward ->should be modified*/
@@ -243,17 +243,17 @@ void control_harvest(geometry_msgs::Twist* targetVel){
 			targetVel->angular.z=0;
 		}
 	} else if(waytype==GOAL) {
-		int GOAL_SIZE = 25;
+		int GOAL_SIZE = 100;
 		bool close_enough = pow(pos_x-500, 2) + pow(pos_y-150,2) < pow(GOAL_SIZE, 2);
 		
 		if(close_enough){
-			float target_o = atan2(150-pos_y, 500-pos_x) + M_PI;
+			float target_o = atan2(200-pos_y, 550-pos_x) + M_PI;
 			float diffO = pos_o-target_o;
 			while (diffO < -M_PI) diffO = diffO + 2*M_PI;
-			while (diffO >= M_PI) diffO = diffO - 2*M_PI;
+			while (diffO > M_PI) diffO = diffO - 2*M_PI;
 			int sign = (diffO > 0 ? 1 : -1);
 
-			if(abs(diffO)>0.01){
+			if(abs(diffO)>0.05){
 				targetVel->angular.z = sign;
 			}else{
 				targetVel->angular.z = 0;
@@ -266,7 +266,7 @@ void control_harvest(geometry_msgs::Twist* targetVel){
 
 void select_control(){
 	std_msgs::Int8 zone_info;
-	if( (0<left_back_pts && left_back_pts<20 && out_of_range_pts>15) || control_method== BALLHARVESTING){
+	if( (0<left_back_pts && left_back_pts<30 && out_of_range_pts>30) || control_method== BALLHARVESTING){
 		zone_info.data= BALLHARVESTING;
 		control_method= BALLHARVESTING;
 	}else{
@@ -314,7 +314,10 @@ int main(int argc, char **argv)
     ros::Rate loop_rate(10);
 
 
+	ros::Time start =ros::Time::now(), now;
+    
     while(ros::ok){
+    	now = ros::Time::now();
     	geometry_msgs::Twist targetVel;
 
     	if 	(control_method == ENTRANCE) 		{
@@ -337,18 +340,14 @@ int main(int argc, char **argv)
 			}
     	} else if 	(control_method == BALLHARVESTING) 	{
 	    	control_ballharvesting(&targetVel);
+			//Ball pickup/dumping
+	    	control_harvest(&targetVel);
+	    	update_delivery_info();
+	    	publish_delivery_info();
     	}
     	else cout << "ERROR: NO CONTROL METHOD" << endl; // Unreachable statement
-		
-
     	// showControlMethod();
 		select_control();
-		//Ball pickup/dumping part started
-    	control_harvest(&targetVel);
-    	update_delivery_info();
-    	publish_delivery_info();
-
-		//Ball pickup/dumping part ended
 		commandVel.publish(targetVel);
 
 	    loop_rate.sleep();
@@ -374,15 +373,19 @@ bool meet_step()
 
 
 void update_delivery_info(){
-	if(delivery!=0) delivery_count++;
+	if(delivery!=0){
+		delivery_count++;
+	}
 
-	int th1=210;
+
+	int th1=300;
 	int th2=2000;
 	if(delivery_count>th1 && delivery==1){
 		delivery=0;
 		delivery_count=0;
 		csg_count=0;
 		ball_count++;
+
 	}else if(delivery_count>th2 && delivery==2){
 		delivery=0;
 		delivery_count=0;

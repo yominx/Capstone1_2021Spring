@@ -117,6 +117,7 @@ void publish_wayp(int x, int y, int z){
 // 	// TODO: check for the walls, too.
 // 	return true;
 // }
+
 bool visible_arbitrary(int x1, int y1, int x2, int y2){
 	int diffX = x2 - x1, diffY = y2 - y1, ITER = 100;
 	float stepX = diffX/ITER, stepY = diffY/ITER;
@@ -142,40 +143,6 @@ bool visible_arbitrary(int x1, int y1, int x2, int y2){
 	// cout << x1 << ", " << y1 << " to " << x2 << ", " << y2 << " is available" << endl;
 	return true;
 }
-
-
-// bool visible_arbitrary(int x1, int y1, int x2, int y2){
-// 	int diffX = x1 - x2, diffY = y1 - y2;
-// 	float a,b, num, den;
-	
-// 	if (diffX == 0){ // x+c=0
-// 		for(int i=0;i<pillarCount;i++){
-// 			if (abs(pillarX[i]-x1) < (PILLAR_RADIUS + ROBOT_SIZE + MARGIN)) return false;
-// 		}
-// 		for(int i=0;i<ballCount;i++){
-// 			if (abs(ballX[i]-x1)   < (ROBOT_SIZE + MARGIN)) return false;
-// 		}
-// 		return true;
-// 	} else { 
-// 		// y=ax+b
-// 		a = diffY/diffX; // slope
-// 		b = y1-a*x1;
-// 		den = sqrt(a*a+1);
-// 		for(int i=0;i < pillarCount;i++){ // check pillar-collision
-// 			num = a*pillarX[i] + b - pillarY[i];
-// 			cout << "distance for "<<i<< "th pillar is " << abs(num/den) <<endl;
-// 			if (abs(num/den) < (PILLAR_RADIUS + ROBOT_SIZE)) return false; // num/den == distance
-// 		}
-// 		for(int i=0;i<ballCount;i++){ // check ball-collision
-// 			num = a*ballX[i] + b - ballY[i];
-// 			cout << "distance for "<<i<< "th ball is " << abs(num/den) <<endl;
-// 			if (abs(num/den) < (ROBOT_SIZE + MARGIN)) return false; // num/den == distance. ignore radius of the ball.
-// 		}
-
-// 		return true; 
-// 	}
-// }
-
 
 int get_shortest_index(int size, NodeMap* node_list){ // '-1' means 'No balls are detected'
 	// TODO: use A* to calculate more EXACT distance
@@ -323,9 +290,7 @@ void goal_control(int size, NodeMap* nodes){
 
 void positions_callback(const core_msgs::multiarray::ConstPtr& object)
 {
-	if(END){
-		publish_wayp(-1,-1,-1);
-	}
+	if (END) publish_wayp(-1,-1,-1);
 	int size = (object->data.size())/3;
 	int node_number = 0;
 
@@ -355,7 +320,7 @@ void positions_callback(const core_msgs::multiarray::ConstPtr& object)
 }
 
 void ballcount_callback(const std_msgs::Int8::ConstPtr& count){
-	int TOTAL_BALLS = 1;
+	int TOTAL_BALLS = 5;
 	REMAINING_BALLS = TOTAL_BALLS - count->data;
 }
 
