@@ -281,7 +281,7 @@ void goal_control(int size, NodeMap* nodes){
 			visualize(size, nodes, goal_index, cur_node.x, cur_node.y);
 		} else {
 			publish_wayp(nextX, nextY, nodes[next_index].type);
-			visualize(size, nodes, next_index, nextX, nextY);
+			visualize(size, nodes, goal_index, nextX, nextY);
 		}
 	}
 
@@ -312,7 +312,7 @@ void positions_callback(const core_msgs::multiarray::ConstPtr& object)
 			ballharvest_control(node_number, target_ball_index, nodes);
 		}
 	} else { // Go to goal point
-		cout << "Goal control" << endl;
+		// cout << "Goal control" << endl;
 		goal_control(node_number, nodes);
 	}
 

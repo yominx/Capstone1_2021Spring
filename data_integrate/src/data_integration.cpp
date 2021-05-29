@@ -57,8 +57,7 @@ int waytype;
 //ball pickup&dumping part started
 int delivery=0;
 int delivery_count=0;
-int ball_count=4;
-int csg_count=0;
+int ball_count=5;
 //ball pickup&dumping part ended
 ros::Publisher commandVel;
 ros::Publisher zone;
@@ -80,7 +79,7 @@ int control_method = ENTRANCE;
 #define PILLAR 	2
 #define GOAL 	3
 
-#define DEBUG_HARVEST false
+#define DEBUG_HARVEST true
 
 using namespace std;
 
@@ -230,8 +229,9 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 
 void control_harvest(geometry_msgs::Twist* targetVel){
 	delivery=0;
-	if(waytype==BALL || csg_count>0){
-		csg_count=1;
+	cout << "HARVEST TYPE: " << waytype << endl;
+
+	if(waytype==BALL){
 		int BALL_LIDAR_DIST = 35;
 		bool close_enough = pow(pos_x-target_x, 2) + pow(pos_y-target_y,2) < pow(BALL_LIDAR_DIST, 2);
 		
@@ -243,14 +243,17 @@ void control_harvest(geometry_msgs::Twist* targetVel){
 			targetVel->angular.z=0;
 		}
 	} else if(waytype==GOAL) {
-		int GOAL_SIZE = 100;
-		bool close_enough = pow(pos_x-500, 2) + pow(pos_y-150,2) < pow(GOAL_SIZE, 2);
-		
+		int GOAL_SIZE = 65;
+		int goalX = 550, goalY = 200; // CHANGE THIS VALUE FROM /position
+
+		bool close_enough = pow(pos_x-goalX, 2) + pow(pos_y-goalY,2) < pow(GOAL_SIZE, 2);
+		cout << "DIST " << sqrt(pow(pos_x-goalX, 2) + pow(pos_y-goalY,2))<< endl;
 		if(close_enough){
-			float target_o = atan2(200-pos_y, 550-pos_x) + M_PI;
-			float diffO = pos_o-target_o;
+			float target_o = atan2(goalY-pos_y, goalX-pos_x) + M_PI;
+			float diffO = target_o - pos_o;
 			while (diffO < -M_PI) diffO = diffO + 2*M_PI;
 			while (diffO > M_PI) diffO = diffO - 2*M_PI;
+			cout << "DIFF ORIENTATION" << diffO << endl;
 			int sign = (diffO > 0 ? 1 : -1);
 
 			if(abs(diffO)>0.05){
@@ -383,7 +386,6 @@ void update_delivery_info(){
 	if(delivery_count>th1 && delivery==1){
 		delivery=0;
 		delivery_count=0;
-		csg_count=0;
 		ball_count++;
 
 	}else if(delivery_count>th2 && delivery==2){
