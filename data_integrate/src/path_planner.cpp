@@ -118,7 +118,7 @@ void publish_wayp(int x, int y, int z){
 // 	return true;
 // }
 bool visible_arbitrary(int x1, int y1, int x2, int y2){
-	int diffX = x2 - x1, diffY = y2 - y1, ITER = 30;
+	int diffX = x2 - x1, diffY = y2 - y1, ITER = 100;
 	float stepX = diffX/ITER, stepY = diffY/ITER;
 	float posX, posY, distsq;
 
