@@ -41,7 +41,6 @@ float lidar_distance[400];
 float lidar_obs;
 
 int left_points,right_points;
-int diff_points;
 int prev_diff_points = 0;
 int left_back_pts, right_back_pts;
 int out_of_range_pts;
@@ -110,8 +109,10 @@ void depth_Callback(const sensor_msgs::ImageConstPtr& msg)
 	    buffer_depth.convertTo(buffer_depth, CV_32F, 0.001);
 	    float target = buffer_depth.at<float>(479,320);
 		if (target < minValue && target > 0.15) minValue = buffer_depth.at<float>(479,320);
-		cout << buffer_depth.at<float>(479,320) << endl;
-		cout << "min val = " << minValue << endl;
+		if (!DEBUG_HARVEST){
+			cout << buffer_depth.at<float>(479,320) << endl;
+			cout << "min val = " << minValue << endl;
+		}
    }
    catch (cv_bridge::Exception& e)
    {
@@ -170,24 +171,24 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 		}
 
 		// cout << "LEFT " << left_points << " RIGHT " << right_points << endl;
-		 // cout <<" LB "<<left_back_pts<<" RB "<<right_back_pts<<endl;
-		 // cout <<" OOR "<<out_of_range_pts<<endl;
+		// cout <<" LB "<<left_back_pts<<" RB "<<right_back_pts<<endl;
+		// cout <<" OOR "<<out_of_range_pts<<endl;
 		int diff = left_points - right_points;
 		if (diff < -threshold) { // control to leftside
 			targetVel->linear.x  = 4;
-			targetVel->angular.z = -(diff_points+threshold)*0.04 + (diff_points-prev_diff_points)*2;  // TODO: change to PID control (Now P control)
-		} else if (diff_points > threshold) { // control to rightside
+			targetVel->angular.z = -(diff+threshold)*0.04 + (diff-prev_diff_points)*2;  // TODO: change to PID control (Now P control)
+		} else if (diff > threshold) { // control to rightside
 			targetVel->linear.x  = 4;
-			targetVel->angular.z = -(diff_points-threshold)*0.04 - (diff_points-prev_diff_points)*2;  // TODO: change to PID control (Now P control)
+			targetVel->angular.z = -(diff-threshold)*0.04 - (diff-prev_diff_points)*2;  // TODO: change to PID control (Now P control)
 		} else { // Just move forward
 			targetVel->linear.x  = 5;
 			targetVel->angular.z = 0;
 		}
 
-		if (targetVel->angular.z > 1.6) targetVel->angular.z = 1.7;
-		else if (targetVel->angular.z < -1.6) targetVel->angular.z = -1.7;
+		if (targetVel->angular.z > 1.7) targetVel->angular.z = 1.7;
+		else if (targetVel->angular.z < -1.7) targetVel->angular.z = -1.7;
 
-		prev_diff_points = diff_points;
+		prev_diff_points = diff;
 	}
 	targetVel->angular.x = -50;
 
@@ -237,6 +238,8 @@ void control_harvest(geometry_msgs::Twist* targetVel){
 		bool close_enough = pow(pos_x-target_x, 2) + pow(pos_y-target_y,2) < pow(BALL_LIDAR_DIST, 2);
 		
 		if(close_enough){
+			cout << "CLOSE ENOUGH! HARVEST BALL" << endl;
+			// cout << "Delivery Count: " <<delivery_count << endl;
 			delivery=1;
 			targetVel->linear.x=0;
 			targetVel->angular.z=0;
@@ -317,7 +320,7 @@ int main(int argc, char **argv)
     	if 	(control_method == ENTRANCE) 		{
     		control_entrance(&targetVel);
     		targetVel.angular.x = 0;
-    		if (!PASSED_STEP && meet_step()) {
+    		if (!DEBUG_HARVEST && !PASSED_STEP && meet_step()) {
     			int t = 15;
     			targetVel.linear.x  = 5;
 				targetVel.angular.z = 0;
@@ -338,7 +341,7 @@ int main(int argc, char **argv)
     	else cout << "ERROR: NO CONTROL METHOD" << endl; // Unreachable statement
 		
 
-    	showControlMethod();
+    	// showControlMethod();
 		select_control();
 		//Ball pickup/dumping part started
     	control_harvest(&targetVel);
@@ -372,8 +375,10 @@ bool meet_step()
 
 void update_delivery_info(){
 	if(delivery!=0) delivery_count++;
-	int th1=1000;
+
+	int th1=80;
 	int th2=2000;
+
 	if(delivery_count>th1 && delivery==1){
 		delivery=0;
 		delivery_count=0;

@@ -113,7 +113,9 @@ void Zones::removeZone(int r, int c, int type)
 {
   int n = zoneList.size();
   for (int i=0;i<n;i++){
-    if (zoneList[i].insideZone(r,c) && zoneList[i].reliable) {
+    if (zoneList[i].insideZone(r,c) && zoneList[i].reliable && zoneList[i].type == type ) {
+      cout << "Remove \n\ttype:" << zoneList[i].type <<
+      "(x, y): " << zoneList[i].cenCol<< ", " << zoneList[i].cenRow << endl;
       removeZone(i,type);
       return;
     }
@@ -162,7 +164,7 @@ Zones::Zone::~Zone(){}
 bool Zones::Zone::insideZone(int r, int c)
 {
   int ball_dist_sq = pow(cenRow-r, 2) + pow(cenCol-c,2);
-  cout << "DISTANCE IS "<<  ball_dist_sq << endl;
+  // cout << "DISTANCE IS "<<  ball_dist_sq << endl;
   return (ball_dist_sq  <= pow(zoneSize,2) );
 }
 
@@ -305,10 +307,12 @@ void pillarPos_Callback(const std_msgs::Float32MultiArray pos)
 
 void goalNum_Callback(const std_msgs::Int8 msg)
 {
-    int tmp = 5 - msg.data;
-    if (remainBalls != tmp){
-      float xBall = X + DLB * cos(O);
-      float yBall = Y + DLB * sin(O);
+    int remainBalls_callback = 5 - msg.data;
+    cout << "remainBalls : " << remainBalls_callback << endl;
+    if (remainBalls != remainBalls_callback){
+      float xBall = 50  + X + DLB * cos(O);
+      float yBall = 350 - Y + DLB * sin(O);
+      cout << "Remove near " << xBall << ", " << yBall << endl;
       ballZones.removeZone(yBall,xBall,BALL);
       remainBalls--;
     }
