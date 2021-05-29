@@ -34,8 +34,8 @@ using namespace cv;
 int MAP_WIDTH = 600;
 int MAP_HEIGHT = 400;
 int MAP_CENTER = 50;
-float DCL = 0.25; //distance between camara and lidar
-
+float DLC = 0.17; //distance between camara and lidar
+float DLB = 0.35; //distance between lidar and ball
 int nData = 0;
 int nBalls=0;
 int remainBalls = 5;
@@ -100,7 +100,6 @@ int Zones::size()
 void Zones::addZone(int r, int c, int type)
 {
   int n = zoneList.size();
-  cout << "zoneList size = " << n << endl;
   for (int i=0;i<n;i++){
     if (zoneList[i].insideZone(r,c)){
       zoneList[i].add(r,c,type);
@@ -114,7 +113,7 @@ void Zones::removeZone(int r, int c, int type)
 {
   int n = zoneList.size();
   for (int i=0;i<n;i++){
-    if (zoneList[i].insideZone(r,c)) {
+    if (zoneList[i].insideZone(r,c) && zoneList[i].reliable) {
       removeZone(i,type);
       return;
     }
@@ -191,6 +190,23 @@ Zones ballZones(5);
 Zones pillarZones(3);
 Zones goalZones(1);
 
+void sort(vector<int>& reliableList, const Zones& zones)
+{
+  float keyVal, targetVal;
+  int j;
+  for (int i=1; i<reliableList.size(); i++){
+    keyVal = zones.zoneList[reliableList[i]].nPoints / zones.zoneList[reliableList[i]].cnt;
+    j=i-1;
+    targetVal = zones.zoneList[reliableList[j]].nPoints / zones.zoneList[reliableList[j]].cnt;
+    while (j >= 0 && targetVal < keyVal){
+      reliableList[j+1] = reliableList[j];
+      j -= 1;
+      targetVel = zones.zoneList[reliableList[j]].nPoints / zones.zoneList[reliableList[j]].cnt;
+    }
+    reliableList[j] = reliableList[i];
+  }
+}
+
 void filtering(Zones& zones, int size, float* dist, float* angle, int type, core_msgs::multiarray& msg)
 {
   Mat map;
@@ -207,8 +223,8 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
   }
 
   for (int i=0; i<size; i++){ //ball_dist[i], ball_angle[i]
-    int x = 50 + (int)round(X + (DCL*cos(O)*100) + (dist[i]*cos(angle[i] + O)*100));
-    int y = 350 - (int)round(Y + (DCL*sin(O)*100) + (dist[i]*sin(angle[i] + O)*100));
+    int x = 50 + (int)round(X + (DLC*cos(O)*100) + (dist[i]*cos(angle[i] + O)*100));
+    int y = 350 - (int)round(Y + (DLC*sin(O)*100) + (dist[i]*sin(angle[i] + O)*100));
     if (!(x>50 && x<=550 && y>50 && y<350)){
       continue;
     }
@@ -216,6 +232,8 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
   }
 
   int zSize = zones.zoneList.size();
+  vector<int> reliableList;
+  reliableList.clear();
   for (int i=0,j=0; i<zSize; i++, j++){
     zones.zoneList[j].cnt++;
     // cout << "(" << j << "-th zone) nPoints: " << zones.zoneList[j].nPoints << ", cnt: "<< zones.zoneList[j].cnt << endl;
@@ -231,14 +249,21 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
         j--;
       }
     }
-    if (zones.zoneList[j].reliable){
-      msg.data.push_back(type);
-      msg.data.push_back(zones.zoneList[j].cenCol);
-      msg.data.push_back(zones.zoneList[j].cenRow);
-      nData += 1;
-      circle(MAP, Point(zones.zoneList[j].cenCol, zones.zoneList[j].cenRow),2,color, -1);
-      continue;
-    }
+    if (zones.zoneList[j].reliable) {reliableList.push_back(j);}
+  }
+
+  if (reliableList.size() > zones.max){
+    sort(reliableList, zones); // sorting by the value of (nPoints/cnt)
+  }
+
+  int repeat = (reliableList.size()>zones.max) ? zones.max : reliableList.size();
+  for (int i=0; i<repeat; i++){
+    msg.data.push_back(type);
+    msg.data.push_back(zones.zoneList[reliableList[i]].cenCol);
+    msg.data.push_back(zones.zoneList[reliableList[i]].cenRow);
+    nData += 1;
+    circle(MAP, Point(zones.zoneList[reliableList[i]].cenCol, zones.zoneList[reliableList[i]].cenRow),2,color, -1);
+    continue;
   }
 }
 
@@ -278,9 +303,11 @@ void pillarPos_Callback(const std_msgs::Float32MultiArray pos)
 
 void goalNum_Callback(const std_msgs::Int8 msg)
 {
-    int remainBalls_callback = 5 - msg.data;
-    if (remainBalls != remainBalls_callback){
-      ballZones.removeZone(Y,X,BALL);
+    int tmp = 5 - msg.data;
+    if (remainBalls != tmp){
+      float xBall = X + DLB * cos(O);
+      float yBall = Y + DLB * sin(O);
+      ballZones.removeZone(yBall,xBall,BALL);
       remainBalls--;
     }
 }
