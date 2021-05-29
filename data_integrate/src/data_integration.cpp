@@ -41,8 +41,9 @@ float lidar_distance[400];
 float lidar_obs;
 
 int left_points,right_points;
+int diff_points;
+int prev_diff_points = 0;
 int left_back_pts, right_back_pts;
-
 int out_of_range_pts;
 
 /* robot position variables */
@@ -66,6 +67,8 @@ ros::Publisher ball_delivery;
 
 bool PASSED_STEP = false;
 cv::Mat buffer_depth;
+
+bool MOVING = true;
 
 #define ENTRANCE 1
 #define BALLHARVESTING 2
@@ -167,19 +170,24 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 		}
 
 		// cout << "LEFT " << left_points << " RIGHT " << right_points << endl;
-		 cout <<" LB "<<left_back_pts<<" RB "<<right_back_pts<<endl;
-		 cout <<" OOR "<<out_of_range_pts<<endl;
+		 // cout <<" LB "<<left_back_pts<<" RB "<<right_back_pts<<endl;
+		 // cout <<" OOR "<<out_of_range_pts<<endl;
 		int diff = left_points - right_points;
 		if (diff < -threshold) { // control to leftside
 			targetVel->linear.x  = 4;
-			targetVel->angular.z = -(diff+threshold)*0.05;
-		} else if (diff > threshold) { // control to rightside
+			targetVel->angular.z = -(diff_points+threshold)*0.04 + (diff_points-prev_diff_points)*2;  // TODO: change to PID control (Now P control)
+		} else if (diff_points > threshold) { // control to rightside
 			targetVel->linear.x  = 4;
-			targetVel->angular.z = -(diff-threshold)*0.05;
+			targetVel->angular.z = -(diff_points-threshold)*0.04 - (diff_points-prev_diff_points)*2;  // TODO: change to PID control (Now P control)
 		} else { // Just move forward
-			targetVel->linear.x  = 4;
+			targetVel->linear.x  = 5;
 			targetVel->angular.z = 0;
 		}
+
+		if (targetVel->angular.z > 1.6) targetVel->angular.z = 1.7;
+		else if (targetVel->angular.z < -1.6) targetVel->angular.z = -1.7;
+
+		prev_diff_points = diff_points;
 	}
 	targetVel->angular.x = -50;
 
@@ -198,15 +206,25 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 		/* in place rotation ->should be modified*/
 		targetVel->linear.x  = 0;
 		targetVel->angular.z = angle_sign*2;
+		MOVING = true;
 	}
 	else if (dist < DIST_THRESHOLD) {
-		targetVel->linear.x  = 0;
-		targetVel->angular.z = 0;
+		if (!MOVING) {
+			targetVel->linear.x  = 0;
+			targetVel->angular.z = 0;
+			MOVING = !MOVING;
+		} else {
+			targetVel->linear.x  = -(targetVel->linear.x);
+			targetVel->angular.z = -(targetVel->angular.z);
+			MOVING = !MOVING;
+		}
+
 	}
 	else {
 		/* move forward ->should be modified*/
 		targetVel->linear.x  = 4;
 		targetVel->angular.z = 0;
+		MOVING = true;
 	}
 	return;
 }
@@ -298,10 +316,10 @@ int main(int argc, char **argv)
 
     	if 	(control_method == ENTRANCE) 		{
     		control_entrance(&targetVel);
-	    	// Handling step obstacle
-			if (!DEBUG_HARVEST && !PASSED_STEP && meet_step()) {
-				int t = 10;
-				targetVel.linear.x  = 4;
+    		targetVel.angular.x = 0;
+    		if (!PASSED_STEP && meet_step()) {
+    			int t = 15;
+    			targetVel.linear.x  = 5;
 				targetVel.angular.z = 0;
 				targetVel.angular.x = 50; // collector velocity: angular.x
 				ros::Time beginTime =ros::Time::now();
