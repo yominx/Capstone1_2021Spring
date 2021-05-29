@@ -57,7 +57,7 @@ int waytype;
 int delivery=0;
 int delivery_count=0;
 int ball_count=0;
-int csg_count;
+int csg_count=0;
 //ball pickup&dumping part ended
 ros::Publisher commandVel;
 ros::Publisher zone;
@@ -171,8 +171,8 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 		}
 
 		// cout << "LEFT " << left_points << " RIGHT " << right_points << endl;
-		// cout <<" LB "<<left_back_pts<<" RB "<<right_back_pts<<endl;
-		// cout <<" OOR "<<out_of_range_pts<<endl;
+		cout <<" LB "<<left_back_pts<<" RB "<<right_back_pts<<endl;
+		cout <<" OOR "<<out_of_range_pts<<endl;
 		int diff = left_points - right_points;
 		if (diff < -threshold) { // control to leftside
 			targetVel->linear.x  = 4;
@@ -268,7 +268,7 @@ void control_harvest(geometry_msgs::Twist* targetVel){
 
 void select_control(){
 	std_msgs::Int8 zone_info;
-	if( (0<left_back_pts && left_back_pts<11 && out_of_range_pts>5) || control_method== BALLHARVESTING){
+	if( (0<left_back_pts && left_back_pts<20 && out_of_range_pts>15) || control_method== BALLHARVESTING){
 		zone_info.data= BALLHARVESTING;
 		control_method= BALLHARVESTING;
 	}else{
@@ -376,9 +376,9 @@ bool meet_step()
 void update_delivery_info(){
 	if(delivery!=0) delivery_count++;
 
-	int th1=80;
+	int th1=210;
 	int th2=2000;
-
+	cout<<"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"<<delivery_count<<endl;
 	if(delivery_count>th1 && delivery==1){
 		delivery=0;
 		delivery_count=0;

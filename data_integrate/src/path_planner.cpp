@@ -129,7 +129,7 @@ bool visible_arbitrary(int x1, int y1, int x2, int y2){
 			distsq = pow(posX-pillarX[j], 2) + pow(posY-pillarY[j],2);
 			// cout << "ITER "  << i << " posX " << posX << " posY " << posY <<
 			// endl << "pillX " << pillarX[j] << " pillY " << pillarY[j] << endl << distsq << endl;
-			if(distsq < pow(PILLAR_RADIUS+ROBOT_SIZE+MARGIN, 2)) return false;
+			if(distsq < pow(PILLAR_RADIUS+ROBOT_SIZE, 2)) return false;
 		}
 		for(int j=0;j<ballCount;j++){ // check ball-collision
 			if((ballX[j] == x1 && ballY[j] == y1) 
@@ -244,15 +244,15 @@ int buildMap(int size, NodeMap* nodes, const core_msgs::multiarray::ConstPtr& ob
 
 void unknown_map_control(int node_number){
 	// cout << "Robot Position:" << robotX << ", " << robotY << endl;
-	if(visible_arbitrary(robotX, robotY, robotX, robotY + 30)) {
+	if (visible_arbitrary(robotX, robotY, robotX + 15, robotY - 15)) {
+		publish_wayp(robotX + 15, robotY - 15, -1);
+		visualize(node_number, nodes, -1, robotX + 15, robotY - 15);
+	} else if(visible_arbitrary(robotX, robotY, robotX + 30, robotY)) {
 		publish_wayp(robotX + 30, robotY, -1);
 		visualize(node_number, nodes, -1, robotX + 30, robotY);
-	} else if (visible_arbitrary(robotX, robotY, robotX + 15, robotY + 15)) {
-		publish_wayp(robotX + 15, robotY + 15, -1);
-		visualize(node_number, nodes, -1, robotX + 15, robotY + 15);
-	} else if (visible_arbitrary(robotX, robotY, robotX + 30, robotY)) {
-		publish_wayp(robotX, robotY + 30, -1);
-		visualize(node_number, nodes, -1, robotX, robotY + 30);
+	} else if (visible_arbitrary(robotX, robotY, robotX, robotY -30)) {
+		publish_wayp(robotX, robotY - 30, -1);
+		visualize(node_number, nodes, -1, robotX, robotY - 30);
 	} else{
 		cout << "ERROR: No points to move" << endl;
 	}
@@ -340,6 +340,7 @@ void positions_callback(const core_msgs::multiarray::ConstPtr& object)
 			ballharvest_control(node_number, target_ball_index, nodes);
 		}
 	} else { // Go to goal point
+		cout << "Goal control" << endl;
 		goal_control(node_number, nodes);
 	}
 
@@ -347,7 +348,8 @@ void positions_callback(const core_msgs::multiarray::ConstPtr& object)
 }
 
 void ballcount_callback(const std_msgs::Int8::ConstPtr& count){
-	REMAINING_BALLS = 5 - count->data;
+	int TOTAL_BALLS = 5;
+	REMAINING_BALLS = TOTAL_BALLS - count->data;
 }
 
 
@@ -357,7 +359,7 @@ int main(int argc, char **argv)
     ros::NodeHandle n;
 
     ros::Subscriber sub_positions = n.subscribe<core_msgs::multiarray>("/position", 100, positions_callback);
-    ros::Subscriber sub_harvested_balls = n.subscribe<std_msgs::Int8> ("/ball_count", 100, ballcount_callback);
+    ros::Subscriber sub_harvested_balls = n.subscribe<std_msgs::Int8> ("/ball_number", 100, ballcount_callback);
 	waypoints_publisher = n.advertise<geometry_msgs::Vector3>("/waypoint", 10);
 
     while(ros::ok){

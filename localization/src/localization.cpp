@@ -578,7 +578,7 @@ int main(int argc, char **argv)
 
 //테스트 용으로 사용시 아래 단락을 주석처리하고 robot_pos의 초기값을 main함수 밖에서 설정
         if (zone_info==1){
-          robot_pos.x=-10;
+          robot_pos.x=-30;
           robot_pos.y=50;
           robot_pos.z=2*M_PI-0.4;
           cout<<"localization not yet"<<endl;

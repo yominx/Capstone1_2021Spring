@@ -148,7 +148,7 @@ Zones::Zone::Zone(int r, int c, int type):type(type),nPoints(1),cenRow(r),cenCol
   switch(type){
     case BALL:
       zoneSize = 40;
-      threshold = 0.5;
+      threshold = 0.3;
       break;
     case PILLAR:
       zoneSize = 20;
@@ -243,7 +243,7 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
     // cout << "(" << j << "-th zone) nPoints: " << zones.zoneList[j].nPoints << ", cnt: "<< zones.zoneList[j].cnt << endl;
     // cout << "(" << j << "-th zone) is reliable : " << zones.zoneList[j].reliable << endl;
     // cout << "(" << j << "-th zone) cnt*threshold = " << zones.zoneList[j].cnt << " * " << zones.zoneList[j].threshold << " = " << zones.zoneList[j].cnt * zones.zoneList[j].threshold <<endl;
-    if ((zones.zoneList[j].cnt % 10) == 0 && zones.zoneList[i].nPoints < 100){
+    if ((zones.zoneList[j].cnt % 10) == 0 && zones.zoneList[i].nPoints < 80){
       if (zones.zoneList[j].nPoints > zones.zoneList[j].cnt * zones.zoneList[j].threshold){
         zones.zoneList[j].reliable = true;
         // cout << "(" << j << "-th zone) is reliable" << endl;
