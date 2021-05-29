@@ -227,8 +227,8 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
   }
 
   for (int i=0; i<size; i++){ //ball_dist[i], ball_angle[i]
-    int x = 50 + (int)round(X + (DLC*cos(O)*100) + (dist[i]*cos(angle[i] + O)*100));
-    int y = 350 - (int)round(Y + (DLC*sin(O)*100) + (dist[i]*sin(angle[i] + O)*100));
+    int x = (type==PILLAR) ? 50+(int)round(X +(dist[i]*cos(angle[i]+O)*100)) : 50+(int)round(X+(DLC*cos(O)*100)+(dist[i]*cos(angle[i]+O)*100));
+    int y = (type==PILLAR) ? 350-(int)round(Y+(dist[i]*sin(angle[i]+O)*100)) : 350-(int)round(Y+(DLC*sin(O)*100)+(dist[i]*sin(angle[i]+O)*100));
     if (!(x>50 && x<=550 && y>50 && y<350)){
       continue;
     }

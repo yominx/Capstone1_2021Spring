@@ -22,6 +22,8 @@
 #include <std_msgs/ColorRGBA.h>
 #include <math.h>
 
+#define DEBUG true
+
 using namespace cv;
 using namespace std;
 
@@ -153,7 +155,7 @@ vector<Vec4f> filtering(vector<Vec3f> circles, Mat img){
         filtered.push_back(circle);
         print(i, row, col, 2, true);
       }
-      print(i, row, col, 2, false);
+      else {print(i, row, col, 2, false);}
       continue;
     }
 
@@ -283,8 +285,10 @@ void ball_detect(){
      }
      cout << endl;
      pubBall.publish(msgBall);  //publish a message
-     cv::imshow("view", buffer);  //show the image with a window
-     cv::waitKey(1);
+     if (DEBUG){
+       cv::imshow("view", buffer);  //show the image with a window
+       cv::waitKey(1);
+     }
 }
 
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)
