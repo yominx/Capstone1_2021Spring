@@ -152,7 +152,7 @@ Zones::Zone::Zone(int r, int c, int type):type(type),nPoints(1),cenRow(r),cenCol
       break;
     case PILLAR:
       zoneSize = 20;
-      threshold = 0.5;
+      threshold = 0.7;
       break;
     case GOAL:
       zoneSize = 50;
@@ -227,8 +227,8 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
   }
 
   for (int i=0; i<size; i++){ //ball_dist[i], ball_angle[i]
-    int x = 50 + (int)round(X + (DLC*cos(O)*100) + (dist[i]*cos(angle[i] + O)*100));
-    int y = 350 - (int)round(Y + (DLC*sin(O)*100) + (dist[i]*sin(angle[i] + O)*100));
+    int x = (type==PILLAR) ? 50+(int)round(X +(dist[i]*cos(angle[i]+O)*100)) : 50+(int)round(X+(DLC*cos(O)*100)+(dist[i]*cos(angle[i]+O)*100));
+    int y = (type==PILLAR) ? 350-(int)round(Y+(dist[i]*sin(angle[i]+O)*100)) : 350-(int)round(Y+(DLC*sin(O)*100)+(dist[i]*sin(angle[i]+O)*100));
     if (!(x>50 && x<=550 && y>50 && y<350)){
       continue;
     }
@@ -243,7 +243,7 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
     // cout << "(" << j << "-th zone) nPoints: " << zones.zoneList[j].nPoints << ", cnt: "<< zones.zoneList[j].cnt << endl;
     // cout << "(" << j << "-th zone) is reliable : " << zones.zoneList[j].reliable << endl;
     // cout << "(" << j << "-th zone) cnt*threshold = " << zones.zoneList[j].cnt << " * " << zones.zoneList[j].threshold << " = " << zones.zoneList[j].cnt * zones.zoneList[j].threshold <<endl;
-    if ((zones.zoneList[j].cnt % 10) == 0 && zones.zoneList[i].nPoints < 80){
+    if ((zones.zoneList[j].cnt % 10) == 0 && zones.zoneList[i].cnt < 80){
       if (zones.zoneList[j].nPoints > zones.zoneList[j].cnt * zones.zoneList[j].threshold){
         zones.zoneList[j].reliable = true;
         // cout << "(" << j << "-th zone) is reliable" << endl;
@@ -351,9 +351,9 @@ int main(int argc, char **argv)
       nData += 1;
       msg.cols = nData;
       pub.publish(msg);
-      // imshow("map", MAP);
+      imshow("map", MAP);
       // destroyAllWindows();
-      // waitKey(1);
+      waitKey(1);
       loop_rate.sleep();
       ros::spinOnce();
     }

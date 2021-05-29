@@ -23,6 +23,7 @@
 #include "std_msgs/Int8.h"
 #include "std_msgs/String.h"
 #include "std_msgs/Float64.h"
+#include "std_msgs/Float32MultiArray.h"
 #include "geometry_msgs/Twist.h"
 
 #include "opencv2/opencv.hpp"
@@ -67,7 +68,9 @@ ros::Publisher ball_delivery;
 bool PASSED_STEP = false;
 cv::Mat buffer_depth;
 
-bool MOVING = true;
+// bool MOVING = true;
+float v_linear;
+float v_angular;
 
 #define ENTRANCE 1
 #define BALLHARVESTING 2
@@ -120,7 +123,10 @@ void depth_Callback(const sensor_msgs::ImageConstPtr& msg)
    }
 }
 
-
+void vel_Callback(const std_msgs::Float32MultiArray::ConstPtr& cur_vel) {
+	v_linear = cur_vel->data[0];
+	v_angular = cur_vel->data[1];
+}
 void position_Callback(const geometry_msgs::Vector3::ConstPtr& robot_pos) {
 	pos_x = 50 + robot_pos->x;
 	pos_y = 50 + robot_pos->y;
@@ -207,25 +213,17 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 		/* in place rotation ->should be modified*/
 		targetVel->linear.x  = 0;
 		targetVel->angular.z = angle_sign*2;
-		MOVING = true;
+		// MOVING = true;
 	}
 	else if (dist < DIST_THRESHOLD) {
-		if (!MOVING) {
-			targetVel->linear.x  = 0;
-			targetVel->angular.z = 0;
-			MOVING = !MOVING;
-		} else {
-			targetVel->linear.x  = -(targetVel->linear.x);
-			targetVel->angular.z = -(targetVel->angular.z);
-			MOVING = !MOVING;
-		}
-
+		targetVel->linear.x  = -v_linear/2;
+		targetVel->angular.z = -v_angular/2;
 	}
 	else {
 		/* move forward ->should be modified*/
 		targetVel->linear.x  = 4;
 		targetVel->angular.z = 0;
-		MOVING = true;
+		// MOVING = true;
 	}
 	return;
 }
@@ -301,6 +299,8 @@ int main(int argc, char **argv)
     
 	ros::Subscriber sub_pos = n.subscribe<geometry_msgs::Vector3>("/robot_pos", 1000, position_Callback);
 	ros::Subscriber sub_target = n.subscribe<geometry_msgs::Vector3>("/waypoint", 1000, target_Callback);
+
+	ros::Subscriber cur_vel = n.subscribe<std_msgs::Float32MultiArray>("/current_vel", 1000, vel_Callback); // for stop control
 
 	commandVel = n.advertise<geometry_msgs::Twist>("/command_vel", 10);
 	zone = n.advertise<std_msgs::Int8>("/zone", 10);
