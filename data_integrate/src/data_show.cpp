@@ -138,7 +138,7 @@ void Zones::removeZone(int i, int type)
   map(roi) = Scalar(0);
   circle(MAP, Point(zone.cenCol, zone.cenRow),2,Scalar(0,0,0), -1);
   zoneList.erase(zoneList.begin()+i);
-  cout << "zone " << i << "-th removed" << endl;
+  // cout << "zone " << i << "-th removed" << endl;
 }
 
 Zones::Zone::Zone(int r, int c, int type):type(type),nPoints(1),cenRow(r),cenCol(c),cnt(1),reliable(false)
@@ -161,7 +161,9 @@ Zones::Zone::~Zone(){}
 
 bool Zones::Zone::insideZone(int r, int c)
 {
-  return ( pow(cenRow-r, 2) + pow(cenCol-c,2) <= pow(zoneSize,2) );
+  int ball_dist_sq = pow(cenRow-r, 2) + pow(cenCol-c,2);
+  cout << "DISTANCE IS "<<  ball_dist_sq << endl;
+  return (ball_dist_sq  <= pow(zoneSize,2) );
 }
 
 void Zones::Zone::add(int r, int c, int type)
