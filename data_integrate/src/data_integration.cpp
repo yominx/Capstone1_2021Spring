@@ -68,6 +68,8 @@ ros::Publisher ball_delivery;
 bool PASSED_STEP = false;
 cv::Mat buffer_depth;
 
+bool MOVING = true;
+
 #define ENTRANCE 1
 #define BALLHARVESTING 2
 int control_method = ENTRANCE;
@@ -203,15 +205,25 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 		/* in place rotation ->should be modified*/
 		targetVel->linear.x  = 0;
 		targetVel->angular.z = angle_sign*2;
+		MOVING = true;
 	}
 	else if (dist < DIST_THRESHOLD) {
-		targetVel->linear.x  = 0;
-		targetVel->angular.z = 0;
+		if (!MOVING) {
+			targetVel->linear.x  = 0;
+			targetVel->angular.z = 0;
+			MOVING = !MOVING;
+		} else {
+			targetVel->linear.x  = -(targetVel->linear.x);
+			targetVel->angular.z = -(targetVel->angular.z);
+			MOVING = !MOVING;
+		}
+
 	}
 	else {
 		/* move forward ->should be modified*/
 		targetVel->linear.x  = 4;
 		targetVel->angular.z = 0;
+		MOVING = true;
 	}
 	return;
 }
