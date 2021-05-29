@@ -113,7 +113,9 @@ void Zones::removeZone(int r, int c, int type)
 {
   int n = zoneList.size();
   for (int i=0;i<n;i++){
-    if (zoneList[i].insideZone(r,c) && zoneList[i].reliable) {
+    if (zoneList[i].insideZone(r,c) && zoneList[i].reliable && zoneList[i].type == type ) {
+      cout << "Remove \n\ttype:" << zoneList[i].type <<
+      "(x, y): " << zoneList[i].cenCol<< ", " << zoneList[i].cenRow << endl;
       removeZone(i,type);
       return;
     }
@@ -150,7 +152,7 @@ Zones::Zone::Zone(int r, int c, int type):type(type),nPoints(1),cenRow(r),cenCol
       break;
     case PILLAR:
       zoneSize = 20;
-      threshold = 0.5;
+      threshold = 0.7;
       break;
     case GOAL:
       zoneSize = 50;
@@ -162,7 +164,7 @@ Zones::Zone::~Zone(){}
 bool Zones::Zone::insideZone(int r, int c)
 {
   int ball_dist_sq = pow(cenRow-r, 2) + pow(cenCol-c,2);
-  cout << "DISTANCE IS "<<  ball_dist_sq << endl;
+  // cout << "DISTANCE IS "<<  ball_dist_sq << endl;
   return (ball_dist_sq  <= pow(zoneSize,2) );
 }
 
@@ -225,8 +227,8 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
   }
 
   for (int i=0; i<size; i++){ //ball_dist[i], ball_angle[i]
-    int x = 50 + (int)round(X + (DLC*cos(O)*100) + (dist[i]*cos(angle[i] + O)*100));
-    int y = 350 - (int)round(Y + (DLC*sin(O)*100) + (dist[i]*sin(angle[i] + O)*100));
+    int x = (type==PILLAR) ? 50+(int)round(X +(dist[i]*cos(angle[i]+O)*100)) : 50+(int)round(X+(DLC*cos(O)*100)+(dist[i]*cos(angle[i]+O)*100));
+    int y = (type==PILLAR) ? 350-(int)round(Y+(dist[i]*sin(angle[i]+O)*100)) : 350-(int)round(Y+(DLC*sin(O)*100)+(dist[i]*sin(angle[i]+O)*100));
     if (!(x>50 && x<=550 && y>50 && y<350)){
       continue;
     }
@@ -241,7 +243,7 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
     // cout << "(" << j << "-th zone) nPoints: " << zones.zoneList[j].nPoints << ", cnt: "<< zones.zoneList[j].cnt << endl;
     // cout << "(" << j << "-th zone) is reliable : " << zones.zoneList[j].reliable << endl;
     // cout << "(" << j << "-th zone) cnt*threshold = " << zones.zoneList[j].cnt << " * " << zones.zoneList[j].threshold << " = " << zones.zoneList[j].cnt * zones.zoneList[j].threshold <<endl;
-    if ((zones.zoneList[j].cnt % 10) == 0 && zones.zoneList[i].nPoints < 100){
+    if ((zones.zoneList[j].cnt % 10) == 0 && zones.zoneList[i].cnt < 100){
       if (zones.zoneList[j].nPoints > zones.zoneList[j].cnt * zones.zoneList[j].threshold){
         zones.zoneList[j].reliable = true;
         // cout << "(" << j << "-th zone) is reliable" << endl;
@@ -305,10 +307,12 @@ void pillarPos_Callback(const std_msgs::Float32MultiArray pos)
 
 void goalNum_Callback(const std_msgs::Int8 msg)
 {
-    int tmp = 5 - msg.data;
-    if (remainBalls != tmp){
-      float xBall = X + DLB * cos(O);
-      float yBall = Y + DLB * sin(O);
+    int remainBalls_callback = 5 - msg.data;
+    cout << "remainBalls : " << remainBalls_callback << endl;
+    if (remainBalls != remainBalls_callback){
+      float xBall = 50  + X + DLB * cos(O);
+      float yBall = 350 - Y + DLB * sin(O);
+      cout << "Remove near " << xBall << ", " << yBall << endl;
       ballZones.removeZone(yBall,xBall,BALL);
       remainBalls--;
     }
@@ -347,9 +351,9 @@ int main(int argc, char **argv)
       nData += 1;
       msg.cols = nData;
       pub.publish(msg);
-      // imshow("map", MAP);
+      imshow("map", MAP);
       // destroyAllWindows();
-      // waitKey(1);
+      waitKey(1);
       loop_rate.sleep();
       ros::spinOnce();
     }

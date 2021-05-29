@@ -35,7 +35,7 @@
 /// MARGIN is similar to threshold.
 #define ROBOT_SIZE 20
 #define PILLAR_RADIUS 10
-#define	MARGIN 7
+#define	MARGIN 5
 #define	THRESHOLD 7
 
 #define ROBOT 	0
@@ -129,7 +129,7 @@ bool visible_arbitrary(int x1, int y1, int x2, int y2){
 			distsq = pow(posX-pillarX[j], 2) + pow(posY-pillarY[j],2);
 			// cout << "ITER "  << i << " posX " << posX << " posY " << posY <<
 			// endl << "pillX " << pillarX[j] << " pillY " << pillarY[j] << endl << distsq << endl;
-			if(distsq < pow(PILLAR_RADIUS+ROBOT_SIZE, 2)) return false;
+			if(distsq < pow(PILLAR_RADIUS+ROBOT_SIZE+MARGIN, 2)) return false;
 		}
 		for(int j=0;j<ballCount;j++){ // check ball-collision
 			if((ballX[j] == x1 && ballY[j] == y1) 
