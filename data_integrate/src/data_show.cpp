@@ -201,7 +201,7 @@ void sort(vector<int>& reliableList, const Zones& zones)
     while (j >= 0 && targetVal < keyVal){
       reliableList[j+1] = reliableList[j];
       j -= 1;
-      targetVel = zones.zoneList[reliableList[j]].nPoints / zones.zoneList[reliableList[j]].cnt;
+      targetVal = zones.zoneList[reliableList[j]].nPoints / zones.zoneList[reliableList[j]].cnt;
     }
     reliableList[j] = reliableList[i];
   }
