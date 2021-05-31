@@ -67,7 +67,6 @@ ros::Publisher ball_delivery;
 bool PASSED_STEP = false;
 cv::Mat buffer_depth;
 
-// bool MOVING = true;
 float v_linear;
 float v_angular;
 bool STOP_FLAG = false;
@@ -205,45 +204,101 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 void control_ballharvesting(geometry_msgs::Twist *targetVel)
 {
 	float ANGLE_THRESHOLD = M_PI/180;
-	float DIST_THRESHOLD = 43;
+	float BALL_DIST_THRESHOLD = 43;
+	float PILLAR_DIST_THRESHOLD;
+	float GOAL_DIST_THRESHOLD;
 	float angle_sign = (diff_o > 0 ? 1 : -1);
 
 	// cout << "Ball Harvesting Control" << endl;
 	// cout << "[CONTROL] Angle difference is " << diff_o << endl;
 	cout << "DISTANCE IS " << dist << endl;
 	cout << "ANGLE DIFF IS " << diff_o << endl;
-	if (fabs(diff_o) > ANGLE_THRESHOLD) {
-		/* in place rotation ->should be modified*/
-		if (fabs(diff_o) < ANGLE_THRESHOLD*2) {
-			targetVel->linear.x  = 0;
-			targetVel->angular.z = angle_sign*2/3;
-		} else {
-			targetVel->linear.x  = 0;
-			targetVel->angular.z = angle_sign;
-		}
-		// MOVING = true;
+	
+	
+
+	switch (waytype) {
+		case BALL:
+			if (fabs(diff_o) > ANGLE_THRESHOLD) {
+				/* in place rotation ->should be modified*/
+				if (fabs(diff_o) < ANGLE_THRESHOLD*2) {
+					targetVel->linear.x  = 0;
+					targetVel->angular.z = angle_sign*2/3;
+				} else {
+					targetVel->linear.x  = 0;
+					targetVel->angular.z = angle_sign;
+				}
+			} else if (dist < BALL_DIST_THRESHOLD) {
+				if (!STOP_FLAG && ((targetVel->linear.x)+(targetVel->angular.z)) != 0) {
+					targetVel->linear.x  = -targetVel->linear.x/4;
+					targetVel->angular.z = -targetVel->angular.z/4;
+					STOP_FLAG = true;
+				} else {
+					targetVel->linear.x  = 0;
+					targetVel->angular.z = 0;
+				}
+			} else {
+				/* move forward ->should be modified*/
+				if (dist > 100) {
+					targetVel->linear.x  = 5;
+					targetVel->angular.z = 0;
+				} else {
+					targetVel->linear.x  = dist/25;
+					targetVel->angular.z = 0;
+				}
+			}
+			break;
+		
+		case PILLAR:
+			if (fabs(diff_o) > ANGLE_THRESHOLD) {
+				/* in place rotation ->should be modified*/
+				if (fabs(diff_o) < ANGLE_THRESHOLD*2) {
+					targetVel->linear.x  = 0;
+					targetVel->angular.z = angle_sign*2/3;
+				} else {
+					targetVel->linear.x  = 0;
+					targetVel->angular.z = angle_sign;
+				}
+			} else {
+				if (dist > PILLAR_DIST_THRESHOLD) {
+					targetVel->linear.x  = 5;
+					targetVel->angular.z = 0;
+				} else {
+					targetVel->linear.x  = 1+4*(dist/PILLAR_DIST_THRESHOLD);
+					targetVel->angular.z = 0;
+				}
+			}
+			break;
+
+		case GOAL:
+			if (fabs(diff_o) > ANGLE_THRESHOLD) {
+				/* in place rotation ->should be modified*/
+				if (fabs(diff_o) < ANGLE_THRESHOLD*2) {
+					targetVel->linear.x  = 0;
+					targetVel->angular.z = angle_sign*2/3;
+				} else {
+					targetVel->linear.x  = 0;
+					targetVel->angular.z = angle_sign;
+				}
+			} else {
+				if (dist > GOAL_DIST_THRESHOLD*3) {
+					targetVel->linear.x  = 5;
+					targetVel->angular.z = 0;
+				} else if (dist > GOAL_DIST_THRESHOLD) {
+					targetVel->linear.x  = 0.5 + 2*(dist/GOAL_DIST_THRESHOLD - 1);
+				} else {
+					if (!STOP_FLAG && ((targetVel->linear.x)+(targetVel->angular.z)) != 0) {
+						targetVel->linear.x  = -targetVel->linear.x/4;
+						targetVel->angular.z = -targetVel->angular.z/4;
+						STOP_FLAG = true;
+					} else {
+						targetVel->linear.x  = 0;
+						targetVel->angular.z = 0;
+					}
+				}
+			}
+			break;
 	}
-	else if (dist < DIST_THRESHOLD && waytype != PILLAR) {
-		if (!STOP_FLAG && ((targetVel->linear.x)+(targetVel->angular.z)) != 0) {
-			targetVel->linear.x  = -targetVel->linear.x/4;
-			targetVel->angular.z = -targetVel->angular.z/4;
-			STOP_FLAG = true;
-		} else {
-			targetVel->linear.x  = 0;
-			targetVel->angular.z = 0;
-		}
-	}
-	else {
-		/* move forward ->should be modified*/
-		if (dist > 100) {
-			targetVel->linear.x  = 5;
-			targetVel->angular.z = 0;
-		} else {
-			targetVel->linear.x  = dist/25;
-			targetVel->angular.z = 0;
-		}
-		// MOVING = true;
-	}
+	
 	return;
 }
 
