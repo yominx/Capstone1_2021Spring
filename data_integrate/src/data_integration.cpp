@@ -205,8 +205,8 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 {
 	float ANGLE_THRESHOLD = M_PI/180;
 	float BALL_DIST_THRESHOLD = 43;
-	float PILLAR_DIST_THRESHOLD;
-	float GOAL_DIST_THRESHOLD;
+	float PILLAR_DIST_THRESHOLD = 50;
+	float GOAL_DIST_THRESHOLD = 83;
 	float angle_sign = (diff_o > 0 ? 1 : -1);
 
 	// cout << "Ball Harvesting Control" << endl;
@@ -298,7 +298,7 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 			}
 			break;
 	}
-	
+
 	return;
 }
 
