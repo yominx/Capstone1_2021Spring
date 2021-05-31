@@ -204,8 +204,8 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 
 void control_ballharvesting(geometry_msgs::Twist *targetVel)
 {
-	float ANGLE_THRESHOLD = M_PI/100;
-	float DIST_THRESHOLD = 50;
+	float ANGLE_THRESHOLD = M_PI/180;
+	float DIST_THRESHOLD = 43;
 	float angle_sign = (diff_o > 0 ? 1 : -1);
 
 	// cout << "Ball Harvesting Control" << endl;
@@ -252,7 +252,7 @@ void control_harvest(geometry_msgs::Twist* targetVel){
 
 	if(waytype==BALL){
 
-		int BALL_LIDAR_DIST = 45;
+		int BALL_LIDAR_DIST = 40;
 		bool close_enough = pow(pos_x-target_x, 2) + pow(pos_y-target_y,2) < pow(BALL_LIDAR_DIST, 2);
 		
 		if(close_enough){
@@ -263,13 +263,13 @@ void control_harvest(geometry_msgs::Twist* targetVel){
 			targetVel->angular.z=0;
 		}
 	} else if(waytype==GOAL) {
-		int GOAL_SIZE = 65;
+		int GOAL_SIZE = 90;
 		int goalX = 550, goalY = 200; // CHANGE THIS VALUE FROM /position
 
 		bool close_enough = pow(pos_x-goalX, 2) + pow(pos_y-goalY,2) < pow(GOAL_SIZE, 2);
 		cout << "DIST " << sqrt(pow(pos_x-goalX, 2) + pow(pos_y-goalY,2))<< endl;
 		if(close_enough){
-			float target_o = atan2(goalY-pos_y, goalX-pos_x) + M_PI;
+			float target_o = atan2(goalY-pos_y, goalX-pos_x)+M_PI;
 			float diffO = target_o - pos_o;
 			while (diffO < -M_PI) diffO = diffO + 2*M_PI;
 			while (diffO > M_PI) diffO = diffO - 2*M_PI;
@@ -414,7 +414,7 @@ void update_delivery_info(){
 	}
 
 
-	int th1=200;
+	int th1=350;
 	int th2=2000;
 	if(delivery_count>th1 && delivery==1){
 		delivery=0;

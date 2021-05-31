@@ -74,7 +74,7 @@ Mat mapPillarDebug;
 vector<int> reliableList;
 core_msgs::multiarray msg;
 
-
+float ALPHA = 0.1     ;
 class Zones
 {
 public:
@@ -205,11 +205,11 @@ void Zones::Zone::add(int r, int c, int type)
       map = mapGoal;
   }
   map.at<int>(r,c) += 1;
-  if (map.at<int>(r,c) > map.at<int>(cenRow,cenCol)){
+  // if (map.at<int>(r,c) > map.at<int>(cenRow,cenCol)){
     circle(MAP, Point(cenCol, cenRow),2,Scalar(0,0,0), -1);
-    cenRow = r;
-    cenCol = c;
-  }
+    cenRow = (cenRow == 0) ? r : ((1-ALPHA) * cenRow + ALPHA*r);
+    cenCol = (cenCol == 0) ? c : ((1-ALPHA) * cenCol + ALPHA*c);
+  // }
   ++nPoints;
 }
 
