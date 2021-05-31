@@ -76,25 +76,9 @@ bool filtering2(int row, int col, float r, Mat img){
   return true;
 }
 
-//
-// bool filtering3(int row, int col, int r, Mat img, float& dist){ // too close to detect
-//   if (isBlack(row,col-r,img) || isBlack(row,col+r,img)) return false;
-//   int lWalk=0, rWalk=0, uWalk=0;
-//   while (!isBlack(row,col-r-(lWalk+1),img)){
-//     ++lWalk;
-//   }
-//   while (!isBlack(row,col+r+rWalk+1,img)){
-//     ++rWalk;
-//   }
-//   if ((!isBlack(row-r,col,img)) && abs(lWalk-rWalk) < THRESHOLD){
-//     while(!isBlack(row-r-(uWalk+1),col,img)){
-//       ++uWalk;
-//     }
-//     dist = img.at<uchar>(row-r-uWalk,col);
-//     return true;
-//   }
-//   return false;
-// }
+bool filtering3(int row, int col){ // too close to detect
+  return (buffer_depth.at<float>(row,col) < 0.4) ? true : false;
+}
 
 vector<Vec4f> filtering(vector<Vec3f> circles, Mat img){
   vector<Vec4f> filtered; // 0:col, 1:radius, 2:distance
@@ -150,7 +134,9 @@ vector<Vec4f> filtering(vector<Vec3f> circles, Mat img){
       }
       continue;
     }
-
+    if (filtering3(row,col)){
+      continue;
+    }
     if (abs(r_pred-r) < r/5){
       circle[0] = col;
       circle[1] = row;
