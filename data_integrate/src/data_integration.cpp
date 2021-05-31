@@ -63,6 +63,7 @@ ros::Publisher commandVel;
 ros::Publisher zone;
 ros::Publisher ball_number;
 ros::Publisher ball_delivery;
+geometry_msgs::Twist targetVel;
 
 bool PASSED_STEP = false;
 cv::Mat buffer_depth;
@@ -84,10 +85,15 @@ int control_method = ENTRANCE;
 
 using namespace std;
 
-
+void control_harvest(geometry_msgs::Twist* targetVel);
+void control_ballharvesting(geometry_msgs::Twist* targetVel);
+void control_entrance(geometry_msgs::Twist* targetVel);
 void update_delivery_info();
 void publish_delivery_info();
 bool meet_step();
+void select_control();
+
+
 
 void lidar_Callback(const sensor_msgs::LaserScan::ConstPtr& scan)
 {
@@ -100,6 +106,28 @@ void lidar_Callback(const sensor_msgs::LaserScan::ConstPtr& scan)
         lidar_distance[i]=scan->ranges[i];
     }
 	map_mutex.unlock();
+
+	if(control_method == ENTRANCE){
+		control_entrance(&targetVel);
+		targetVel.angular.x = 0;
+		if (!DEBUG_HARVEST && !PASSED_STEP && meet_step()) {
+			int t = 15;
+			targetVel.linear.x  = 5;
+			targetVel.angular.z = 0;
+			targetVel.angular.x = 50; // collector velocity: angular.x
+			ros::Time beginTime =ros::Time::now();
+			ros::Duration delta_t = ros::Duration(t);
+			ros::Time endTime=beginTime + delta_t;
+			while(ros::Time::now()<endTime)
+			{
+				commandVel.publish(targetVel);
+				ros::Duration(0.1).sleep();
+			}
+			PASSED_STEP = true;
+		}
+		select_control();
+		commandVel.publish(targetVel);
+	}
 }
 
 
@@ -147,6 +175,30 @@ void target_Callback(const geometry_msgs::Vector3::ConstPtr& waypoint) {
 	while (diff_o >= M_PI) diff_o = diff_o - 2*M_PI;
 
 	dist = sqrt(pow(target_y-pos_y, 2) + pow(target_x-pos_x, 2));
+
+	control_ballharvesting(&targetVel);
+	if (STOP_FLAG) {
+		int t = 1;
+		ros::Time beginTime =ros::Time::now();
+		ros::Duration delta_t = ros::Duration(t);
+		ros::Time endTime=beginTime + delta_t;
+		while(ros::Time::now()<endTime)
+		{
+			commandVel.publish(targetVel);
+			ros::Duration(0.1).sleep();
+		}
+		STOP_FLAG = false;
+	}
+
+	//Ball pickup/dumping
+	control_harvest(&targetVel);
+	update_delivery_info();
+	publish_delivery_info();
+	commandVel.publish(targetVel);
+
+
+
+
 }
 
 
@@ -263,7 +315,7 @@ void control_harvest(geometry_msgs::Twist* targetVel){
 			targetVel->angular.z=0;
 		}
 	} else if(waytype==GOAL) {
-		int GOAL_SIZE = 90;
+		int GOAL_SIZE = 80;
 		int goalX = 550, goalY = 200; // CHANGE THIS VALUE FROM /position
 
 		bool close_enough = pow(pos_x-goalX, 2) + pow(pos_y-goalY,2) < pow(GOAL_SIZE, 2);
@@ -339,57 +391,10 @@ int main(int argc, char **argv)
 
 	ros::Time start =ros::Time::now(), now;
     
-    geometry_msgs::Twist targetVel;
-    while(ros::ok){
-    	now = ros::Time::now();
 
-    	if 	(control_method == ENTRANCE) 		{
-    		control_entrance(&targetVel);
-    		targetVel.angular.x = 0;
-    		if (!DEBUG_HARVEST && !PASSED_STEP && meet_step()) {
-    			int t = 15;
-    			targetVel.linear.x  = 5;
-				targetVel.angular.z = 0;
-				targetVel.angular.x = 50; // collector velocity: angular.x
-				ros::Time beginTime =ros::Time::now();
-				ros::Duration delta_t = ros::Duration(t);
-				ros::Time endTime=beginTime + delta_t;
-				while(ros::Time::now()<endTime)
-				{
-					commandVel.publish(targetVel);
-					ros::Duration(0.1).sleep();
-				}
-				PASSED_STEP = true;
-			}
-    	} else if 	(control_method == BALLHARVESTING) 	{
-	    	control_ballharvesting(&targetVel);
-			if (STOP_FLAG) {
-	    		int t = 1;
-	    		ros::Time beginTime =ros::Time::now();
-				ros::Duration delta_t = ros::Duration(t);
-				ros::Time endTime=beginTime + delta_t;
-				while(ros::Time::now()<endTime)
-				{
-					commandVel.publish(targetVel);
-					ros::Duration(0.1).sleep();
-				}
-				STOP_FLAG = false;
-	    	}
 
-			//Ball pickup/dumping
-	    	control_harvest(&targetVel);
-	    	update_delivery_info();
-	    	publish_delivery_info();
-    	}
-    	else cout << "ERROR: NO CONTROL METHOD" << endl; // Unreachable statement
-    	// showControlMethod();
-		select_control();
-		commandVel.publish(targetVel);
 
-	    loop_rate.sleep();
-		ros::spinOnce();
-    }
-
+	ros::spin();
     return 0;
 }
 

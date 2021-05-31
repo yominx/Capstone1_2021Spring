@@ -25,8 +25,8 @@
 
 using namespace std;
 using namespace cv;
-#define RAW
-#define DEBUG
+// #define RAW
+// #define DEBUG
 
 #define VEHICLE 0
 #define BALL 1
@@ -74,7 +74,7 @@ Mat mapPillarDebug;
 vector<int> reliableList;
 core_msgs::multiarray msg;
 
-float ALPHA = 0.1     ;
+float ALPHA = 0.5;
 class Zones
 {
 public:
