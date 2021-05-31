@@ -79,7 +79,7 @@ int control_method = ENTRANCE;
 #define PILLAR 	2
 #define GOAL 	3
 
-#define DEBUG_HARVEST false
+#define DEBUG_HARVEST true
 
 using namespace std;
 
@@ -205,6 +205,7 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 	float ANGLE_THRESHOLD = M_PI/100;
 	float DIST_THRESHOLD = 5;
 	int angle_sign = (diff_o > 0 ? 1 : -1);
+	
 
 	// cout << "Ball Harvesting Control" << endl;
 	// cout << "[CONTROL] Angle difference is " << diff_o << endl;
@@ -214,7 +215,7 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 		targetVel->angular.z = angle_sign;
 		// MOVING = true;
 	}
-	else if (dist < DIST_THRESHOLD) {
+	else if (dist < DIST_THRESHOLD || (waytype==BALL && dist<60)) {
 		targetVel->linear.x  = -v_linear/2;
 		targetVel->angular.z = -v_angular/4;
 	}
@@ -228,10 +229,10 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 }
 
 void control_harvest(geometry_msgs::Twist* targetVel){
-	delivery=0;
 	cout << "HARVEST TYPE: " << waytype << endl;
 
 	if(waytype==BALL){
+
 		int BALL_LIDAR_DIST = 35;
 		bool close_enough = pow(pos_x-target_x, 2) + pow(pos_y-target_y,2) < pow(BALL_LIDAR_DIST, 2);
 		
@@ -381,11 +382,12 @@ void update_delivery_info(){
 	}
 
 
-	int th1=300;
+	int th1=200;
 	int th2=2000;
 	if(delivery_count>th1 && delivery==1){
 		delivery=0;
 		delivery_count=0;
+		cout<<"delivery_count="<<delivery_count<<endl;
 		ball_count++;
 
 	}else if(delivery_count>th2 && delivery==2){

@@ -33,8 +33,8 @@
 /// MAP INFOS
 /// Belows are written in pixel unit. 1 pixel = 1 cm.
 /// MARGIN is similar to threshold.
-#define ROBOT_SIZE 20
-#define PILLAR_RADIUS 10
+#define ROBOT_SIZE 23
+#define PILLAR_RADIUS 7.5
 #define	MARGIN 5
 #define	THRESHOLD 7
 

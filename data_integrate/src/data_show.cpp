@@ -54,6 +54,7 @@ float pillarDist[10];
 float pillarAngle[10];
 
 float X, Y, O;               // Odometry info
+bool odometryCalled = false;
 
 Mat mapBall = cv::Mat::zeros(MAP_HEIGHT,MAP_WIDTH, CV_32S);
 Mat mapGoal = cv::Mat::zeros(MAP_HEIGHT,MAP_WIDTH, CV_32S);
@@ -75,6 +76,7 @@ core_msgs::multiarray msg;
 
 class Zones
 {
+public:
   class Zone
   {
   public:
@@ -228,8 +230,6 @@ void sort(vector<int>& reliableList, const Zones& zones)
 
 void filtering(Zones& zones, int size, float* dist, float* angle, int type, core_msgs::multiarray& msg)
 {
-  cout << "FILT START" << endl;
-  int i = 0;
   Mat map;
   Scalar color;
   switch(type){
@@ -243,14 +243,13 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
       color = Scalar(0,255,0);
   }
   for (int i=0; i<size; i++){ //ball_dist[i], ball_angle[i]
-    cout << "FILT " << i++ << endl;
     int x = (type==PILLAR) ? 50+(int)round(X +(dist[i]*cos(angle[i]+O)*100)) : 50+(int)round(X+(DLC*cos(O)*100)+(dist[i]*cos(angle[i]+O)*100));
     int y = (type==PILLAR) ? 350-(int)round(Y+(dist[i]*sin(angle[i]+O)*100)) : 350-(int)round(Y+(DLC*sin(O)*100)+(dist[i]*sin(angle[i]+O)*100));
     if (!(x>50 && x<=550 && y>50 && y<350)){
       continue;
     }
+
     zones.addZone(y,x,type);
-    cout << "FILT " << i++ << endl;
   }
 
   int zSize = zones.zoneList.size();
@@ -260,23 +259,27 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
     // cout << "(" << j << "-th zone) nPoints: " << zones.zoneList[j].nPoints << ", cnt: "<< zones.zoneList[j].cnt << endl;
     // cout << "(" << j << "-th zone) is reliable : " << zones.zoneList[j].reliable << endl;
     // cout << "(" << j << "-th zone) cnt*threshold = " << zones.zoneList[j].cnt << " * " << zones.zoneList[j].threshold << " = " << zones.zoneList[j].cnt * zones.zoneList[j].threshold <<endl;
-    if ((zones.zoneList[j].cnt % 10) == 0 && zones.zoneList[i].cnt < 100){
+    if ((zones.zoneList[j].cnt % 10) == 0 && zones.zoneList[j].cnt < 100){
       if (zones.zoneList[j].nPoints > zones.zoneList[j].cnt * zones.zoneList[j].threshold){
         zones.zoneList[j].reliable = true;
-        // cout << "(" << j << "-th zone) is reliable" << endl;
+        // reliableList.push_back(j);
+        cout << "(" << j << "-th zone) is reliable: " << zones.zoneList[j].cenCol << ", " << zones.zoneList[j].cenRow << endl;
       }
       else {
         zones.removeZone(j, type);
         j--;
       }
     }
-    if (zones.zoneList[j].reliable) {reliableList.push_back(j);}
   }
-  cout << "FILT " << i++ << endl;
+
+  int nSize = zones.zoneList.size();
+  for (int i=0; i<nSize; i++)
+    if (zones.zoneList[i].reliable) reliableList.push_back(i);
+
+
   if (reliableList.size() > zones.max){
     sort(reliableList, zones); // sorting by the value of (nPoints/cnt)
   }
-  cout << "FILT " << i++ << endl;
 
   int repeat = (reliableList.size()>zones.max) ? zones.max : reliableList.size();
   for (int i=0; i<repeat; i++){
@@ -286,8 +289,6 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
     nData += 1;
     circle(MAP, Point(zones.zoneList[reliableList[i]].cenCol, zones.zoneList[reliableList[i]].cenRow),2,color, -1);
   }
-  cout << "FILT " << i++ << endl;
-  cout << "FILT END" << endl;
 }
 
 #ifdef DEBUG
@@ -335,8 +336,7 @@ void drawRawMap(int type, int n, float* dist, float* angle)
       color = Scalar(255,0,0);
   }
   for (int i=0; i<n; i++){
-    int x = (type==PILLAR) ? 50+(int)round(X +(dist[i]*cos(angle[i]+O)*100)) : 50+(int)round(X+(DLC*cos(O)*100)+(dist[i]*cos(angle[i]+O)*100));
-    int y = (type==PILLAR) ? 350-(int)round(Y+(dist[i]*sin(angle[i]+O)*100)) : 350-(int)round(Y+(DLC*sin(O)*100)+(dist[i]*sin(angle[i]+O)*100));
+    int x, y;
     switch(type){
       case BALL:
         x = 50+(int)round(X+(DLC*cos(O)*100)+(dist[i]*cos(angle[i]+O)*100));
@@ -377,10 +377,11 @@ void goalPos_Callback(const core_msgs::goal_position::ConstPtr& pos)
 }
 
 void odometry_Callback(const geometry_msgs::Vector3 odometry){
-    //cout << "(X,Y,O)= (" << X << ", " << Y << ", " << O << ")"  << endl;
+  cout << "(X,Y,O)= (" << X << ", " << Y << ", " << O << ")"  << endl;
   X = odometry.x;
   Y = odometry.y;
   O = odometry.z;
+  odometryCalled = true;
 }
 
 void pillarPos_Callback(const std_msgs::Float32MultiArray pos)
@@ -426,43 +427,45 @@ int main(int argc, char **argv)
     // O=0.;
 
     while(ros::ok){
-      msg.data.clear();
-      msg.cols = 0;
-      nData = 0;
-      int i = 0;
-      cout << "HERE " << i++ << endl;
-      int k =0;
+      if (odometryCalled){
+        msg.data.clear();
+        msg.cols = 0;
+        nData = 0;
+        int i = 0;
+        cout << "HERE " << i++ << endl;
+        int k =0;
 #ifdef RAW
-      drawRawMap(BALL, nBalls, ballDist, ballAngle);
-      drawRawMap(PILLAR, nPillars, pillarDist, pillarAngle);
-      imshow("raw map", MAPRAW);
-      waitKey(10);
+        drawRawMap(BALL, nBalls, ballDist, ballAngle);
+        drawRawMap(PILLAR, nPillars, pillarDist, pillarAngle);
+        imshow("raw map", MAPRAW);
+        waitKey(10);
 #endif
-      filtering(ballZones, nBalls, ballDist, ballAngle, BALL, msg);
-      cout << "HERE " << i++ << endl;
-      filtering(pillarZones, nPillars, pillarDist, pillarAngle, PILLAR, msg);
-      cout << "HERE " << i++ << endl;
-      //filtering(goalZones, nGoals, goalDist, goalAngle, GOAL, msg);
-      circle(MAP, Point(50+int(round(X)), 350-int(round(Y))), 2, cv::Scalar(255,0,0), -1);
-      cout << "HERE " << i++ << endl;
-      msg.data.push_back(VEHICLE);
-      msg.data.push_back(50+int(round(X)));
-      msg.data.push_back(350-int(round(Y)));
-      nData += 1;
+        filtering(ballZones, nBalls, ballDist, ballAngle, BALL, msg);
+        cout << "HERE " << i++ << endl;
+        filtering(pillarZones, nPillars, pillarDist, pillarAngle, PILLAR, msg);
+        cout << "HERE " << i++ << endl;
+        //filtering(goalZones, nGoals, goalDist, goalAngle, GOAL, msg);
+        circle(MAP, Point(50+int(round(X)), 350-int(round(Y))), 2, cv::Scalar(255,0,0), -1);
+        cout << "HERE " << i++ << endl;
+        msg.data.push_back(VEHICLE);
+        msg.data.push_back(50+int(round(X)));
+        msg.data.push_back(350-int(round(Y)));
+        nData += 1;
 #ifdef DEBUG
-      showColoredMap(BALL);
+        showColoredMap(BALL);
 #endif
-      //set the goal position
-      msg.data.push_back(GOAL);
-      msg.data.push_back(550);
-      msg.data.push_back(200);
-      nData += 1;
-      msg.cols = nData;
-      pub.publish(msg);
-      cout << "HERE " << i++ << endl;
-      imshow("map", MAP);
-      // destroyAllWindows();
-      waitKey(1);
+        //set the goal position
+        msg.data.push_back(GOAL);
+        msg.data.push_back(550);
+        msg.data.push_back(200);
+        nData += 1;
+        msg.cols = nData;
+        pub.publish(msg);
+        cout << "HERE " << i++ << endl;
+        imshow("map", MAP);
+        // destroyAllWindows();
+        waitKey(1);
+      }
       loop_rate.sleep();
       ros::spinOnce();
     }
