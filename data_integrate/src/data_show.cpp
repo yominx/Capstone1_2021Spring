@@ -36,7 +36,7 @@ using namespace cv;
 int MAP_WIDTH = 600;
 int MAP_HEIGHT = 400;
 float DLC = 0.27; //distance between camara and lidar
-float DLB = 0.45; //distance between lidar and ball
+float DLB = 0.50; //distance between lidar and ball
 
 int nData = 0;
 
@@ -73,6 +73,7 @@ Mat mapPillarDebug;
 
 vector<int> reliableList;
 core_msgs::multiarray msg;
+
 
 class Zones
 {
@@ -153,8 +154,13 @@ void Zones::removeZone(int i, int type)
     case GOAL:
       map = mapGoal;
   }
+  if(i >= zoneList.size()){
+    cerr << "INVALID INDEX" << i << "is larger than " << zoneList.size() << endl;
+  }
   Zone zone = zoneList[i];
-  Rect roi = Rect(Point(zone.cenCol-zone.zoneSize,zone.cenRow-zone.zoneSize),Point(zone.cenCol+zone.zoneSize,zone.cenRow+zone.zoneSize));
+  int x = zone.cenCol, y = zone.cenRow, delta=zone.zoneSize;
+  cout << "RECTANGULAR: " << x << " and " << y << " DIFF " << delta << endl;
+  Rect roi = Rect(Point(x-delta, y-delta),Point(x+delta, y+delta));
   map(roi) = Scalar(0);
   circle(MAP, Point(zone.cenCol, zone.cenRow),2,Scalar(0,0,0), -1);
   zoneList.erase(zoneList.begin()+i);
@@ -169,7 +175,7 @@ Zones::Zone::Zone(int r, int c, int type):type(type),nPoints(1),cenRow(r),cenCol
       break;
     case PILLAR:
       zoneSize = 20;
-      threshold = 0.4;
+      threshold = 0.65;
       break;
     case GOAL:
       zoneSize = 50;
@@ -281,6 +287,7 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
   }
 
   int repeat = (reliableList.size()>zones.max) ? zones.max : reliableList.size();
+
   for (int i=0; i<repeat; i++){
     msg.data.push_back(type);
     msg.data.push_back(zones.zoneList[reliableList[i]].cenCol);
@@ -377,7 +384,6 @@ void goalPos_Callback(const core_msgs::goal_position::ConstPtr& pos)
 }
 
 void odometry_Callback(const geometry_msgs::Vector3 odometry){
-  cout << "(X,Y,O)= (" << X << ", " << Y << ", " << O << ")"  << endl;
   X = odometry.x;
   Y = odometry.y;
   O = odometry.z;
@@ -394,16 +400,17 @@ void pillarPos_Callback(const std_msgs::Float32MultiArray pos)
   }
 }
 
+
+
 void goalNum_Callback(const std_msgs::Int8 msg)
 {
-  int remainBalls_callback = 5 - msg.data;
-  // cout << "remainBalls : " << remainBalls_callback << endl;
-  if (remainBalls != remainBalls_callback){
-    float xBall = 50  + X + DLB * cos(O);
-    float yBall = 350 - Y + DLB * sin(O);
-    ballZones.removeZone(yBall,xBall,BALL);
-    remainBalls--;
-  }
+    int tmp = 5 - msg.data;
+    if (remainBalls != tmp){
+      int xBall = 50 +(int)round(X + DLB*cos(O)*100);
+      int yBall = 350-(int)round(Y + DLB*sin(O)*100);
+      ballZones.removeZone(yBall,xBall,BALL);
+      remainBalls--;
+    }
 }
 
 int main(int argc, char **argv)
@@ -432,7 +439,6 @@ int main(int argc, char **argv)
         msg.cols = 0;
         nData = 0;
         int i = 0;
-        cout << "HERE " << i++ << endl;
         int k =0;
 #ifdef RAW
         drawRawMap(BALL, nBalls, ballDist, ballAngle);
@@ -441,12 +447,9 @@ int main(int argc, char **argv)
         waitKey(10);
 #endif
         filtering(ballZones, nBalls, ballDist, ballAngle, BALL, msg);
-        cout << "HERE " << i++ << endl;
         filtering(pillarZones, nPillars, pillarDist, pillarAngle, PILLAR, msg);
-        cout << "HERE " << i++ << endl;
         //filtering(goalZones, nGoals, goalDist, goalAngle, GOAL, msg);
         circle(MAP, Point(50+int(round(X)), 350-int(round(Y))), 2, cv::Scalar(255,0,0), -1);
-        cout << "HERE " << i++ << endl;
         msg.data.push_back(VEHICLE);
         msg.data.push_back(50+int(round(X)));
         msg.data.push_back(350-int(round(Y)));
@@ -461,7 +464,6 @@ int main(int argc, char **argv)
         nData += 1;
         msg.cols = nData;
         pub.publish(msg);
-        cout << "HERE " << i++ << endl;
         imshow("map", MAP);
         // destroyAllWindows();
         waitKey(1);

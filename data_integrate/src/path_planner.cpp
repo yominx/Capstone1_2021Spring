@@ -480,6 +480,7 @@ void visualize(int size, NodeMap* nodes, int goal_index, int targetX, int target
    	int cur_idx = goal_index;
    	if (cur_idx == -1){
 	    imshow("BALL HARVESTING MAP", missionmap);
+    	moveWindow("BALL HARVESTING MAP", 0, 0);
 		waitKey(10);   		
    		return;
    	}
@@ -495,6 +496,7 @@ void visualize(int size, NodeMap* nodes, int goal_index, int targetX, int target
 	}
 	// cout << "[Visualize] MAP CONFIGURATION DONE" << endl;
     imshow("BALL HARVESTING MAP", missionmap);
+    moveWindow("BALL HARVESTING MAP", 0, 0);
 	waitKey(10);
 
 }

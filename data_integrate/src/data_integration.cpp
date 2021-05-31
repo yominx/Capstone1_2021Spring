@@ -205,7 +205,7 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 void control_ballharvesting(geometry_msgs::Twist *targetVel)
 {
 	float ANGLE_THRESHOLD = M_PI/100;
-	float DIST_THRESHOLD = 40;
+	float DIST_THRESHOLD = 50;
 	float angle_sign = (diff_o > 0 ? 1 : -1);
 
 	// cout << "Ball Harvesting Control" << endl;
@@ -223,10 +223,10 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 		}
 		// MOVING = true;
 	}
-	else if (dist < DIST_THRESHOLD) {
+	else if (dist < DIST_THRESHOLD && waytype != PILLAR) {
 		if (!STOP_FLAG && ((targetVel->linear.x)+(targetVel->angular.z)) != 0) {
-			targetVel->linear.x  = -targetVel->linear.x/2;
-			targetVel->angular.z = -targetVel->angular.z/2;
+			targetVel->linear.x  = -targetVel->linear.x/4;
+			targetVel->angular.z = -targetVel->angular.z/4;
 			STOP_FLAG = true;
 		} else {
 			targetVel->linear.x  = 0;
@@ -252,7 +252,7 @@ void control_harvest(geometry_msgs::Twist* targetVel){
 
 	if(waytype==BALL){
 
-		int BALL_LIDAR_DIST = 35;
+		int BALL_LIDAR_DIST = 45;
 		bool close_enough = pow(pos_x-target_x, 2) + pow(pos_y-target_y,2) < pow(BALL_LIDAR_DIST, 2);
 		
 		if(close_enough){
@@ -370,7 +370,6 @@ int main(int argc, char **argv)
 				ros::Time endTime=beginTime + delta_t;
 				while(ros::Time::now()<endTime)
 				{
-					cout << "STOPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP" << endl;
 					commandVel.publish(targetVel);
 					ros::Duration(0.1).sleep();
 				}
