@@ -442,13 +442,6 @@ int main(int argc, char **argv)
 	// double time_const_angular = 1; // to be modified with experiments
 
     ros::Rate loop_rate(10);
-
-
-	ros::Time start =ros::Time::now(), now;
-    
-
-
-
 	ros::spin();
     return 0;
 }
