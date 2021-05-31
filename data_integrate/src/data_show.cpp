@@ -26,7 +26,7 @@
 using namespace std;
 using namespace cv;
 #define RAW
-// #define DEBUG
+#define DEBUG
 
 #define VEHICLE 0
 #define BALL 1
@@ -276,7 +276,6 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
   for (int i=0; i<nSize; i++)
     if (zones.zoneList[i].reliable) reliableList.push_back(i);
 
-
   if (reliableList.size() > zones.max){
     sort(reliableList, zones); // sorting by the value of (nPoints/cnt)
   }
@@ -293,7 +292,7 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
 
 #ifdef DEBUG
 void showColoredMap(int type)
-{ 
+{
   // Mat map;
   // Mat map_debug;
   // double minVal, maxVal;
@@ -320,8 +319,9 @@ void showColoredMap(int type)
 
 #ifdef RAW
 void drawRawMap(int type, int n, float* dist, float* angle)
-{ 
+{
   Scalar color;
+  int x, y;
   switch(type){
     case BALL:
       color = Scalar(0,0,255);
