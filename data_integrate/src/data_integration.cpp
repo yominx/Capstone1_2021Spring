@@ -80,7 +80,7 @@ int control_method = ENTRANCE;
 #define PILLAR 	2
 #define GOAL 	3
 
-#define DEBUG_HARVEST false
+#define DEBUG_HARVEST true
 
 using namespace std;
 
@@ -204,8 +204,8 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 
 void control_ballharvesting(geometry_msgs::Twist *targetVel)
 {
-	float ANGLE_THRESHOLD = M_PI/100;
-	float DIST_THRESHOLD = 40;
+	float ANGLE_THRESHOLD = M_PI/180;
+	float DIST_THRESHOLD = 43;
 	float angle_sign = (diff_o > 0 ? 1 : -1);
 
 	// cout << "Ball Harvesting Control" << endl;
@@ -223,10 +223,10 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 		}
 		// MOVING = true;
 	}
-	else if (dist < DIST_THRESHOLD) {
+	else if (dist < DIST_THRESHOLD && waytype != PILLAR) {
 		if (!STOP_FLAG && ((targetVel->linear.x)+(targetVel->angular.z)) != 0) {
-			targetVel->linear.x  = -targetVel->linear.x/2;
-			targetVel->angular.z = -targetVel->angular.z/2;
+			targetVel->linear.x  = -targetVel->linear.x/4;
+			targetVel->angular.z = -targetVel->angular.z/4;
 			STOP_FLAG = true;
 		} else {
 			targetVel->linear.x  = 0;
@@ -248,11 +248,11 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 }
 
 void control_harvest(geometry_msgs::Twist* targetVel){
-	delivery=0;
 	cout << "HARVEST TYPE: " << waytype << endl;
 
 	if(waytype==BALL){
-		int BALL_LIDAR_DIST = 35;
+
+		int BALL_LIDAR_DIST = 40;
 		bool close_enough = pow(pos_x-target_x, 2) + pow(pos_y-target_y,2) < pow(BALL_LIDAR_DIST, 2);
 		
 		if(close_enough){
@@ -263,13 +263,13 @@ void control_harvest(geometry_msgs::Twist* targetVel){
 			targetVel->angular.z=0;
 		}
 	} else if(waytype==GOAL) {
-		int GOAL_SIZE = 65;
+		int GOAL_SIZE = 90;
 		int goalX = 550, goalY = 200; // CHANGE THIS VALUE FROM /position
 
 		bool close_enough = pow(pos_x-goalX, 2) + pow(pos_y-goalY,2) < pow(GOAL_SIZE, 2);
 		cout << "DIST " << sqrt(pow(pos_x-goalX, 2) + pow(pos_y-goalY,2))<< endl;
 		if(close_enough){
-			float target_o = atan2(goalY-pos_y, goalX-pos_x) + M_PI;
+			float target_o = atan2(goalY-pos_y, goalX-pos_x)+M_PI;
 			float diffO = target_o - pos_o;
 			while (diffO < -M_PI) diffO = diffO + 2*M_PI;
 			while (diffO > M_PI) diffO = diffO - 2*M_PI;
@@ -370,7 +370,6 @@ int main(int argc, char **argv)
 				ros::Time endTime=beginTime + delta_t;
 				while(ros::Time::now()<endTime)
 				{
-					cout << "STOPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP" << endl;
 					commandVel.publish(targetVel);
 					ros::Duration(0.1).sleep();
 				}
@@ -415,11 +414,12 @@ void update_delivery_info(){
 	}
 
 
-	int th1=300;
+	int th1=350;
 	int th2=2000;
 	if(delivery_count>th1 && delivery==1){
 		delivery=0;
 		delivery_count=0;
+		cout<<"delivery_count="<<delivery_count<<endl;
 		ball_count++;
 
 	}else if(delivery_count>th2 && delivery==2){
