@@ -26,7 +26,7 @@
 using namespace std;
 using namespace cv;
 #define RAW
-// #define DEBUG
+#define DEBUG
 
 #define VEHICLE 0
 #define BALL 1
@@ -228,8 +228,6 @@ void sort(vector<int>& reliableList, const Zones& zones)
 
 void filtering(Zones& zones, int size, float* dist, float* angle, int type, core_msgs::multiarray& msg)
 {
-  cout << "FILT START" << endl;
-  int i = 0;
   Mat map;
   Scalar color;
   switch(type){
@@ -243,14 +241,12 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
       color = Scalar(0,255,0);
   }
   for (int i=0; i<size; i++){ //ball_dist[i], ball_angle[i]
-    cout << "FILT " << i++ << endl;
     int x = (type==PILLAR) ? 50+(int)round(X +(dist[i]*cos(angle[i]+O)*100)) : 50+(int)round(X+(DLC*cos(O)*100)+(dist[i]*cos(angle[i]+O)*100));
     int y = (type==PILLAR) ? 350-(int)round(Y+(dist[i]*sin(angle[i]+O)*100)) : 350-(int)round(Y+(DLC*sin(O)*100)+(dist[i]*sin(angle[i]+O)*100));
     if (!(x>50 && x<=550 && y>50 && y<350)){
       continue;
     }
     zones.addZone(y,x,type);
-    cout << "FILT " << i++ << endl;
   }
 
   int zSize = zones.zoneList.size();
@@ -263,6 +259,7 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
     if ((zones.zoneList[j].cnt % 10) == 0 && zones.zoneList[i].cnt < 100){
       if (zones.zoneList[j].nPoints > zones.zoneList[j].cnt * zones.zoneList[j].threshold){
         zones.zoneList[j].reliable = true;
+        reliableList.push_back(j);
         // cout << "(" << j << "-th zone) is reliable" << endl;
       }
       else {
@@ -270,13 +267,10 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
         j--;
       }
     }
-    if (zones.zoneList[j].reliable) {reliableList.push_back(j);}
   }
-  cout << "FILT " << i++ << endl;
   if (reliableList.size() > zones.max){
     sort(reliableList, zones); // sorting by the value of (nPoints/cnt)
   }
-  cout << "FILT " << i++ << endl;
 
   int repeat = (reliableList.size()>zones.max) ? zones.max : reliableList.size();
   for (int i=0; i<repeat; i++){
@@ -292,7 +286,7 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
 
 #ifdef DEBUG
 void showColoredMap(int type)
-{ 
+{
   // Mat map;
   // Mat map_debug;
   // double minVal, maxVal;
@@ -319,8 +313,9 @@ void showColoredMap(int type)
 
 #ifdef RAW
 void drawRawMap(int type, int n, float* dist, float* angle)
-{ 
+{
   Scalar color;
+  int x, y;
   switch(type){
     case BALL:
       color = Scalar(0,0,255);
@@ -335,8 +330,6 @@ void drawRawMap(int type, int n, float* dist, float* angle)
       color = Scalar(255,0,0);
   }
   for (int i=0; i<n; i++){
-    int x = (type==PILLAR) ? 50+(int)round(X +(dist[i]*cos(angle[i]+O)*100)) : 50+(int)round(X+(DLC*cos(O)*100)+(dist[i]*cos(angle[i]+O)*100));
-    int y = (type==PILLAR) ? 350-(int)round(Y+(dist[i]*sin(angle[i]+O)*100)) : 350-(int)round(Y+(DLC*sin(O)*100)+(dist[i]*sin(angle[i]+O)*100));
     switch(type){
       case BALL:
         x = 50+(int)round(X+(DLC*cos(O)*100)+(dist[i]*cos(angle[i]+O)*100));
