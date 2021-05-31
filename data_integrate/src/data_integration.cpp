@@ -70,6 +70,7 @@ cv::Mat buffer_depth;
 // bool MOVING = true;
 float v_linear;
 float v_angular;
+bool STOP_FLAG = false;
 
 #define ENTRANCE 1
 #define BALLHARVESTING 2
@@ -122,10 +123,11 @@ void depth_Callback(const sensor_msgs::ImageConstPtr& msg)
    }
 }
 
-void vel_Callback(const std_msgs::Float32MultiArray::ConstPtr& cur_vel) {
-	v_linear = cur_vel->data[0];
-	v_angular = cur_vel->data[1];
-}
+// void vel_Callback(const std_msgs::Float32MultiArray::ConstPtr& cur_vel) {
+// 	v_linear = cur_vel->data[0];
+// 	v_angular = cur_vel->data[1];
+// }
+
 void position_Callback(const geometry_msgs::Vector3::ConstPtr& robot_pos) {
 	pos_x = 50 + robot_pos->x;
 	pos_y = 50 + robot_pos->y;
@@ -203,25 +205,43 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 void control_ballharvesting(geometry_msgs::Twist *targetVel)
 {
 	float ANGLE_THRESHOLD = M_PI/100;
-	float DIST_THRESHOLD = 5;
-	int angle_sign = (diff_o > 0 ? 1 : -1);
+	float DIST_THRESHOLD = 40;
+	float angle_sign = (diff_o > 0 ? 1 : -1);
 
 	// cout << "Ball Harvesting Control" << endl;
 	// cout << "[CONTROL] Angle difference is " << diff_o << endl;
+	cout << "DISTANCE IS " << dist << endl;
+	cout << "ANGLE DIFF IS " << diff_o << endl;
 	if (fabs(diff_o) > ANGLE_THRESHOLD) {
 		/* in place rotation ->should be modified*/
-		targetVel->linear.x  = 0;
-		targetVel->angular.z = angle_sign;
+		if (fabs(diff_o) < ANGLE_THRESHOLD*2) {
+			targetVel->linear.x  = 0;
+			targetVel->angular.z = angle_sign*2/3;
+		} else {
+			targetVel->linear.x  = 0;
+			targetVel->angular.z = angle_sign;
+		}
 		// MOVING = true;
 	}
 	else if (dist < DIST_THRESHOLD) {
-		targetVel->linear.x  = -v_linear/2;
-		targetVel->angular.z = -v_angular/4;
+		if (!STOP_FLAG && ((targetVel->linear.x)+(targetVel->angular.z)) != 0) {
+			targetVel->linear.x  = -targetVel->linear.x/2;
+			targetVel->angular.z = -targetVel->angular.z/2;
+			STOP_FLAG = true;
+		} else {
+			targetVel->linear.x  = 0;
+			targetVel->angular.z = 0;
+		}
 	}
 	else {
 		/* move forward ->should be modified*/
-		targetVel->linear.x  = 4;
-		targetVel->angular.z = 0;
+		if (dist > 100) {
+			targetVel->linear.x  = 5;
+			targetVel->angular.z = 0;
+		} else {
+			targetVel->linear.x  = dist/25;
+			targetVel->angular.z = 0;
+		}
 		// MOVING = true;
 	}
 	return;
@@ -303,7 +323,7 @@ int main(int argc, char **argv)
 	ros::Subscriber sub_pos = n.subscribe<geometry_msgs::Vector3>("/robot_pos", 1000, position_Callback);
 	ros::Subscriber sub_target = n.subscribe<geometry_msgs::Vector3>("/waypoint", 1000, target_Callback);
 
-	ros::Subscriber cur_vel = n.subscribe<std_msgs::Float32MultiArray>("/current_vel", 1000, vel_Callback); // for stop control
+	// ros::Subscriber cur_vel = n.subscribe<std_msgs::Float32MultiArray>("/current_vel", 1000, vel_Callback); // for stop control
 
 	commandVel = n.advertise<geometry_msgs::Twist>("/command_vel", 10);
 	zone = n.advertise<std_msgs::Int8>("/zone", 10);
@@ -319,9 +339,9 @@ int main(int argc, char **argv)
 
 	ros::Time start =ros::Time::now(), now;
     
+    geometry_msgs::Twist targetVel;
     while(ros::ok){
     	now = ros::Time::now();
-    	geometry_msgs::Twist targetVel;
 
     	if 	(control_method == ENTRANCE) 		{
     		control_entrance(&targetVel);
@@ -343,6 +363,20 @@ int main(int argc, char **argv)
 			}
     	} else if 	(control_method == BALLHARVESTING) 	{
 	    	control_ballharvesting(&targetVel);
+			if (STOP_FLAG) {
+	    		int t = 1;
+	    		ros::Time beginTime =ros::Time::now();
+				ros::Duration delta_t = ros::Duration(t);
+				ros::Time endTime=beginTime + delta_t;
+				while(ros::Time::now()<endTime)
+				{
+					cout << "STOPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP" << endl;
+					commandVel.publish(targetVel);
+					ros::Duration(0.1).sleep();
+				}
+				STOP_FLAG = false;
+	    	}
+
 			//Ball pickup/dumping
 	    	control_harvest(&targetVel);
 	    	update_delivery_info();
