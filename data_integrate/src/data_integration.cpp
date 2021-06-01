@@ -80,7 +80,7 @@ int control_method = ENTRANCE;
 #define PILLAR 	2
 #define GOAL 	3
 
-#define DEBUG_HARVEST true
+#define DEBUG_HARVEST false
 
 using namespace std;
 
@@ -229,7 +229,7 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 			out_of_range_pts++;
 		}
 
-		cout << "LEFT " << left_points << " RIGHT " << right_points << endl;
+		// cout << "LEFT " << left_points << " RIGHT " << right_points << endl;
 		// cout <<" LB "<<left_back_pts<<" RB "<<right_back_pts<<endl;
 		// cout <<" OOR "<<out_of_range_pts<<endl;
 		int diff = left_points - right_points;
@@ -270,6 +270,27 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 	
 
 	switch (waytype) {
+		case -1: 
+			if (fabs(diff_o) > ANGLE_THRESHOLD) {
+				/* in place rotation ->should be modified*/
+				if (fabs(diff_o) < ANGLE_THRESHOLD*2) {
+					targetVel->linear.x  = 0;
+					targetVel->angular.z = angle_sign/2;
+				} else {
+					targetVel->linear.x  = 0;
+					targetVel->angular.z = angle_sign*2/3;
+				}
+			} else {
+				if (dist > PILLAR_DIST_THRESHOLD) {
+					targetVel->linear.x  = 5;
+					targetVel->angular.z = 0;
+				} else {
+					targetVel->linear.x  = 1+4*(dist/PILLAR_DIST_THRESHOLD);
+					targetVel->angular.z = 0;
+				}
+			}
+			break;
+
 		case BALL:
 			if (fabs(diff_o) > ANGLE_THRESHOLD) {
 				/* in place rotation ->should be modified*/
@@ -350,6 +371,9 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 				}
 			}
 			break;
+		case 4:
+			targetVel->linear.x  = 0;
+			targetVel->angular.z = 0.5;
 	}
 
 	return;
