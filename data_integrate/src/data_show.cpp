@@ -424,6 +424,11 @@ void drawRawMap(int type, int n, float* dist, float* angle)
 }
 #endif
 
+<<<<<<< HEAD
+int delivery_mode=0;
+void delivery_mode_Callback(const std_msgs::Int8::ConstPtr& delivery){
+  delivery_mode=delivery->data;
+=======
 bool cramer(float x1, float y1, float x2, float y2, float x3, float y3)
 {
 	float x_perp, y_perp, distsq;
@@ -469,6 +474,7 @@ bool cramer(float x1, float y1, float x2, float y2, float x3, float y3)
 		if(distsq < pow(PILLAR_RADIUS, 2)) return true;
 	}
 	return false;
+>>>>>>> e164650c01949152da157985b5f4f7b39125471f
 }
 
 void ballPos_Callback(const core_msgs::ball_position::ConstPtr& pos)
@@ -529,6 +535,8 @@ int main(int argc, char **argv)
     ros::Subscriber subGoal = n.subscribe<core_msgs::ball_position>("/ball_position", 1000, ballPos_Callback);
     ros::Subscriber subPillar = n.subscribe<std_msgs::Float32MultiArray>("/obs_pos", 1000, pillarPos_Callback);
     ros::Subscriber subGoalNum = n.subscribe<std_msgs::Int8>("/ball_number", 10, goalNum_Callback);
+    ros::Subscriber delivery = nh.subscribe<std_msgs::Int8>("/ball_delivery", 10, delivery_mode_Callback);
+
     ros::Rate loop_rate(10);
     line(MAP, Point(50, 50), Point(550, 50), Scalar(255,255,255), 1);
     line(MAP, Point(50, 50), Point(50, 250), Scalar(255,255,255), 1);
