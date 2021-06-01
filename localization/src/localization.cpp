@@ -447,6 +447,11 @@ void control_input_Callback(const geometry_msgs::Twist::ConstPtr& targetVel){
 }
 
 
+int delivery_mode=0;
+void delivery_mode_Callback(const std_msgs::Int8::ConstPtr& delivery){
+  delivery_mode=delivery->data;
+}
+
 
 
 int main(int argc, char **argv)
@@ -456,6 +461,7 @@ int main(int argc, char **argv)
     ros::Subscriber sub = nh.subscribe<sensor_msgs::LaserScan>("/scan", 1000, lidar_Callback); //LiDAR 데이터 받아오기
     ros::Subscriber sub1 = nh.subscribe<std_msgs::Int8>("/zone", 1, entrance_Callback); //Entrance zone 들어갔는지 여부 받아오기
     ros::Subscriber commandVel = nh.subscribe<geometry_msgs::Twist>("/command_vel", 10, control_input_Callback);
+    ros::Subscriber delivery = nh.subscribe<std_msgs::Int8>("/ball_delivery", 10, delivery_mode_Callback);
 
     ros::Publisher pub = nh.advertise<geometry_msgs::Vector3>("/robot_pos", 1); //odometry, 즉 robot의 위치를 Vector3로 발행한다.
     ros::Publisher pub1 = nh.advertise<std_msgs::Float32MultiArray>("/obs_pos", 1);
