@@ -16,8 +16,10 @@ function callback_cmdvel_sub(msg)
     sim.setJointTargetVelocity(joint22,Vl + 1.5*Vr)
     sim.setJointTargetVelocity(joint13,Vl - 1.83*Vr)
     sim.setJointTargetVelocity(joint23,Vl + 1.83*Vr)
-    sim.setJointTargetVelocity(joint00,Vcollector)
     
+    if(Vcollector~=0) then
+        sim.setJointTargetVelocity(joint00,Vcollector)
+    end
 
     sim.addStatusbarMessage(string.format("Vl:%f Vr:%f",Vl, Vr))
 end
@@ -34,18 +36,18 @@ function callback_ball_delivery_sub(msg)
    
    if (delivery_mode==1)then
         
-        if (count<=100) then
+        if (count<=80) then
             if(math.abs(angle)>th1) then
                 sim.setJointTargetVelocity(joint00, -velocity)
             elseif ( math.abs(angle)>0.1 ) then
-                sim.setJointTargetVelocity(joint00, -velocity*(math.abs(angle)+0.2)/(th1+0.2))
+                sim.setJointTargetVelocity(joint00, -velocity*(math.abs(angle)+0.1)/(th1+0.1))
             elseif ( math.abs(angle)<0.1 ) then
                 count=count+1
                 sim.setJointTargetVelocity(joint00,0)
             end
         end
 
-        if( count > 100 ) then
+        if( count > 80 ) then
             if ( math.abs(angle)<th1) then
                 sim.setJointTargetVelocity(joint00, velocity*(math.abs(angle))/(th1))
             elseif ( math.abs(angle)>th1) then
@@ -53,10 +55,10 @@ function callback_ball_delivery_sub(msg)
             end
         end
     elseif delivery_mode==2 then
-        if(count2<150) then
+        if(count2<300) then
             sim.setJointTargetVelocity(joint01, -velocity2)
         end
-        if(count2>=150) then
+        if(count2>=300) then
             sim.setJointTargetVelocity(joint02, -velocity2)
         end
         count2=count2+1

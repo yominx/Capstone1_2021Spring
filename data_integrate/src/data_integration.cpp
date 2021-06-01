@@ -229,9 +229,9 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 			out_of_range_pts++;
 		}
 
-		// cout << "LEFT " << left_points << " RIGHT " << right_points << endl;
-		cout <<" LB "<<left_back_pts<<" RB "<<right_back_pts<<endl;
-		cout <<" OOR "<<out_of_range_pts<<endl;
+		cout << "LEFT " << left_points << " RIGHT " << right_points << endl;
+		// cout <<" LB "<<left_back_pts<<" RB "<<right_back_pts<<endl;
+		// cout <<" OOR "<<out_of_range_pts<<endl;
 		int diff = left_points - right_points;
 		if (diff < -threshold) { // control to leftside
 			targetVel->linear.x  = 4;
@@ -256,7 +256,7 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 
 void control_ballharvesting(geometry_msgs::Twist *targetVel)
 {
-	float ANGLE_THRESHOLD = M_PI/180;
+	float ANGLE_THRESHOLD = M_PI/100;
 	float BALL_DIST_THRESHOLD = 43;
 	float PILLAR_DIST_THRESHOLD = 50;
 	float GOAL_DIST_THRESHOLD = 83;

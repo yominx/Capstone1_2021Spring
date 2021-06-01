@@ -42,6 +42,7 @@
 #define BALL 	1
 #define PILLAR 	2
 #define GOAL 	3
+#define ROTATE  4
 
 #define MAP_WIDTH 	600
 #define MAP_HEIGHT 	400
@@ -87,7 +88,7 @@ public:
 	}
 };
 
-NodeMap nodes[40];
+NodeMap nodes[50];
 
 
 int Astar_plan(int size, int target_index, NodeMap* node_list);
@@ -118,6 +119,27 @@ void publish_wayp(int x, int y, int z){
 // 	return true;
 // }
 
+// bool visible_arbitrary(int x1, int y1, int x2, int y2){
+// 	int diffX = x2 - x1, diffY = y2 - y1, ITER = 10;
+// 	float stepX = diffX/ITER, stepY = diffY/ITER;
+// 	float posX, posY, distsq;
+
+// 	for(int i=0; i<ITER; i++){ // check collision for 100 steps (discrete)
+// 		posX = x1+i*stepX;
+// 		posY = y1+i*stepY;
+// 		for(int j=0;j < pillarCount;j++){ // check pillar-collision
+// 			distsq = pow(posX-pillarX[j], 2) + pow(posY-pillarY[j],2);
+// 			cout << "ITER "  << i << " posX " << posX << " posY " << posY <<
+// 			endl << "pillX " << pillarX[j] << " pillY " << pillarY[j] << endl << distsq << endl;
+// 			if(distsq < pow(PILLAR_RADIUS+ROBOT_SIZE, 2)) return false;
+// 		}
+// 		for(int j=0;j<ballCount;j++){ // check ball-collision
+// 			if((ballX[j] == x1 && ballY[j] == y1) 
+// 				|| (ballX[j] == x2 && ballY[j] == y2))
+// 					continue;
+// 			distsq = pow(posX-ballX[j], 2) + pow(posY-ballY[j],2);
+// 			if(distsq < pow(MARGIN+ROBOT_SIZE,2)) return false;
+// 		}
 bool cramer(float x1, float y1, float x2, float y2, float x3, float y3)
 {
 	float x_perp, y_perp, distsq;
@@ -166,13 +188,11 @@ bool cramer(float x1, float y1, float x2, float y2, float x3, float y3)
 }
 
 bool visible_arbitrary(int x1, int y1, int x2, int y2){
-	float distsq;
 	for(int j=0; j < pillarCount; j++){ // check pillar-collision
-		if (!cramer(x1, y1, x2, y2, pillarX[j],pillarY[j])) return false;
+		if(!cramer(x1, y1, x2, y2, pillarX[j],pillarY[j])) return false;
 	}
 	return true;
 }
-
 // 	for(int j=0;j<ballCount;j++){ // check ball-collision
 // 		if((ballX[j] == x1 && ballY[j] == y1)
 // 			|| (ballX[j] == x2 && ballY[j] == y2))
@@ -229,10 +249,10 @@ int buildMap(int size, NodeMap* nodes, const core_msgs::multiarray::ConstPtr& ob
 				break;
 			case PILLAR:
 				// cout << "[MAP] PILLAR POS: " << x << ", " << y << endl;
-				nodes[node_number++] = NodeMap(PILLAR, x + GAP, y + GAP);
-				nodes[node_number++] = NodeMap(PILLAR, x + GAP, y - GAP);
-				nodes[node_number++] = NodeMap(PILLAR, x - GAP, y + GAP);
-				nodes[node_number++] = NodeMap(PILLAR, x - GAP, y - GAP);
+				nodes[node_number++] = NodeMap(PILLAR, x + 1.414*GAP, y);
+				nodes[node_number++] = NodeMap(PILLAR, x - 1.414*GAP, y);
+				nodes[node_number++] = NodeMap(PILLAR, x, y + 1.414*GAP);
+				nodes[node_number++] = NodeMap(PILLAR, x, y - 1.414*GAP);
 				pillarX[pillarCount] = x;
 				pillarY[pillarCount] = y;
 				pillarCount++;
@@ -261,7 +281,7 @@ void unknown_map_control(int node_number){
 		publish_wayp(robotX, robotY - 30, -1);
 		visualize(node_number, nodes, -1, robotX, robotY - 30);
 	} else{
-		cout << "ERROR: No points to move" << endl;
+		publish_wayp(0, 0, ROTATE);
 	}
 }
 
@@ -303,6 +323,7 @@ void goal_control(int size, NodeMap* nodes){
 
 	if(goal_index == -1){ // GOAL not found...
 		cout << "[GOAL CONTROL] ERROR: GOAL IS NOT FOUND..." << endl;
+		publish_wayp(0, 0, ROTATE);
 	} else if(pow(nodes[goal_index].x-robotX,2) + pow(nodes[goal_index].y-robotY,2) < pow(THRESHOLD,2)){ // close enough
 		END = true;
 	} else {
@@ -345,7 +366,7 @@ void positions_callback(const core_msgs::multiarray::ConstPtr& object)
 	if (REMAINING_BALLS > 0){
 		cout << REMAINING_BALLS << " Balls are remaining..." << endl;
 		int target_ball_index = get_shortest_index(node_number, nodes);
-		if (target_ball_index == -1){ // No balls are found
+		if (target_ball_index == -1 || robotX < 50 ){ // No balls are found
 			cout << "No balls are detected..." << endl;
 			unknown_map_control(node_number);
 		} else { // make path_plan to nodes[i]
