@@ -271,9 +271,9 @@ int buildMap(int size, NodeMap* nodes, const core_msgs::multiarray::ConstPtr& ob
 
 void unknown_map_control(int node_number){
 	// cout << "Robot Position:" << robotX << ", " << robotY << endl;
-	if (visible_arbitrary(robotX, robotY, robotX + 15, robotY - 15)) {
-		publish_wayp(robotX + 15, robotY - 15, -1);
-		visualize(node_number, nodes, -1, robotX + 15, robotY - 15);
+	if (visible_arbitrary(robotX, robotY, robotX + 30, robotY - 15)) {
+		publish_wayp(robotX + 30, robotY - 15, -1);
+		visualize(node_number, nodes, -1, robotX + 30, robotY - 15);
 	} else if(visible_arbitrary(robotX, robotY, robotX + 30, robotY)) {
 		publish_wayp(robotX + 30, robotY, -1);
 		visualize(node_number, nodes, -1, robotX + 30, robotY);

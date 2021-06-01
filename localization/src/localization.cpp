@@ -59,8 +59,8 @@ float lidar_distance[400];
 
 boost::mutex map_mutex;
 
-float pi=2*atanf(1);
-#define RAD2DEG(x) ((x)*180./M_PI)
+float PI = 4*atanf(1);
+#define RAD2DEG(x) ((x)*180./PI)
 
 
 
@@ -153,13 +153,13 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
       perp = abs(la[3]);
 
 
-      if( 0<pos_o && pos_o<M_PI/2 ){
+      if( 0<pos_o && pos_o<PI/2 ){
         oricaseNo=1;
-      }else if( M_PI/2<pos_o && pos_o<M_PI ){
+      }else if( PI/2<pos_o && pos_o<PI ){
         oricaseNo=2;
-      }else if(M_PI<pos_o && pos_o<1.5*M_PI  ){
+      }else if(PI<pos_o && pos_o<1.5*PI  ){
         oricaseNo=3;
-      }else if(( 1.5*M_PI<pos_o && pos_o<2*M_PI  )){
+      }else if(( 1.5*PI<pos_o && pos_o<2*PI  )){
         oricaseNo=4;
       }
 
@@ -188,13 +188,13 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
               }
               break;
             case 2:
-              if ( (abs(slope-(M_PI/2-pos_o))<angle_threshold )&&( abs(perp-(pos_x))<length_threshold )){
-                oridata.push_back(M_PI/2-slope);
+              if ( (abs(slope-(PI/2-pos_o))<angle_threshold )&&( abs(perp-(pos_x))<length_threshold )){
+                oridata.push_back(PI/2-slope);
                 xdata.push_back(perp);
               }
               if( pos_x<50){
-                if ( (abs(slope-(M_PI/2-pos_o))<angle_threshold )&&( abs(perp-(100+pos_x))<length_threshold )){
-                  oridata.push_back(M_PI/2-slope);
+                if ( (abs(slope-(PI/2-pos_o))<angle_threshold )&&( abs(perp-(100+pos_x))<length_threshold )){
+                  oridata.push_back(PI/2-slope);
                   xdata.push_back(-100+perp);
               }
               }
@@ -206,8 +206,8 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
               }
               break;
             case 4:
-              if ( abs(slope-(M_PI/2-pos_o))<angle_threshold && (abs(perp-(500-pos_x))<length_threshold) ){
-                oridata.push_back(M_PI/2-slope);
+              if ( abs(slope-(PI/2-pos_o))<angle_threshold && (abs(perp-(500-pos_x))<length_threshold) ){
+                oridata.push_back(PI/2-slope);
                 xdata.push_back(500-perp);
               }
           }
@@ -216,33 +216,33 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
         case 2:
           switch (linecaseNo){
             case 1:
-              if ( (abs(slope- (pos_o-M_PI/2))<angle_threshold )&& abs(perp-pos_x)<length_threshold  ){
-                oridata.push_back(slope+M_PI/2);
+              if ( (abs(slope- (pos_o-PI/2))<angle_threshold )&& abs(perp-pos_x)<length_threshold  ){
+                oridata.push_back(slope+PI/2);
                 xdata.push_back(perp);
               }
 
               if( pos_x<50){
-                if ( (abs(slope- (pos_o-M_PI/2))<angle_threshold )&&( abs(perp-(100+pos_x))<length_threshold )){
-                  oridata.push_back(slope+M_PI/2);
+                if ( (abs(slope- (pos_o-PI/2))<angle_threshold )&&( abs(perp-(100+pos_x))<length_threshold )){
+                  oridata.push_back(slope+PI/2);
                   xdata.push_back(-100+perp);
               }
               }
               break;
             case 2:
-              if ( abs(slope-(M_PI-pos_o))<angle_threshold && abs(perp-(pos_y))<length_threshold  ){
-                oridata.push_back(M_PI-slope);
+              if ( abs(slope-(PI-pos_o))<angle_threshold && abs(perp-(pos_y))<length_threshold  ){
+                oridata.push_back(PI-slope);
                 ydata.push_back(perp);
               }
               break;
             case 3:
-              if ( abs(slope-(pos_o-M_PI/2))<angle_threshold && abs(perp-(500-pos_x))<length_threshold  ){
-                oridata.push_back(slope+M_PI/2);
+              if ( abs(slope-(pos_o-PI/2))<angle_threshold && abs(perp-(500-pos_x))<length_threshold  ){
+                oridata.push_back(slope+PI/2);
                 xdata.push_back(500-perp);
               }
               break;
             case 4:
-              if ( abs(slope-(M_PI-pos_o))<angle_threshold && abs(perp-(300-pos_y))<length_threshold  ){
-                oridata.push_back(M_PI-slope);
+              if ( abs(slope-(PI-pos_o))<angle_threshold && abs(perp-(300-pos_y))<length_threshold  ){
+                oridata.push_back(PI-slope);
                 ydata.push_back(300-perp);
               }
               break;
@@ -253,32 +253,32 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
         case 3:
           switch (linecaseNo){
             case 1:
-              if ( abs(slope-(pos_o-M_PI))<angle_threshold && abs(pos_y-perp)<length_threshold  ){
-                oridata.push_back(slope+M_PI);
+              if ( abs(slope-(pos_o-PI))<angle_threshold && abs(pos_y-perp)<length_threshold  ){
+                oridata.push_back(slope+PI);
                 ydata.push_back(perp);
               }
               break;
             case 2:
-              if ( abs(slope-(1.5*M_PI-pos_o))<angle_threshold && abs(pos_x-(500-perp))<length_threshold  ){
-                oridata.push_back(1.5*M_PI-slope);
+              if ( abs(slope-(1.5*PI-pos_o))<angle_threshold && abs(pos_x-(500-perp))<length_threshold  ){
+                oridata.push_back(1.5*PI-slope);
                 xdata.push_back(500-perp);
               }
               break;
             case 3:
-              if ( abs(slope-(pos_o-M_PI))<angle_threshold && abs(pos_y-(300-perp))<length_threshold  ){
-                oridata.push_back(slope+M_PI);
+              if ( abs(slope-(pos_o-PI))<angle_threshold && abs(pos_y-(300-perp))<length_threshold  ){
+                oridata.push_back(slope+PI);
                 ydata.push_back(300-perp);
               }
               break;
             case 4:
-              if ( abs(slope- (1.5*M_PI-pos_o))<angle_threshold && abs(perp-pos_x)<length_threshold  ){
-                oridata.push_back(1.5*M_PI-slope);
+              if ( abs(slope- (1.5*PI-pos_o))<angle_threshold && abs(perp-pos_x)<length_threshold  ){
+                oridata.push_back(1.5*PI-slope);
                 xdata.push_back(perp);
               }
 
               if( pos_x<50){
-                if ( (abs(slope- (1.5*M_PI-pos_o))<angle_threshold )&&( abs(perp-(100+pos_x))<length_threshold )){
-                  oridata.push_back(1.5*M_PI-slope);
+                if ( (abs(slope- (1.5*PI-pos_o))<angle_threshold )&&( abs(perp-(100+pos_x))<length_threshold )){
+                  oridata.push_back(1.5*PI-slope);
                   xdata.push_back(-100+perp);
               }
               }
@@ -289,34 +289,34 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
         case 4:
           switch (linecaseNo){
             case 1:
-              if ( abs(slope-(pos_o-1.5*M_PI))<angle_threshold && abs(pos_x-(500-perp) )<length_threshold ){
-                oridata.push_back(slope+1.5*M_PI);
+              if ( abs(slope-(pos_o-1.5*PI))<angle_threshold && abs(pos_x-(500-perp) )<length_threshold ){
+                oridata.push_back(slope+1.5*PI);
                 xdata.push_back(500-perp);
               }
               break;
             case 2:
-              if ( abs(slope-(2*M_PI-pos_o))<angle_threshold && abs(pos_y-(300-perp))<length_threshold  ){
-                oridata.push_back(2*M_PI-slope);
+              if ( abs(slope-(2*PI-pos_o))<angle_threshold && abs(pos_y-(300-perp))<length_threshold  ){
+                oridata.push_back(2*PI-slope);
                 ydata.push_back(300-perp);
               }
               break;
             case 3:
 
-              if ( abs(slope-(pos_o-1.5*M_PI))<angle_threshold && abs(pos_x-perp)<length_threshold  ){
-                oridata.push_back(slope+1.5*M_PI);
+              if ( abs(slope-(pos_o-1.5*PI))<angle_threshold && abs(pos_x-perp)<length_threshold  ){
+                oridata.push_back(slope+1.5*PI);
                 xdata.push_back(perp);
               }
 
               if( pos_x<50){
-                if ( (abs(slope-(pos_o-1.5*M_PI))<angle_threshold )&&( abs(perp-(100+pos_x))<length_threshold )){
-                  oridata.push_back(slope+1.5*M_PI);
+                if ( (abs(slope-(pos_o-1.5*PI))<angle_threshold )&&( abs(perp-(100+pos_x))<length_threshold )){
+                  oridata.push_back(slope+1.5*PI);
                   xdata.push_back(-100+perp);
               }
               }
               break;
             case 4:
-              if ( abs(slope- (2*M_PI-pos_o))<angle_threshold && abs(perp-pos_y)<length_threshold ){
-                oridata.push_back(2*M_PI-slope);
+              if ( abs(slope- (2*PI-pos_o))<angle_threshold && abs(perp-pos_y)<length_threshold ){
+                oridata.push_back(2*PI-slope);
                 ydata.push_back(perp);
               }
               break;
@@ -330,7 +330,7 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
 
     int button=1;
 
-    if(pos_o==M_PI/2 || pos_o==M_PI || pos_o==1.5*M_PI || pos_o==2*M_PI){
+    if(pos_o==PI/2 || pos_o==PI || pos_o==1.5*PI || pos_o==2*PI){
       pos_o=pos_o-0.01;
       cout<<"oops!"<<endl;
     }else if(pos_o==0){
@@ -344,23 +344,23 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
       if(oridata.size()<lines.size()/5){//pos_o가 잘못된 경우.
       //oridata 사이즈의 기준 크기가 작을수록 밑의 기준은 커야한다. 반대로 기준 크기가 클수록 밑 기준은 작아야한다.
       //+빨리 회전할수록 밑의 기준이 커야 한다
-        if(abs(pos_o-M_PI/2)<0.1){//이 크기가 클수록 angle_theshold도 커야 한다.
-          pos_o=M_PI/2+(M_PI/2-pos_o); //
-        }else if(abs(pos_o-M_PI)<0.1){//0.05가 크면 엄한 녀석을 잡아넣을 수 있다. 그러나 0.05가 작으면 0.05보다 살짝 벗어나는 곳에서 멈추면 잡을수가 없다.
+        if(abs(pos_o-PI/2)<0.1){//이 크기가 클수록 angle_theshold도 커야 한다.
+          pos_o=PI/2+(PI/2-pos_o); //
+        }else if(abs(pos_o-PI)<0.1){//0.05가 크면 엄한 녀석을 잡아넣을 수 있다. 그러나 0.05가 작으면 0.05보다 살짝 벗어나는 곳에서 멈추면 잡을수가 없다.
         //angle_threshold의 1/2
-          pos_o=M_PI+(M_PI-pos_o);
-        } else if(abs(pos_o-1.5*M_PI)<0.1){
-          pos_o=1.5*M_PI+(1.5*M_PI-pos_o);
+          pos_o=PI+(PI-pos_o);
+        } else if(abs(pos_o-1.5*PI)<0.1){
+          pos_o=1.5*PI+(1.5*PI-pos_o);
         } else if(0<pos_o && pos_o<0.1){
-          pos_o=2*M_PI-pos_o;
+          pos_o=2*PI-pos_o;
           button=0;
         }else if(0>pos_o){
-          pos_o=2*M_PI+pos_o;
+          pos_o=2*PI+pos_o;
           button=0;
-        } else if( 0<2*M_PI-pos_o && 2*M_PI-pos_o<0.1 && button){
-          pos_o=(2*M_PI-pos_o);
-        } else if(2*M_PI-pos_o<0  && button){
-          pos_o=pos_o-2*M_PI;
+        } else if( 0<2*PI-pos_o && 2*PI-pos_o<0.1 && button){
+          pos_o=(2*PI-pos_o);
+        } else if(2*PI-pos_o<0  && button){
+          pos_o=pos_o-2*PI;
         }
 
         if(xdata.size()<2 && ydata.size()>2){
@@ -510,19 +510,19 @@ int main(int argc, char **argv)
             view_angle=view_angle-1;
             sum=sum-lidar_distance[i];
             avg_distance=sum/(view_angle+1);
-            obstacle_width=avg_distance*(M_PI/180)*view_angle;
+            obstacle_width=avg_distance*(PI/180)*view_angle;
 //Debugging:cout<<obstacle_width<<"/"<<view_angle<<endl;
 
             if(0.07<obstacle_width && obstacle_width < 0.15 && view_angle>0 && abs(lidar_distance[i-1]-avg_distance)<0.2 ){//threshold should be larger than the maximum width of the obstacle
               //this means that formerly detected object has small width, which means it is likely to be an obstacle
 
               obs_distance.push_back(lidar_distance[i-1-view_angle/2]+0.15/2);
-              if (lidar_degree[i-1-view_angle/2]>=M_PI/2 && lidar_degree[i-1-view_angle/2]<=1.5*M_PI){
-                obs_degree.push_back(lidar_degree[i-1-view_angle/2]-M_PI/2);
-              } else if(lidar_degree[i-1-view_angle/2]<=M_PI/2){
-                obs_degree.push_back(lidar_degree[i-1-view_angle/2]-M_PI/2);
-              } else if(lidar_degree[i-1-view_angle/2]>=1.5*M_PI && lidar_degree[i-1-view_angle/2]<=2*M_PI){
-                obs_degree.push_back(lidar_degree[i-1-view_angle/2]-2.5*M_PI);
+              if (lidar_degree[i-1-view_angle/2]>=PI/2 && lidar_degree[i-1-view_angle/2]<=1.5*PI){
+                obs_degree.push_back(lidar_degree[i-1-view_angle/2]-PI/2);
+              } else if(lidar_degree[i-1-view_angle/2]<=PI/2){
+                obs_degree.push_back(lidar_degree[i-1-view_angle/2]-PI/2);
+              } else if(lidar_degree[i-1-view_angle/2]>=1.5*PI && lidar_degree[i-1-view_angle/2]<=2*PI){
+                obs_degree.push_back(lidar_degree[i-1-view_angle/2]-2.5*PI);
               }
 
 
@@ -589,22 +589,22 @@ int main(int argc, char **argv)
         if (zone_info==1){
           robot_pos.x=-10;
           robot_pos.y=50;
-          robot_pos.z=2*M_PI-0.2;
+          robot_pos.z=2*PI-0.2;
           //cout<<"localization not yet"<<endl;
         }else if (zone_info==2 && initial_step<10){
           rectangular_map(lines, 30, 0.3);
           initial_step++;
-          if( robot_pos.x==-10 && robot_pos.y==50 && robot_pos.z==2*M_PI-0.2){
+          if( robot_pos.x==-10 && robot_pos.y==50 && robot_pos.z==2*PI-0.2){
             robot_pos.x=-10;
             robot_pos.y=50;
-            robot_pos.z=2*M_PI-0.09;
+            robot_pos.z=2*PI-0.09;
             rectangular_map(lines, 30, 0.3);
           }
 
-          if( robot_pos.x==-10 && robot_pos.y==50 && robot_pos.z==2*M_PI-0.09){
+          if( robot_pos.x==-10 && robot_pos.y==50 && robot_pos.z==2*PI-0.09){
             robot_pos.x=-10;
             robot_pos.y=50;
-            robot_pos.z=2*M_PI-0.2;
+            robot_pos.z=2*PI-0.2;
             rectangular_map(lines, 30, 0.3);
           }
 
