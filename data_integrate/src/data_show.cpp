@@ -200,7 +200,7 @@ Zones::Zone::Zone(int r, int c, int type):type(type),nPoints(1),cenRow(r),cenCol
 {
   switch(type){
     case BALL:
-      zoneSize = 40;
+      zoneSize = 20;
       threshold = 0.3;
       break;
     case PILLAR:
