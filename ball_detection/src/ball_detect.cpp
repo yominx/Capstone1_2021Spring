@@ -146,11 +146,7 @@ vector<Vec4f> filtering(vector<Vec3f> circles, Mat img){
     if (filtering3(row,col)){
       continue;
     }
-<<<<<<< HEAD
-    if (abs(r_pred-r) < r/6){
-=======
     if (abs(r_pred-r) < r/7){
->>>>>>> e164650c01949152da157985b5f4f7b39125471f
       circle[0] = col;
       circle[1] = row;
       circle[2] = r;
