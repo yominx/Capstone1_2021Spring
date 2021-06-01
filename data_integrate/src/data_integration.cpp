@@ -57,7 +57,7 @@ int waytype;
 //ball pickup&dumping part started
 int delivery=0;
 int delivery_count=0;
-int ball_count=4;
+int ball_count=0;
 //ball pickup&dumping part ended
 ros::Publisher commandVel;
 ros::Publisher zone;
@@ -259,7 +259,7 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 	float ANGLE_THRESHOLD = M_PI/100;
 	float BALL_DIST_THRESHOLD = 43;
 	float PILLAR_DIST_THRESHOLD = 50;
-	float GOAL_DIST_THRESHOLD = 80;
+	float GOAL_DIST_THRESHOLD = 67;
 	float angle_sign = (diff_o > 0 ? 1 : -1);
 
 	// cout << "Ball Harvesting Control" << endl;
@@ -291,7 +291,7 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 				}
 			} else {
 				/* move forward ->should be modified*/
-				if (dist > 100) {
+				if (dist > 150) {
 					targetVel->linear.x  = 5;
 					targetVel->angular.z = 0;
 				} else {
@@ -306,10 +306,10 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 				/* in place rotation ->should be modified*/
 				if (fabs(diff_o) < ANGLE_THRESHOLD*2) {
 					targetVel->linear.x  = 0;
-					targetVel->angular.z = angle_sign*2/3;
+					targetVel->angular.z = angle_sign/2;
 				} else {
 					targetVel->linear.x  = 0;
-					targetVel->angular.z = angle_sign;
+					targetVel->angular.z = angle_sign*2/3;
 				}
 			} else {
 				if (dist > PILLAR_DIST_THRESHOLD) {
@@ -327,10 +327,10 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 				/* in place rotation ->should be modified*/
 				if (fabs(diff_o) < ANGLE_THRESHOLD*2) {
 					targetVel->linear.x  = 0;
-					targetVel->angular.z = angle_sign*2/3;
+					targetVel->angular.z = angle_sign/2.5;
 				} else {
 					targetVel->linear.x  = 0;
-					targetVel->angular.z = angle_sign;
+					targetVel->angular.z = angle_sign*2/3;
 				}
 			} else {
 				if (dist > GOAL_DIST_THRESHOLD*3) {
@@ -371,7 +371,7 @@ void control_harvest(geometry_msgs::Twist* targetVel){
 			targetVel->angular.z=0;
 		}
 	} else if(waytype==GOAL) {
-		int GOAL_SIZE = 80;
+		int GOAL_SIZE = 67;
 		int goalX = 550, goalY = 200; // CHANGE THIS VALUE FROM /position
 
 		bool close_enough = pow(pos_x-goalX, 2) + pow(pos_y-goalY,2) < pow(GOAL_SIZE, 2);
