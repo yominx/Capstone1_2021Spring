@@ -146,7 +146,11 @@ vector<Vec4f> filtering(vector<Vec3f> circles, Mat img){
     if (filtering3(row,col)){
       continue;
     }
+<<<<<<< HEAD
     if (abs(r_pred-r) < r/6){
+=======
+    if (abs(r_pred-r) < r/7){
+>>>>>>> e164650c01949152da157985b5f4f7b39125471f
       circle[0] = col;
       circle[1] = row;
       circle[2] = r;
@@ -207,15 +211,17 @@ void ball_detect(){
      //Circles (Cx, Cy, r)
 
      //before Filtering
-     // for(int k=0,i=0;k<circles.size();k++){
-     //     Vec3f params = circles[k];  //the information of k-th circle
-     //     float c_c=cvRound(params[0]);  //x position of k-th circle
-     //     float c_r=cvRound(params[1]);  //y position
-     //     float r=cvRound(params[2]); //radius
-     //
-     //     Point center(c_c,c_r);  //declare a Point Point(coloum, row)
-     //     circle(buffer,center,r,Scalar(255,0,255),2); //draw a circle on 'frame' based on the information given,   r = radius, Scalar(0,0,255) means color, 10 means lineWidth
-     // }
+#ifdef DEBUG
+     for(int k=0,i=0;k<circles.size();k++){
+         Vec3f params = circles[k];  //the information of k-th circle
+         float c_c=cvRound(params[0]);  //x position of k-th circle
+         float c_r=cvRound(params[1]);  //y position
+         float r=cvRound(params[2]); //radius
+
+         Point center(c_c,c_r);  //declare a Point Point(coloum, row)
+         circle(buffer,center,r,Scalar(255,0,255),1); //draw a circle on 'frame' based on the information given,   r = radius, Scalar(0,0,255) means color, 10 means lineWidth
+     }
+#endif
      filteredCircles = filtering(circles, gray);
      Vec4f params; //assign a memory to save the information of circles
      int c_c,c_r,r;

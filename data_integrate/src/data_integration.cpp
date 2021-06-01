@@ -57,7 +57,7 @@ int waytype;
 //ball pickup&dumping part started
 int delivery=0;
 int delivery_count=0;
-int ball_count=0;
+int ball_count=4;
 //ball pickup&dumping part ended
 ros::Publisher commandVel;
 ros::Publisher zone;
@@ -80,7 +80,7 @@ int control_method = ENTRANCE;
 #define PILLAR 	2
 #define GOAL 	3
 
-#define DEBUG_HARVEST false
+#define DEBUG_HARVEST true
 
 using namespace std;
 
@@ -259,7 +259,7 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 	float ANGLE_THRESHOLD = M_PI/100;
 	float BALL_DIST_THRESHOLD = 43;
 	float PILLAR_DIST_THRESHOLD = 50;
-	float GOAL_DIST_THRESHOLD = 83;
+	float GOAL_DIST_THRESHOLD = 80;
 	float angle_sign = (diff_o > 0 ? 1 : -1);
 
 	// cout << "Ball Harvesting Control" << endl;

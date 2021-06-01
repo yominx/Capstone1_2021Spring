@@ -6,6 +6,7 @@
 #include <string>
 #include <signal.h>
 #include <math.h>
+#include <cmath>
 #include <boost/thread.hpp>
 #include <vector>
 #include <ros/ros.h>
@@ -35,9 +36,10 @@ using namespace cv;
 
 int MAP_WIDTH = 600;
 int MAP_HEIGHT = 400;
+int PILLAR_RADIUS = 15;
 float DLC = 0.27; //distance between camara and lidar
 float DLB = 0.50; //distance between lidar and ball
-
+float FOV = 28.5*M_PI/180;
 int nData = 0;
 
 int nBalls=0;
@@ -89,10 +91,14 @@ public:
     bool reliable;
     int zoneSize;
     float threshold;
+    bool inSight;
+    bool checked;
+    int disappearedCnt;
     Zone(int r, int c, int type);
     ~Zone();
     bool insideZone(int r, int c);
     void add(int r, int c, int type);
+    bool blocked();
   };
 
 public:
@@ -104,7 +110,12 @@ public:
   void addZone(int r, int c, int type);
   void removeZone(int r, int c, int type);
   void removeZone(int i, int type);
+  void resetState();
 };
+
+Zones ballZones(5);
+Zones pillarZones(3);
+Zones goalZones(1);
 
 Zones::Zones(int goal):max(goal){}
 
@@ -166,7 +177,20 @@ void Zones::removeZone(int i, int type)
   zoneList.erase(zoneList.begin()+i);
 }
 
-Zones::Zone::Zone(int r, int c, int type):type(type),nPoints(1),cenRow(r),cenCol(c),cnt(1),reliable(false)
+void Zones::resetState()
+{
+  for (int i = 0; i<zoneList.size(); i++){
+    float theta = atan2(zoneList[i].cenRow-Y,zoneList[i].cenCol-X);
+    if (theta < 0) theta += 2*M_PI;
+    zoneList[i].inSight = (fabs(O-theta) < FOV) ? true : false;
+    if (zoneList[i].blocked()) zoneList[i].inSight = false;
+    float dist = sqrt(pow(X-zoneList[i].cenCol,2) + pow(Y-zoneList[i].cenRow,2));
+    if (dist > 50) zoneList[i].inSight = false;
+    zoneList[i].checked = false;
+  }
+}
+
+Zones::Zone::Zone(int r, int c, int type):type(type),nPoints(1),cenRow(r),cenCol(c),cnt(1),reliable(false),inSight(true),checked(true),disappearedCnt(0)
 {
   switch(type){
     case BALL:
@@ -191,6 +215,7 @@ bool Zones::Zone::insideZone(int r, int c)
   return (ball_dist_sq  <= pow(zoneSize,2) );
 }
 
+
 void Zones::Zone::add(int r, int c, int type)
 {
   Mat map;
@@ -205,17 +230,35 @@ void Zones::Zone::add(int r, int c, int type)
       map = mapGoal;
   }
   map.at<int>(r,c) += 1;
-  // if (map.at<int>(r,c) > map.at<int>(cenRow,cenCol)){
-    circle(MAP, Point(cenCol, cenRow),2,Scalar(0,0,0), -1);
+  circle(MAP, Point(cenCol, cenRow),2,Scalar(0,0,0), -1);
+  float dist = sqrt(pow(cenRow-r, 2) + pow(cenCol-c,2));
+  if (dist > 100.) {
+    if (map.at<int>(r,c)>map.at<int>(cenRow,cenCol)){
+      cenRow = r;
+      cenCol = c;
+    }
+  }
+  else {
     cenRow = (cenRow == 0) ? r : ((1-ALPHA) * cenRow + ALPHA*r);
     cenCol = (cenCol == 0) ? c : ((1-ALPHA) * cenCol + ALPHA*c);
+  }
+  checked = true;
+  disappearedCnt = 0;
   // }
   ++nPoints;
 }
 
-Zones ballZones(5);
-Zones pillarZones(3);
-Zones goalZones(1);
+bool cramer(float x1, float y1, float x2, float y2, float x3, float y3);
+bool Zones::Zone::blocked()
+{
+  int pillarN = pillarZones.zoneList.size();
+  // int ballN = ballZones.zoneList.size();
+  for (int i=0; i<pillarN; i++){
+    if (cramer(X, Y, cenCol, cenRow, pillarZones.zoneList[i].cenCol, pillarZones.zoneList[i].cenRow)) return true;
+  }
+  return false;
+}
+
 
 void sort(vector<int>& reliableList, const Zones& zones)
 {
@@ -248,6 +291,8 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
     case GOAL:
       color = Scalar(0,255,0);
   }
+  if (type == BALL) zones.resetState(); // update whether the zone is visible and detected
+
   for (int i=0; i<size; i++){ //ball_dist[i], ball_angle[i]
     int x = (type==PILLAR) ? 50+(int)round(X +(dist[i]*cos(angle[i]+O)*100)) : 50+(int)round(X+(DLC*cos(O)*100)+(dist[i]*cos(angle[i]+O)*100));
     int y = (type==PILLAR) ? 350-(int)round(Y+(dist[i]*sin(angle[i]+O)*100)) : 350-(int)round(Y+(DLC*sin(O)*100)+(dist[i]*sin(angle[i]+O)*100));
@@ -258,7 +303,20 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
     zones.addZone(y,x,type);
   }
 
-  int zSize = zones.zoneList.size();
+  int zSize;
+  if (type == BALL){
+    zSize = zones.zoneList.size();
+    for (int i=0, j=0; i<zSize; i++,j++){
+      if (zones.zoneList[j].inSight && !(zones.zoneList[j].checked)){
+        zones.zoneList[j].disappearedCnt++;
+        if (zones.zoneList[j].disappearedCnt > 30){
+          zones.removeZone(j,type);
+          j--;
+        }
+      }
+    }
+  }
+  zSize = zones.zoneList.size();
   reliableList.clear();
   for (int i=0,j=0; i<zSize; i++, j++){
     zones.zoneList[j].cnt++;
@@ -278,8 +336,8 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
     }
   }
 
-  int nSize = zones.zoneList.size();
-  for (int i=0; i<nSize; i++)
+  zSize = zones.zoneList.size();
+  for (int i=0; i<zSize; i++)
     if (zones.zoneList[i].reliable) reliableList.push_back(i);
 
   if (reliableList.size() > zones.max){
@@ -366,9 +424,57 @@ void drawRawMap(int type, int n, float* dist, float* angle)
 }
 #endif
 
+<<<<<<< HEAD
 int delivery_mode=0;
 void delivery_mode_Callback(const std_msgs::Int8::ConstPtr& delivery){
   delivery_mode=delivery->data;
+=======
+bool cramer(float x1, float y1, float x2, float y2, float x3, float y3)
+{
+	float x_perp, y_perp, distsq;
+	float x_min, x_max, y_min, y_max, det_a;
+	if (abs(x1-x2) < 0.01){
+		x_perp = x1;
+		y_perp = y3;
+	}
+	else if(abs(y1-y2)<0.01){
+		x_perp = x3;
+		y_perp = y1;
+	}
+	else {
+		float a11, a12, a13, a21, a22, a23;
+		a11 = y1-y2;
+		a12 = x2-x1;
+		a13 = y1*(x2-x1)-(y2-y1)*x1;
+		a21 = x2-x1;
+		a22 = y2-y1;
+		a23 = x3*(x2-x1)+y3*(y2-y1);
+		det_a = a11*a22-a12*a21;
+		x_perp = (a13*a22-a12*a23)/det_a;
+		y_perp = (a11*a23-a13*a21)/det_a;
+	}
+	if (x1 > x2) {
+		x_min = x2;
+		x_max = x1;
+	}
+	else {
+		x_min = x1;
+		x_max = x2;
+	}
+	if (y1 > y2) {
+		y_min = y2;
+		y_max = y1;
+	}
+	else {
+		y_min = y1;
+		y_max = y2;
+	}
+	if ( (x_perp > x_min) && (x_perp < x_max) && (y_perp > y_min) && (y_perp < y_max)){
+		distsq = pow(x_perp-x3, 2) + pow(y_perp-y3,2);
+		if(distsq < pow(PILLAR_RADIUS, 2)) return true;
+	}
+	return false;
+>>>>>>> e164650c01949152da157985b5f4f7b39125471f
 }
 
 void ballPos_Callback(const core_msgs::ball_position::ConstPtr& pos)
