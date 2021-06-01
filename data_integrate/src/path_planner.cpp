@@ -170,17 +170,9 @@ bool visible_arbitrary(int x1, int y1, int x2, int y2){
 	for(int j=0; j < pillarCount; j++){ // check pillar-collision
 		return cramer(x1, y1, x2, y2, pillarX[j],pillarY[j]);
 	}
+	
+}
 
-// 	for(int j=0;j<ballCount;j++){ // check ball-collision
-// 		if((ballX[j] == x1 && ballY[j] == y1)
-// 			|| (ballX[j] == x2 && ballY[j] == y2))
-// 				continue;
-// 		distsq = pow(posX-ballX[j], 2) + pow(posY-ballY[j],2);
-// 		if(distsq < pow(MARGIN+ROBOT_SIZE,2)) return false;
-// 	}
-// 	// cout << x1 << ", " << y1 << " to " << x2 << ", " << y2 << " is available" << endl;
-// 	return true;
-// }
 
 int get_shortest_index(int size, NodeMap* node_list){ // '-1' means 'No balls are detected'
 	// TODO: use A* to calculate more EXACT distance
