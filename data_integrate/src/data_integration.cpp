@@ -80,7 +80,7 @@ int control_method = ENTRANCE;
 #define PILLAR 	2
 #define GOAL 	3
 
-#define DEBUG_HARVEST true
+#define DEBUG_HARVEST false
 
 using namespace std;
 
@@ -105,10 +105,10 @@ void lidar_Callback(const sensor_msgs::LaserScan::ConstPtr& scan)
         lidar_distance[i]=scan->ranges[i];
     }
 	map_mutex.unlock();
+	targetVel.angular.x = 0;
 
 	if(control_method == ENTRANCE){
 		control_entrance(&targetVel);
-		targetVel.angular.x = 0;
 		if (!DEBUG_HARVEST && !PASSED_STEP && meet_step()) {
 			int t = 15;
 			targetVel.linear.x  = 5;
@@ -175,26 +175,27 @@ void target_Callback(const geometry_msgs::Vector3::ConstPtr& waypoint) {
 
 	dist = sqrt(pow(target_y-pos_y, 2) + pow(target_x-pos_x, 2));
 
-	control_ballharvesting(&targetVel);
-	if (STOP_FLAG) {
-		int t = 1;
-		ros::Time beginTime =ros::Time::now();
-		ros::Duration delta_t = ros::Duration(t);
-		ros::Time endTime=beginTime + delta_t;
-		while(ros::Time::now()<endTime)
-		{
-			commandVel.publish(targetVel);
-			ros::Duration(0.1).sleep();
+	if(control_method == BALLHARVESTING){
+		control_ballharvesting(&targetVel);
+		if (STOP_FLAG) {
+			int t = 1;
+			ros::Time beginTime =ros::Time::now();
+			ros::Duration delta_t = ros::Duration(t);
+			ros::Time endTime=beginTime + delta_t;
+			while(ros::Time::now()<endTime)
+			{
+				commandVel.publish(targetVel);
+				ros::Duration(0.1).sleep();
+			}
+			STOP_FLAG = false;
 		}
-		STOP_FLAG = false;
+
+		//Ball pickup/dumping
+		control_harvest(&targetVel);
+		update_delivery_info();
+		publish_delivery_info();
+		commandVel.publish(targetVel);
 	}
-
-	//Ball pickup/dumping
-	control_harvest(&targetVel);
-	update_delivery_info();
-	publish_delivery_info();
-	commandVel.publish(targetVel);
-
 
 
 
@@ -399,6 +400,7 @@ void select_control(){
 	if( (0<left_back_pts && left_back_pts<30 && out_of_range_pts>30) || control_method== BALLHARVESTING){
 		zone_info.data= BALLHARVESTING;
 		control_method= BALLHARVESTING;
+		targetVel.angular.x = 0;
 	}else{
 		zone_info.data=ENTRANCE;
 		control_method= ENTRANCE;

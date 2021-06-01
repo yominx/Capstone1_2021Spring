@@ -24,37 +24,42 @@ end
 
 
 function callback_ball_delivery_sub(msg)
-    local velocity=10
+    local velocity=7
     local velocity2=50
-    local th1=0.8
-    local th12=2
+    local th1=1
+    local thdown=2
     local delivery_mode=msg.data
+    angle=sim.getJointPosition(joint00)
+    sim.addStatusbarMessage(string.format("delivery/ %f count %f angle %f", delivery_mode, count, angle))
+   
+   if (delivery_mode==1)then
         
-    if (delivery_mode==1)then
-        angle=sim.getJointPosition(joint00)
-        
-        sim.addStatusbarMessage(string.format("delivery/ %f count %f angle %f", delivery_mode, count, angle) )
-    
-        if (count<=60) then
-            if(math.abs(angle)>1.5) then
+        if (count<=100) then
+            if(math.abs(angle)>th1) then
                 sim.setJointTargetVelocity(joint00, -velocity)
             elseif ( math.abs(angle)>0.1 ) then
-                sim.setJointTargetVelocity(joint00, -velocity*(th12-math.abs(angle))/(th12-th1))
+                sim.setJointTargetVelocity(joint00, -velocity*(math.abs(angle)+0.2)/(th1+0.2))
             elseif ( math.abs(angle)<0.1 ) then
                 count=count+1
-                sim.addStatusbarMessage("asdasdasdasdasdsad");
                 sim.setJointTargetVelocity(joint00,0)
             end
         end
 
-        if( count > 60 ) then
+        if( count > 100 ) then
             if ( math.abs(angle)<th1) then
-                sim.setJointTargetVelocity(joint00, velocity*(th12-math.abs(angle))/(th12-th1))
+                sim.setJointTargetVelocity(joint00, velocity*(math.abs(angle))/(th1))
             elseif ( math.abs(angle)>th1) then
-                sim.setJointTargetVelocity(joint00, velocity*(math.abs(angle))/(th1) )
+                sim.setJointTargetVelocity(joint00, velocity*(thdown-math.abs(angle))/(thdown-th1))
             end
         end
-        
+    elseif delivery_mode==2 then
+        if(count2<150) then
+            sim.setJointTargetVelocity(joint01, -velocity2)
+        end
+        if(count2>=150) then
+            sim.setJointTargetVelocity(joint02, -velocity2)
+        end
+        count2=count2+1
 
     elseif delivery_mode==0 then
         sim.setJointTargetVelocity(joint00, 10)
@@ -65,6 +70,9 @@ end
 function sysCall_init()
     -- do some initialization here
     joint00 = sim.getObjectHandle("collector_joint")
+    joint01 = sim.getObjectHandle("door_joint_l")
+    joint02 = sim.getObjectHandle("door_joint_r")
+
 
     joint11 = sim.getObjectHandle("11_joint")
     joint21 = sim.getObjectHandle("21_joint")
@@ -75,6 +83,7 @@ function sysCall_init()
 
     cmdvelSub=simROS.subscribe('/command_vel','geometry_msgs/Twist','callback_cmdvel_sub')
     count=0
+    count2=0
     delvelSub=simROS.subscribe('/ball_delivery','std_msgs/Int8','callback_ball_delivery_sub')
     
     transform={header={stamp=simROS.getTime(), frame_id='map'}, child_frame_id='velodyneVPL', transform={translation={x=0, y=0, z=0}, rotation={x=0, y=0, z=0, w=1}}}
