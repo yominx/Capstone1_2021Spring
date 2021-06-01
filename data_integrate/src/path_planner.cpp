@@ -168,8 +168,10 @@ bool cramer(float x1, float y1, float x2, float y2, float x3, float y3)
 bool visible_arbitrary(int x1, int y1, int x2, int y2){
 	float distsq;
 	for(int j=0; j < pillarCount; j++){ // check pillar-collision
-		return cramer(x1, y1, x2, y2, pillarX[j],pillarY[j]);
+		if (!cramer(x1, y1, x2, y2, pillarX[j],pillarY[j])) return false;
 	}
+	return true;
+}
 
 // 	for(int j=0;j<ballCount;j++){ // check ball-collision
 // 		if((ballX[j] == x1 && ballY[j] == y1)
