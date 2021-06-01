@@ -33,8 +33,6 @@ float RADIUS = 0.15/2; //[m]
 float THRESHOLD = 3;
 float FOV = 28.5*M_PI/180;
 float dHeight = 0.178 - RADIUS;
-vector<int> goalIndex;
-
 
 int delivery_mode=0;
 void delivery_mode_Callback(const std_msgs::Int8::ConstPtr& delivery){
@@ -146,11 +144,7 @@ vector<Vec4f> filtering(vector<Vec3f> circles, Mat img){
     if (filtering3(row,col)){
       continue;
     }
-<<<<<<< HEAD
-    if (abs(r_pred-r) < r/6){
-=======
     if (abs(r_pred-r) < r/7){
->>>>>>> e164650c01949152da157985b5f4f7b39125471f
       circle[0] = col;
       circle[1] = row;
       circle[2] = r;
@@ -229,8 +223,6 @@ void ball_detect(){
      int goalIndex = -1;
      core_msgs::ball_position msgBall;  //create a message for ball positions
      core_msgs::goal_position msgGoal;
-     goalIndex.clear();
-
      for (int i=0; i<filteredCircles.size(); i++){
         params = filteredCircles[i];
         c_c = (int)cvRound(params[0]);
@@ -238,7 +230,6 @@ void ball_detect(){
         r = (int)cvFloor(params[2]);
         if (goal_check(c_r,c_c,r, hsvCh[0])){
           nBalls -= 1;
-          goalIndex.push_back(i);
         }
      }
 
@@ -256,13 +247,12 @@ void ball_detect(){
          Point center(c_c,c_r);  //declare a Point Point(coloum, row)
          // cy = 3.839*(exp(-0.03284*cy))+1.245*(exp(-0.00554*cy));   //convert the position of the ball in camera coordinate to the position in base coordinate. It is related to the calibration process. You shoould modify this.
          // cx = (0.002667*cy+0.0003)*cx-(0.9275*cy+0.114);
-         if (k == goalIndex[0]){
-           goalIndex.pop();
+         if (goal_check(c_r,c_c,r, hsvCh[0])){
            circle(buffer,center,r,Scalar(0,255,0),3); //draw a circle on 'frame' based on the information given,   r = radius, Scalar(0,0,255) means color, 10 means lineWidth
-           msgGoal.angle = atan((c_c-319.5)/320*tan(FOV)); // [rad]
-           // msgGoal.angle = atan((2.5*(c_c-319.5)/320)/4.6621);
-           msgGoal.dist = params[3];
-           pubGoal.publish(msgGoal);
+           // msgGoal.angle = atan((c_c-319.5)/320*tan(FOV)); // [rad]
+           // // msgGoal.angle = atan((2.5*(c_c-319.5)/320)/4.6621);
+           // msgGoal.dist = params[3];
+           // pubGoal.publish(msgGoal);
 #ifdef DEBUG
            cout << "[Goal] Distance: " << msgGoal.dist << ", Angle= " << msgGoal.angle << endl;
 #endif

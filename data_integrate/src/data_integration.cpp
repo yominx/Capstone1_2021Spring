@@ -57,7 +57,7 @@ int waytype;
 //ball pickup&dumping part started
 int delivery=0;
 int delivery_count=0;
-int ball_count=4;
+int ball_count=0;
 //ball pickup&dumping part ended
 ros::Publisher commandVel;
 ros::Publisher zone;
