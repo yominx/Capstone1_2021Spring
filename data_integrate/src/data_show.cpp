@@ -74,7 +74,7 @@ Mat mapPillarDebug;
 vector<int> reliableList;
 core_msgs::multiarray msg;
 
-float ALPHA = 0.5;
+float ALPHA = 0.4;
 class Zones
 {
 public:

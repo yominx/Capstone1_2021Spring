@@ -395,7 +395,7 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
 
 
 //Debugging:
-cout<<"output xyo is "<<pos_x<<"/"<<pos_y<<"/"<<pos_o<<endl;
+//cout<<"output xyo is "<<pos_x<<"/"<<pos_y<<"/"<<pos_o<<endl;
 
     robot_pos.x=pos_x;
     robot_pos.y=pos_y;
@@ -441,7 +441,7 @@ void control_input_Callback(const geometry_msgs::Twist::ConstPtr& targetVel){
   robot_pos.y=robot_pos.y+linear_vel_prev*sin(robot_pos.z)*Ts;
   robot_pos.z=robot_pos.z+angular_vel_prev*Ts;
   }
-
+  cout<<"x should be increased by"<<linear_vel_prev*cos(robot_pos.z)*Ts<<endl<<"angle should be increased by"<<angular_vel_prev*Ts<<endl;
   linear_vel_prev=linear_vel_now;
   angular_vel_prev=angular_vel_now;
 }
@@ -580,11 +580,13 @@ int main(int argc, char **argv)
 
 
 //테스트 용으로 사용시 아래 단락을 주석처리하고 robot_pos의 초기값을 main함수 밖에서 설정
+
+    if( delivery_mode != 1){
         if (zone_info==1){
           robot_pos.x=-10;
           robot_pos.y=50;
           robot_pos.z=2*M_PI-0.2;
-          cout<<"localization not yet"<<endl;
+          //cout<<"localization not yet"<<endl;
         }else if (zone_info==2 && initial_step<10){
           rectangular_map(lines, 30, 0.3);
           initial_step++;
@@ -606,8 +608,6 @@ int main(int argc, char **argv)
           rectangular_map(lines, 20, 0.2); //angle_threshold는 최대 0.7보다는 작아야 한다.
         }
 
-
-
         //Getting obstacle location
         obs_pos.data.clear();
 
@@ -618,6 +618,7 @@ int main(int argc, char **argv)
               obs_pos.data.push_back(obs_degree[i]);
             }
         }
+      }
 
 //Debugging:
 // for(int i=0; i<obs_pos.data.size()/2; i++ ){
