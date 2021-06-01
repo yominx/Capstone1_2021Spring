@@ -9,6 +9,7 @@
 #include <cv_bridge/cv_bridge.h>
 #include "opencv2/opencv.hpp"
 #include <vector>
+#include "std_msgs/Int8.h"
 #include "core_msgs/ball_position.h"
 #include "core_msgs/goal_position.h"
 #include <math.h>
@@ -32,6 +33,14 @@ float RADIUS = 0.15/2; //[m]
 float THRESHOLD = 3;
 float FOV = 28.5*M_PI/180;
 float dHeight = 0.178 - RADIUS;
+vector<int> goalIndex;
+
+
+int delivery_mode=0;
+void delivery_mode_Callback(const std_msgs::Int8::ConstPtr& delivery){
+  delivery_mode=delivery->data;
+}
+
 
 bool isBlack(int row, int col, Mat img){
   return img.at<uchar>(row,col)<100;
@@ -137,7 +146,7 @@ vector<Vec4f> filtering(vector<Vec3f> circles, Mat img){
     if (filtering3(row,col)){
       continue;
     }
-    if (abs(r_pred-r) < r/5){
+    if (abs(r_pred-r) < r/6){
       circle[0] = col;
       circle[1] = row;
       circle[2] = r;
@@ -214,6 +223,7 @@ void ball_detect(){
      int goalIndex = -1;
      core_msgs::ball_position msgBall;  //create a message for ball positions
      core_msgs::goal_position msgGoal;
+     goalIndex.clear();
 
      for (int i=0; i<filteredCircles.size(); i++){
         params = filteredCircles[i];
@@ -222,8 +232,7 @@ void ball_detect(){
         r = (int)cvFloor(params[2]);
         if (goal_check(c_r,c_c,r, hsvCh[0])){
           nBalls -= 1;
-          goalIndex = i;
-          break;
+          goalIndex.push_back(i);
         }
      }
 
@@ -241,7 +250,8 @@ void ball_detect(){
          Point center(c_c,c_r);  //declare a Point Point(coloum, row)
          // cy = 3.839*(exp(-0.03284*cy))+1.245*(exp(-0.00554*cy));   //convert the position of the ball in camera coordinate to the position in base coordinate. It is related to the calibration process. You shoould modify this.
          // cx = (0.002667*cy+0.0003)*cx-(0.9275*cy+0.114);
-         if (k == goalIndex){
+         if (k == goalIndex[0]){
+           goalIndex.pop();
            circle(buffer,center,r,Scalar(0,255,0),3); //draw a circle on 'frame' based on the information given,   r = radius, Scalar(0,0,255) means color, 10 means lineWidth
            msgGoal.angle = atan((c_c-319.5)/320*tan(FOV)); // [rad]
            // msgGoal.angle = atan((2.5*(c_c-319.5)/320)/4.6621);
@@ -303,11 +313,13 @@ int main(int argc, char **argv)
    image_transport::ImageTransport it(nh); //create image transport and connect it to node hnalder
    image_transport::Subscriber sub_rgb = it.subscribe("/kinect_rgb", 1, imageCallback); //create subscriber
    image_transport::Subscriber sub_depth = it.subscribe("/kinect_depth", 1, depthCallback);
+   ros::Subscriber delivery = nh.subscribe<std_msgs::Int8>("/ball_delivery", 10, delivery_mode_Callback);
+
    pubBall = nh.advertise<core_msgs::ball_position>("/ball_position", 10); //setting publisher
    pubGoal = nh.advertise<core_msgs::goal_position>("/goal_position", 10); //setting publisher
    ros::Rate loop_rate(10);
    while (ros::ok()){
-     if(!buffer.empty() && !buffer_depth.empty()){
+     if(!buffer.empty() && !buffer_depth.empty() && (delivery_mode != 1)){
        ball_detect();
      }
      loop_rate.sleep();
