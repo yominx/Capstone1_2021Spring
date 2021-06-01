@@ -26,7 +26,7 @@ rosrun ball_detection ball_detection_node
 
 ## coppeliasim_models
 
-map_ver_x.ttt, my_robot_ver_x.ttm files
+map_ver_x.ttt, bonus_map.ttt, my_robot_ver_x.ttm files
 
 Map and my_robot can be updated later, so please check the notice board on klms regularly.
 
