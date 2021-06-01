@@ -87,7 +87,7 @@ public:
 	}
 };
 
-NodeMap nodes[40];
+NodeMap nodes[50];
 
 
 int Astar_plan(int size, int target_index, NodeMap* node_list);
@@ -119,7 +119,7 @@ void publish_wayp(int x, int y, int z){
 // }
 
 bool visible_arbitrary(int x1, int y1, int x2, int y2){
-	int diffX = x2 - x1, diffY = y2 - y1, ITER = 100;
+	int diffX = x2 - x1, diffY = y2 - y1, ITER = 10;
 	float stepX = diffX/ITER, stepY = diffY/ITER;
 	float posX, posY, distsq;
 
@@ -128,8 +128,8 @@ bool visible_arbitrary(int x1, int y1, int x2, int y2){
 		posY = y1+i*stepY;
 		for(int j=0;j < pillarCount;j++){ // check pillar-collision
 			distsq = pow(posX-pillarX[j], 2) + pow(posY-pillarY[j],2);
-			// cout << "ITER "  << i << " posX " << posX << " posY " << posY <<
-			// endl << "pillX " << pillarX[j] << " pillY " << pillarY[j] << endl << distsq << endl;
+			cout << "ITER "  << i << " posX " << posX << " posY " << posY <<
+			endl << "pillX " << pillarX[j] << " pillY " << pillarY[j] << endl << distsq << endl;
 			if(distsq < pow(PILLAR_RADIUS+ROBOT_SIZE, 2)) return false;
 		}
 		for(int j=0;j<ballCount;j++){ // check ball-collision
@@ -305,7 +305,7 @@ void positions_callback(const core_msgs::multiarray::ConstPtr& object)
 	if (REMAINING_BALLS > 0){
 		cout << REMAINING_BALLS << " Balls are remaining..." << endl;
 		int target_ball_index = get_shortest_index(node_number, nodes);
-		if (target_ball_index == -1){ // No balls are found
+		if (target_ball_index == -1 || robotX < 50 ){ // No balls are found
 			cout << "No balls are detected..." << endl;
 			unknown_map_control(node_number);
 		} else { // make path_plan to nodes[i]
