@@ -147,16 +147,16 @@ vector<Vec4f> filtering(vector<Vec3f> circles, Mat img){
     if (filtering3(row,col)){
       continue;
     }
-    if (filtering4(row,col,img)){
-      int r = findTop(row,col,img);
-      float dist = buffer_depth.at<float>(r,col);
+    if (filtering4(HEIGHT-5,col,img)){
+      int r = findTop(HEIGHT-5,col,img);
+      float dist = buffer_depth.at<float>(r+3,col);
       circle[0] = col;
       circle[1] = r;
       circle[2] = RADIUS*f/dist;
       circle[3] = dist;
       filtered.push_back(circle);
     }
-    if (abs(r_pred-r) < r/5){
+    if (abs(r_pred-r) < r/7){
       circle[0] = col;
       circle[1] = row;
       circle[2] = r;
