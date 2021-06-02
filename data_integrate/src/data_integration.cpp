@@ -49,6 +49,7 @@ int out_of_range_pts;
 /* robot position variables */
 float pos_x, pos_y, pos_o;
 float target_x, target_y;
+float target_o;
 float diff_o;
 float dist;
 
@@ -124,9 +125,11 @@ void lidar_Callback(const sensor_msgs::LaserScan::ConstPtr& scan)
 			}
 			PASSED_STEP = true;
 		}
-		select_control();
+
 		commandVel.publish(targetVel);
 	}
+
+	select_control();
 }
 
 
@@ -164,7 +167,7 @@ void target_Callback(const geometry_msgs::Vector3::ConstPtr& waypoint) {
 	target_x = waypoint->x;
 	target_y = waypoint->y;
 	waytype = waypoint->z;
-	float target_o = atan2(target_y-pos_y, target_x-pos_x);
+	target_o = atan2(target_y-pos_y, target_x-pos_x);
 	diff_o = target_o - pos_o; // while -pos_o, |diff_o| may become > pi
 	// cout << "Target orientation is " << target_o << endl <<  "Current orientation is" << pos_o << endl;
 	// cout << "diff x,y is " << target_x-pos_x <<  ", " << target_y-pos_y << endl;
@@ -267,7 +270,7 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 	// cout << "DISTANCE IS " << dist << endl;
 	// cout << "ANGLE DIFF IS " << diff_o << endl;
 	
-	
+	cout<<"diff_o is!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! "<<diff_o<<endl;
 
 	switch (waytype) {
 		case -1: 
@@ -292,7 +295,13 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 			break;
 
 		case BALL:
-			if (fabs(diff_o) > ANGLE_THRESHOLD) {
+
+
+			if(fabs(diff_o) > M_PI/60 && dist < 60 ){
+				targetVel->linear.x  = -1;
+				targetVel->angular.z  = 0;
+
+			}else if (fabs(diff_o) > ANGLE_THRESHOLD) {
 				/* in place rotation ->should be modified*/
 				if (fabs(diff_o) < ANGLE_THRESHOLD*2) {
 					targetVel->linear.x  = 0;
@@ -310,7 +319,8 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 					targetVel->linear.x  = 0;
 					targetVel->angular.z = 0;
 				}
-			} else {
+
+			} else{
 				/* move forward ->should be modified*/
 				if (dist > 150) {
 					targetVel->linear.x  = 5;
@@ -320,6 +330,7 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 					targetVel->angular.z = 0;
 				}
 			}
+
 			break;
 		
 		case PILLAR:
@@ -386,8 +397,12 @@ void control_harvest(geometry_msgs::Twist* targetVel){
 
 		int BALL_LIDAR_DIST = 38;
 		bool close_enough = pow(pos_x-target_x, 2) + pow(pos_y-target_y,2) < pow(BALL_LIDAR_DIST, 2);
+		bool orientation_aligned = (fabs(diff_o) < M_PI/80);
 		
-		if(close_enough){
+
+		cout << "I'm Alive!!!!!!!!!!!!!!!!!!!!!! / " <<close_enough<<orientation_aligned<<endl<<"dist"<<dist<<endl<<"target_o "<<target_o<<" pos_o "<<pos_o<<endl;
+
+		if(close_enough  && orientation_aligned){
 			cout << "CLOSE ENOUGH! HARVEST BALL!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
 			delivery=1;
 			targetVel->linear.x=0;
@@ -420,7 +435,7 @@ void control_harvest(geometry_msgs::Twist* targetVel){
 
 void select_control(){
 	std_msgs::Int8 zone_info;
-	if( (0<left_back_pts && left_back_pts<30 && out_of_range_pts>30) || control_method== BALLHARVESTING){
+	if( (0<left_back_pts && left_back_pts<30 && out_of_range_pts>40) || control_method== BALLHARVESTING){
 		zone_info.data= BALLHARVESTING;
 		control_method= BALLHARVESTING;
 		targetVel.angular.x = 0;
@@ -492,7 +507,7 @@ void update_delivery_info(){
 	}
 
 
-	int th1=350;
+	int th1=120;
 	int th2=2000;
 	if(delivery_count>th1 && delivery==1){
 		delivery=0;
