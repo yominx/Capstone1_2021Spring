@@ -85,6 +85,7 @@ int control_method = ENTRANCE;
 #define BALL 	1
 #define PILLAR 	2
 #define GOAL 	3
+#define ROTATE 4
 
 #define DEBUG_HARVEST true
 

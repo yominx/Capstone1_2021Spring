@@ -13,13 +13,13 @@
 #include "core_msgs/goal_position.h"
 #include "std_msgs/Float32MultiArray.h"
 #include <math.h>
-
+#include "geometry_msgs/Twist.h"
 // #define DEBUG
 #define DEBUG_IMG
 
 using namespace cv;
 using namespace std;
-
+int waytype;
 Mat buffer, buffer_depth, original_img;
 Mat ball_img, goal_img;
 ros::Publisher pubBall;
@@ -202,7 +202,8 @@ void ball_detect(){
      Mat hsvCh[3];
      cvtColor(buffer, hsv, CV_BGR2HSV);
      split(hsv, hsvCh);
-     inRange(hsvCh[0], Scalar(55), Scalar(65), goal_img);
+     hsvCh[0].copyTo(goal_img);
+     inRange(goal_img, Scalar(55), Scalar(65), goal_img);
      inRange(hsvCh[0], Scalar(0), Scalar(10), hsvCh[0]);
      bitwise_and(hsvCh[0],hsvCh[1],hsvCh[0]);
      GaussianBlur(hsvCh[0],hsvCh[0], Size(5,5), 2.5, 2.5);
@@ -221,16 +222,15 @@ void ball_detect(){
      HoughCircles(goal_img,circlesG,HOUGH_GRADIENT, 1, goal_img.rows/30, 30, 10, 7, 200); //proceed circle detection
 
      //Circles (Cx, Cy, r)
-     return;
 #ifdef DEBUG
-     for(int k=0;k<circlesB.size();k++){
-         Vec3f params = circlesB[k];  //the information of k-th circle
-         float c_c=cvRound(params[0]);  //x position of k-th circle
-         float c_r=cvRound(params[1]);  //y position
-         float r=cvRound(params[2]); //radius
-         Point center(c_c,c_r);  //declare a Point Point(coloum, row)
-         circle(buffer,center,r,Scalar(255,0,255),2); //draw a circle on 'frame' based on the information given,   r = radius, Scalar(0,0,255) means color, 10 means lineWidth
-     }
+     // for(int k=0;k<circlesB.size();k++){
+     //     Vec3f params = circlesB[k];  //the information of k-th circle
+     //     float c_c=cvRound(params[0]);  //x position of k-th circle
+     //     float c_r=cvRound(params[1]);  //y position
+     //     float r=cvRound(params[2]); //radius
+     //     Point center(c_c,c_r);  //declare a Point Point(coloum, row)
+     //     circle(buffer,center,r,Scalar(255,0,255),2); //draw a circle on 'frame' based on the information given,   r = radius, Scalar(0,0,255) means color, 10 means lineWidth
+     //   }
      for(int k=0;k<circlesG.size();k++){
          Vec3f params = circlesG[k];  //the information of k-th circle
          float c_c=cvRound(params[0]);  //x position of k-th circle
@@ -272,14 +272,17 @@ void ball_detect(){
      }
      pubBall.publish(msgBall);  //publish a message
      msgClosest.data.clear();
+     if (waytype != 2 && (!fabs(minDist-9999)<10)){
      msgClosest.data.push_back(minDist);
      msgClosest.data.push_back(minAngle);
      pubClosest.publish(msgClosest);
-
+     }
      nBalls = filteredCirclesG.size();
+     cout << "-------------NGOALS---- " << nBalls << endl;
      msgGoal.size = nBalls; //adjust the size of message. (*the size of message is varying depending on how many circles are detected)
      msgGoal.angle.resize(nBalls);  //adjust the size of array
      msgGoal.dist.resize(nBalls);  //adjust the size of array
+     minDist = 9999., minAngle = 0.;
      for(int i=0;i<nBalls;i++){
          params = filteredCirclesG[i];  //the information of k-th circle
          c_c=(int)cvRound(params[0]);  //x position of k-th circle
@@ -289,12 +292,22 @@ void ball_detect(){
          circle(buffer,center,r,Scalar(0,255,0),2); //draw a circle on 'frame' based on the information given,   r = radius, Scalar(0,0,255) means color, 10 means lineWidth
          msgGoal.angle[i]=atan((c_c-319.5)/320*tan(FOV));  //[rad]
          msgGoal.dist[i]=params[3];   //[m]
+         if (params[3] < minDist) {
+           minDist = params[3];
+           minAngle = atan((c_c-319.5)/320*tan(FOV));
+         }
 #ifdef DEBUG
          cout << "[Ball] Distance" << msgBall.dist[i] << ", Angle= " << msgBall.angle[i] << endl;
          cout << endl;
 #endif
      }
-     pubGoal.publish(msgBall);  //publish a message
+     pubGoal.publish(msgGoal);  //publish a message
+     msgClosest.data.clear();
+     if (waytype == 2 && (!fabs(minDist-9999))<10){
+     msgClosest.data.push_back(minDist);
+     msgClosest.data.push_back(minAngle);
+     pubClosest.publish(msgClosest);
+     }
 #ifdef DEBUG_IMG
      cv::imshow("view", buffer);  //show the image with a window
      cv::waitKey(1);
@@ -326,7 +339,9 @@ void depthCallback(const sensor_msgs::ImageConstPtr& msg)
    }
 }
 
-
+void target_Callback(const geometry_msgs::Vector3::ConstPtr& waypoint) {
+	waytype = waypoint->z;
+}
 int main(int argc, char **argv)
 {
    ros::init(argc, argv, "bonus_ball_detect"); //init ros nodd
@@ -334,9 +349,11 @@ int main(int argc, char **argv)
    image_transport::ImageTransport it(nh); //create image transport and connect it to node hnalder
    image_transport::Subscriber sub_rgb = it.subscribe("/kinect_rgb", 1, imageCallback); //create subscriber
    image_transport::Subscriber sub_depth = it.subscribe("/kinect_depth", 1, depthCallback);
+   ros::Subscriber sub_target = nh.subscribe<geometry_msgs::Vector3>("/waypoint", 1000, target_Callback);
    pubBall = nh.advertise<core_msgs::ball_position>("/ball_position", 10); //setting publisher
    pubGoal = nh.advertise<core_msgs::goal_position>("/goal_position", 10); //setting publisher
    pubClosest = nh.advertise<std_msgs::Float32MultiArray>("/closest_point", 1);
+
    ros::Rate loop_rate(10);
    while (ros::ok()){
      cout << "here" << endl;
