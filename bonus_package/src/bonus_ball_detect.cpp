@@ -272,7 +272,7 @@ void ball_detect(){
      }
      pubBall.publish(msgBall);  //publish a message
      msgClosest.data.clear();
-     if (waytype != 2){
+     if (waytype != 2 && (!fabs(minDist-9999)<10)){
      msgClosest.data.push_back(minDist);
      msgClosest.data.push_back(minAngle);
      pubClosest.publish(msgClosest);
@@ -303,7 +303,7 @@ void ball_detect(){
      }
      pubGoal.publish(msgGoal);  //publish a message
      msgClosest.data.clear();
-     if (waytype == 2){
+     if (waytype == 2 && (!fabs(minDist-9999))<10){
      msgClosest.data.push_back(minDist);
      msgClosest.data.push_back(minAngle);
      pubClosest.publish(msgClosest);

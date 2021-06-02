@@ -271,45 +271,8 @@ int buildMap(int size, NodeMap* nodes, const core_msgs::multiarray::ConstPtr& ob
 
 
 void unknown_map_control(int node_number){
-	// cout << "Robot Position:" << robotX << ", " << robotY << endl;
-	int THR = 80;
-	for(int i=0; i<pillarCount; i++){
-		if( pow(pillarX[i]+GAP-robotX, 2) + pow(pillarY[i]-robotY, 2) > pow(THR, 2)
-			&& visible_arbitrary(robotX, robotY, pillarX[i]+GAP, pillarY[i])) {
-			publish_wayp(pillarX[i]+GAP, pillarY[i], -1);
-			visualize(node_number, nodes, -1, pillarX[i]+GAP, pillarY[i]);
-			return;
-		} else if(pow(pillarX[i]-GAP-robotX, 2) + pow(pillarY[i]-robotY, 2) > pow(THR, 2)
-			&& visible_arbitrary(robotX, robotY, pillarX[i]-GAP, pillarY[i])) {
-			publish_wayp(pillarX[i]+GAP, pillarY[i], -1);
-			visualize(node_number, nodes, -1, pillarX[i]-GAP, pillarY[i]);
-			return;
-		} else if(pow(pillarX[i]-robotX, 2) + pow(pillarY[i]+GAP-robotY, 2) > pow(THR, 2)
-			&& visible_arbitrary(robotX, robotY, pillarX[i], pillarY[i]+GAP)) {
-			publish_wayp(pillarX[i]+GAP, pillarY[i], -1);
-			visualize(node_number, nodes, -1, pillarX[i], pillarY[i]+GAP);
-			return;
-		} else if(pow(pillarX[i]-robotX, 2) + pow(pillarY[i]-GAP-robotY, 2) > pow(THR, 2)
-			&& visible_arbitrary(robotX, robotY, pillarX[i], pillarY[i]-GAP)) {
-			publish_wayp(pillarX[i]+GAP, pillarY[i], -1);
-			visualize(node_number, nodes, -1, pillarX[i], pillarY[i]-GAP);
-			return;
-		}
-	}
-
-
-	if (visible_arbitrary(robotX, robotY, robotX + 30, robotY - 15)) {
-		publish_wayp(robotX + 30, robotY - 15, -1);
-		visualize(node_number, nodes, -1, robotX + 30, robotY - 15);
-	} else if(visible_arbitrary(robotX, robotY, robotX + 30, robotY)) {
-		publish_wayp(robotX + 30, robotY, -1);
-		visualize(node_number, nodes, -1, robotX + 30, robotY);
-	} else if (visible_arbitrary(robotX, robotY, robotX, robotY -30)) {
-		publish_wayp(robotX, robotY - 30, -1);
-		visualize(node_number, nodes, -1, robotX, robotY - 30);
-	} else{
+	// cout << "Robot Position:" << robotX << ", " << robotY << endl
 		publish_wayp(0, 0, ROTATE);
-	}
 }
 
 void ballharvest_control(int node_number, int target_ball_index, NodeMap* nodes){

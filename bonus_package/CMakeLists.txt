@@ -64,7 +64,7 @@ target_link_libraries(bonus_path_planner
 )
 
 
-add_executable(bonus_data_integration src/bonus_data_integration.cpp)
+add_executable(bonus_data_integration src/bonus_data_integration_2.cpp)
 add_dependencies(bonus_data_integration core_msgs_generate_messages_cpp)
 target_link_libraries(bonus_data_integration
   ${catkin_LIBRARIES} ${OpenCV_LIBS} ${cv_bridge_LIBRARIES}
