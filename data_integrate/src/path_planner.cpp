@@ -34,7 +34,7 @@
 /// MAP INFOS
 /// Belows are written in pixel unit. 1 pixel = 1 cm.
 /// MARGIN is similar to threshold.
-#define ROBOT_SIZE 23
+#define ROBOT_SIZE 30
 #define PILLAR_RADIUS 7.5
 #define	MARGIN 5
 #define	THRESHOLD 7
@@ -62,7 +62,7 @@ int robotX, 	robotY,
 	goalX,		goalY;
 
 int REMAINING_BALLS = 5;
-int GAP = 1.414*(ROBOT_SIZE + PILLAR_RADIUS + MARGIN);
+int GAP = 1.6*(ROBOT_SIZE + PILLAR_RADIUS + MARGIN);
 bool END = false;
 
 class NodeMap{
@@ -272,7 +272,7 @@ int buildMap(int size, NodeMap* nodes, const core_msgs::multiarray::ConstPtr& ob
 
 void unknown_map_control(int node_number){
 	// cout << "Robot Position:" << robotX << ", " << robotY << endl;
-	int THR = 80;
+	int THR = 130;
 	for(int i=0; i<pillarCount; i++){
 		if( pow(pillarX[i]+GAP-robotX, 2) + pow(pillarY[i]-robotY, 2) > pow(THR, 2) 
 			&& visible_arbitrary(robotX, robotY, pillarX[i]+GAP, pillarY[i])) {
@@ -568,7 +568,6 @@ void visualize(int size, NodeMap* nodes, int goal_index, int targetX, int target
    	int cur_idx = goal_index;
    	if (cur_idx == -1){
 	    imshow("BALL HARVESTING MAP", missionmap);
-    	moveWindow("BALL HARVESTING MAP", 0, 0);
 		waitKey(10);
    		return;
    	}
@@ -584,7 +583,6 @@ void visualize(int size, NodeMap* nodes, int goal_index, int targetX, int target
 	}
 	// cout << "[Visualize] MAP CONFIGURATION DONE" << endl;
     imshow("BALL HARVESTING MAP", missionmap);
-    moveWindow("BALL HARVESTING MAP", 0, 0);
 	waitKey(10);
 
 }

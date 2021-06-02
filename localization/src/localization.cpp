@@ -434,25 +434,33 @@ void entrance_Callback(const std_msgs::Int8::ConstPtr& zone)
 float linear_vel_now, linear_vel_prev=0;
 float angular_vel_now, angular_vel_prev=0;
 float Ts;
+int delivery_mode=0;
 
 void control_input_Callback(const geometry_msgs::Twist::ConstPtr& targetVel){
   linear_vel_now = targetVel->linear.x;
   angular_vel_now = targetVel->angular.z;
 
-  float lin_scaling=1;
-  float ang_scaling=0.05;
+  float lin_scaling=0.001;
+  float ang_scaling=0;
 
-  if (zone_info==2 && initial_step>10){
-  robot_pos.x=robot_pos.x+linear_vel_prev*cos(robot_pos.z)*lin_scaling;
-  robot_pos.y=robot_pos.y+linear_vel_prev*sin(robot_pos.z)*lin_scaling;
-  robot_pos.z=robot_pos.z+angular_vel_prev*ang_scaling;
+  if (zone_info==2 && initial_step>=100 && delivery_mode==0){
+
+    //cout<<"x "<<robot_pos.x<<"y "<<robot_pos.y<<"z "<<robot_pos.z<<endl;
+
+    robot_pos.x=robot_pos.x+linear_vel_prev*cos(robot_pos.z)*lin_scaling;
+    robot_pos.y=robot_pos.y+linear_vel_prev*sin(robot_pos.z)*lin_scaling;
+    robot_pos.z=robot_pos.z+angular_vel_prev*ang_scaling;
+
+    //cout<<"x should be increased by "<<linear_vel_prev*cos(robot_pos.z)*lin_scaling<<endl<<"y should be increased by "<<linear_vel_prev*sin(robot_pos.z)*lin_scaling<<endl<<"angle should be increased by "<<angular_vel_prev*ang_scaling<<endl;
+    //cout<<"now x "<<robot_pos.x<<" now y "<<robot_pos.y<<" now z "<<robot_pos.z<<endl<<endl;
+
   }
-  // cout<<"x should be increased by"<<linear_vel_prev*cos(robot_pos.z)*lin_scaling<<endl<<"y should be increased by "<<linear_vel_prev*sin(robot_pos.z)*lin_scaling<<endl<<"angle should be increased by"<<angular_vel_prev*ang_scaling<<endl;
+  
   linear_vel_prev=linear_vel_now;
   angular_vel_prev=angular_vel_now;
 }
 
-int delivery_mode=0;
+
 void delivery_mode_Callback(const std_msgs::Int8::ConstPtr& delivery){
   delivery_mode=delivery->data;
 }
@@ -597,7 +605,7 @@ int main(int argc, char **argv)
           robot_pos.y=50;
           robot_pos.z=2*PI-0.2;
           //cout<<"localization not yet"<<endl;
-        }else if (zone_info==2 && initial_step<10){
+        }else if (zone_info==2 && initial_step<100){
           rectangular_map(lines, 30, 0.3);
           initial_step++;
           if( robot_pos.x==-20 && robot_pos.y==50 && robot_pos.z==2*PI-0.2){
@@ -607,7 +615,7 @@ int main(int argc, char **argv)
             rectangular_map(lines, 30, 0.3);
           }
 
-          if( robot_pos.x==-20 && robot_pos.y==50 && robot_pos.z==2*PI-0.09){
+          if( robot_pos.x==-20 && robot_pos.y==50 && robot_pos.z==0.09){
             robot_pos.x=-20;
             robot_pos.y=50;
             robot_pos.z=2*PI-0.2;
@@ -615,7 +623,7 @@ int main(int argc, char **argv)
           }
 
         }else{
-          rectangular_map(lines, 20, 0.2); //angle_threshold는 최대 0.7보다는 작아야 한다.
+          rectangular_map(lines, 30, 0.2); //angle_threshold는 최대 0.7보다는 작아야 한다.
         }
 
         //Getting obstacle location
