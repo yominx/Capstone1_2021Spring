@@ -180,18 +180,18 @@ void target_Callback(const geometry_msgs::Vector3::ConstPtr& waypoint) {
 
 	if(control_method == BALLHARVESTING){
 		control_ballharvesting(&targetVel);
-		if (STOP_FLAG) {
-			int t = 1;
-			ros::Time beginTime =ros::Time::now();
-			ros::Duration delta_t = ros::Duration(t);
-			ros::Time endTime=beginTime + delta_t;
-			while(ros::Time::now()<endTime)
-			{
-				commandVel.publish(targetVel);
-				ros::Duration(0.1).sleep();
-			}
-			STOP_FLAG = false;
-		}
+		// if (STOP_FLAG) {
+		// 	float t = 0.5;
+		// 	ros::Time beginTime =ros::Time::now();
+		// 	ros::Duration delta_t = ros::Duration(t);
+		// 	ros::Time endTime=beginTime + delta_t;
+		// 	while(ros::Time::now()<endTime)
+		// 	{
+		// 		commandVel.publish(targetVel);
+		// 		ros::Duration(0.1).sleep();
+		// 	}
+		// 	STOP_FLAG = false;
+		// }
 
 		//Ball pickup/dumping
 		control_harvest(&targetVel);
@@ -260,7 +260,7 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 void control_ballharvesting(geometry_msgs::Twist *targetVel)
 {
 	float ANGLE_THRESHOLD = M_PI/100;
-	float BALL_DIST_THRESHOLD = 41;
+	float BALL_DIST_THRESHOLD = 38;
 	float PILLAR_DIST_THRESHOLD = 50;
 	float GOAL_DIST_THRESHOLD = 67;
 	float angle_sign = (diff_o > 0 ? 1 : -1);
@@ -310,12 +310,11 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 					targetVel->linear.x  = 0;
 					targetVel->angular.z = angle_sign;
 				}
-
-			}else if (dist < BALL_DIST_THRESHOLD) {
-				if (!STOP_FLAG && dist>=39)  {
-					targetVel->linear.x  = -targetVel->linear.x/4;
-					targetVel->angular.z = -targetVel->angular.z/4;
-					STOP_FLAG = true;
+			} else if (dist < BALL_DIST_THRESHOLD) {
+				if (!STOP_FLAG && ((targetVel->linear.x)+(targetVel->angular.z)) != 0) {
+					targetVel->linear.x  = targetVel->linear.x/4;
+					targetVel->angular.z = targetVel->angular.z/4;
+					// STOP_FLAG = true;
 				} else {
 					targetVel->linear.x  = 0;
 					targetVel->angular.z = 0;
@@ -373,9 +372,9 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 					targetVel->linear.x  = 0.5 + 2*(dist/GOAL_DIST_THRESHOLD - 1);
 				} else {
 					if (!STOP_FLAG && ((targetVel->linear.x)+(targetVel->angular.z)) != 0) {
-						targetVel->linear.x  = -targetVel->linear.x/4;
-						targetVel->angular.z = -targetVel->angular.z/4;
-						STOP_FLAG = true;
+						targetVel->linear.x  = targetVel->linear.x/4;
+						targetVel->angular.z = targetVel->angular.z/4;
+						// STOP_FLAG = true;
 					} else {
 						targetVel->linear.x  = 0;
 						targetVel->angular.z = 0;
@@ -396,7 +395,7 @@ void control_harvest(geometry_msgs::Twist* targetVel){
 
 	if(waytype==BALL){
 
-		int BALL_LIDAR_DIST = 40;
+		int BALL_LIDAR_DIST = 38;
 		bool close_enough = pow(pos_x-target_x, 2) + pow(pos_y-target_y,2) < pow(BALL_LIDAR_DIST, 2);
 		bool orientation_aligned = (fabs(diff_o) < M_PI/80);
 		
@@ -493,7 +492,7 @@ bool meet_step()
 		cout << "NO IMAGE!" << endl;
 		return false;
 	}
-	if (minValue<0.239 && minValue>0.15) {
+	if (minValue<0.257 && minValue>0.15) {
 		cout << "THE ROBOT MEET THE STEP!!" << endl;
 		return true;
 	}

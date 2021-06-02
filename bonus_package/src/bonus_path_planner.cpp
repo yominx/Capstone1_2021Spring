@@ -136,7 +136,7 @@ void publish_wayp(int x, int y, int z){
 // 			if(distsq < pow(PILLAR_RADIUS+ROBOT_SIZE, 2)) return false;
 // 		}
 // 		for(int j=0;j<ballCount;j++){ // check ball-collision
-// 			if((ballX[j] == x1 && ballY[j] == y1) 
+// 			if((ballX[j] == x1 && ballY[j] == y1)
 // 				|| (ballX[j] == x2 && ballY[j] == y2))
 // 					continue;
 // 			distsq = pow(posX-ballX[j], 2) + pow(posY-ballY[j],2);
@@ -274,22 +274,22 @@ void unknown_map_control(int node_number){
 	// cout << "Robot Position:" << robotX << ", " << robotY << endl;
 	int THR = 80;
 	for(int i=0; i<pillarCount; i++){
-		if( pow(pillarX[i]+GAP-robotX, 2) + pow(pillarY[i]-robotY, 2) > pow(THR, 2) 
+		if( pow(pillarX[i]+GAP-robotX, 2) + pow(pillarY[i]-robotY, 2) > pow(THR, 2)
 			&& visible_arbitrary(robotX, robotY, pillarX[i]+GAP, pillarY[i])) {
 			publish_wayp(pillarX[i]+GAP, pillarY[i], -1);
 			visualize(node_number, nodes, -1, pillarX[i]+GAP, pillarY[i]);
 			return;
-		} else if(pow(pillarX[i]-GAP-robotX, 2) + pow(pillarY[i]-robotY, 2) > pow(THR, 2) 
+		} else if(pow(pillarX[i]-GAP-robotX, 2) + pow(pillarY[i]-robotY, 2) > pow(THR, 2)
 			&& visible_arbitrary(robotX, robotY, pillarX[i]-GAP, pillarY[i])) {
 			publish_wayp(pillarX[i]+GAP, pillarY[i], -1);
 			visualize(node_number, nodes, -1, pillarX[i]-GAP, pillarY[i]);
 			return;
-		} else if(pow(pillarX[i]-robotX, 2) + pow(pillarY[i]+GAP-robotY, 2) > pow(THR, 2) 
+		} else if(pow(pillarX[i]-robotX, 2) + pow(pillarY[i]+GAP-robotY, 2) > pow(THR, 2)
 			&& visible_arbitrary(robotX, robotY, pillarX[i], pillarY[i]+GAP)) {
 			publish_wayp(pillarX[i]+GAP, pillarY[i], -1);
 			visualize(node_number, nodes, -1, pillarX[i], pillarY[i]+GAP);
 			return;
-		} else if(pow(pillarX[i]-robotX, 2) + pow(pillarY[i]-GAP-robotY, 2) > pow(THR, 2) 
+		} else if(pow(pillarX[i]-robotX, 2) + pow(pillarY[i]-GAP-robotY, 2) > pow(THR, 2)
 			&& visible_arbitrary(robotX, robotY, pillarX[i], pillarY[i]-GAP)) {
 			publish_wayp(pillarX[i]+GAP, pillarY[i], -1);
 			visualize(node_number, nodes, -1, pillarX[i], pillarY[i]-GAP);
@@ -415,7 +415,7 @@ void ballcount_callback(const std_msgs::Int8::ConstPtr& count){
 
 int main(int argc, char **argv)
 {
-    ros::init(argc, argv, "path_planner");
+    ros::init(argc, argv, "bonus_path_planner");
     ros::NodeHandle n;
 
     ros::Subscriber sub_positions = n.subscribe<core_msgs::multiarray>("/position", 100, positions_callback);

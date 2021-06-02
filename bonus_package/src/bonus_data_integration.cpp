@@ -179,7 +179,7 @@ void target_Callback(const geometry_msgs::Vector3::ConstPtr& waypoint) {
 	target_distance = waypoint->x;
 	target_orientation = waypoint->y;
 
-	diff_o = target_orientation; 
+	diff_o = target_orientation;
 
 	// atan2: -pi ~ pi, pos_o: 0 ~ 2pi => -3pi ~ pi
 	while (diff_o < -M_PI) diff_o = diff_o + 2*M_PI;
@@ -222,7 +222,7 @@ void target_Callback(const geometry_msgs::Vector3::ConstPtr& waypoint) {
 
 // 	map_mutex.lock();
 // 	left_points=0; right_points=0; left_back_pts=0; right_back_pts=0; out_of_range_pts=0;
-	
+
 // 	for (int i = 0; i < lidar_size; i++) {
 //         if (MIN_DIST_THRESHOLD < lidar_distance[i] && lidar_distance[i]< RADIUS
 //         	&& 0 < lidar_degree[i] && lidar_degree[i] < 90){
@@ -279,8 +279,8 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 	// cout << "[CONTROL] Angle difference is " << diff_o << endl;
 	cout << "DISTANCE IS " << dist << endl;
 	cout << "ANGLE DIFF IS " << diff_o << endl;
-	
-	
+
+
 
 	switch (waytype) {
 		case BALL:
@@ -313,7 +313,7 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 				}
 			}
 			break;
-		
+
 		case PILLAR:
 			if (fabs(diff_o) > ANGLE_THRESHOLD) {
 				/* in place rotation ->should be modified*/
@@ -377,7 +377,7 @@ void control_harvest(geometry_msgs::Twist* targetVel){
 		int ball_LIDAR_DIST = 40;
 		//bool close_enough = pow(pos_x-target_x, 2) + pow(pos_y-target_y,2) < pow(BALL_LIDAR_DIST, 2);
 		bool close_enough = (target_distance < ball_LIDAR_DIST);
-		
+
 		if(close_enough){
 			cout << "CLOSE ENOUGH! HARVEST BALL" << endl;
 			// cout << "Delivery Count: " <<delivery_count << endl;
@@ -407,7 +407,7 @@ void control_harvest(geometry_msgs::Twist* targetVel){
 				}
 			}else{
 				targetVel->linear.x  = 0;
-				
+
 				if (pos_o<M_PI && is_initial_step==true){
 					float target_o = pos_o+M_PI;
 					is_initial_step=false;
@@ -428,7 +428,7 @@ void control_harvest(geometry_msgs::Twist* targetVel){
 
 			}
 
-			
+
 		}
 }
 }
@@ -457,15 +457,15 @@ void control_harvest(geometry_msgs::Twist* targetVel){
 
 int main(int argc, char **argv)
 {
-    ros::init(argc, argv, "data_integration_bonus");
+    ros::init(argc, argv, "bonus_data_integration");
     ros::NodeHandle n;
-	
+
 	// image_transport::ImageTransport it(n); //create image transport and connect it to node hnalder
 	// image_transport::Subscriber sub_depth = it.subscribe("/kinect_depth", 1, depth_Callback);
 
     // ros::Subscriber sub = n.subscribe<sensor_msgs::LaserScan>("/scan", 1000, lidar_Callback);
     // ros::Subscriber sub1 = n.subscribe<core_msgs::ball_position>("/position", 1000, camera_Callback);
-    
+
 	ros::Subscriber sub_pos = n.subscribe<geometry_msgs::Vector3>("/robot_pos", 1000, position_Callback);
 	ros::Subscriber sub_target = n.subscribe<geometry_msgs::Vector3>("/waypoint", 1000, target_Callback);
 

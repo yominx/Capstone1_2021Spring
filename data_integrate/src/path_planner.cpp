@@ -269,6 +269,21 @@ int buildMap(int size, NodeMap* nodes, const core_msgs::multiarray::ConstPtr& ob
 	return node_number;
 }
 
+void arbit_pos_control(int node_number){
+	if(visible_arbitrary(robotX, robotY, robotX + 30, robotY)) {
+		publish_wayp(robotX + 30, robotY, -1);
+		visualize(node_number, nodes, -1, robotX + 30, robotY);
+	} else if (visible_arbitrary(robotX, robotY, robotX + 30, robotY - 15)) {
+		publish_wayp(robotX + 30, robotY - 15, -1);
+		visualize(node_number, nodes, -1, robotX + 30, robotY - 15);
+	} else if (visible_arbitrary(robotX, robotY, robotX, robotY -30)) {
+		publish_wayp(robotX, robotY - 30, -1);
+		visualize(node_number, nodes, -1, robotX, robotY - 30);
+	} else{
+		publish_wayp(0, 0, ROTATE);
+	}
+
+}
 
 void unknown_map_control(int node_number){
 	// cout << "Robot Position:" << robotX << ", " << robotY << endl;
@@ -297,19 +312,7 @@ void unknown_map_control(int node_number){
 		}
 	}
 
-
-	if (visible_arbitrary(robotX, robotY, robotX + 30, robotY - 15)) {
-		publish_wayp(robotX + 30, robotY - 15, -1);
-		visualize(node_number, nodes, -1, robotX + 30, robotY - 15);
-	} else if(visible_arbitrary(robotX, robotY, robotX + 30, robotY)) {
-		publish_wayp(robotX + 30, robotY, -1);
-		visualize(node_number, nodes, -1, robotX + 30, robotY);
-	} else if (visible_arbitrary(robotX, robotY, robotX, robotY -30)) {
-		publish_wayp(robotX, robotY - 30, -1);
-		visualize(node_number, nodes, -1, robotX, robotY - 30);
-	} else{
-		publish_wayp(0, 0, ROTATE);
-	}
+	arbit_pos_control(node_number);
 }
 
 void ballharvest_control(int node_number, int target_ball_index, NodeMap* nodes){
@@ -379,6 +382,8 @@ void goal_control(int size, NodeMap* nodes){
 void positions_callback(const core_msgs::multiarray::ConstPtr& object)
 {
 	if (END) publish_wayp(-1,-1,-1);
+
+
 	int size = (object->data.size())/3;
 	int node_number = 0;
 
@@ -390,10 +395,12 @@ void positions_callback(const core_msgs::multiarray::ConstPtr& object)
 	// cout << "	BALL   NUMBER: " << ballCount   << endl;
 	// visualize(size, nodes, -1, 0, 0);
 
-	if (REMAINING_BALLS > 0){
+	if(robotX < 50){
+		arbit_pos_control(node_number);
+	} else if (REMAINING_BALLS > 0){
 		cout << REMAINING_BALLS << " Balls are remaining..." << endl;
 		int target_ball_index = get_shortest_index(node_number, nodes);
-		if (target_ball_index == -1 || robotX < 50 ){ // No balls are found
+		if (target_ball_index == -1){ // No balls are found
 			cout << "No balls are detected..." << endl;
 			unknown_map_control(node_number);
 		} else { // make path_plan to nodes[i]
