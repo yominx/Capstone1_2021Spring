@@ -17,6 +17,7 @@
 #include "core_msgs/multiarray.h"
 #include "std_msgs/Float32MultiArray.h"
 #include "std_msgs/Int8.h"
+#include "geometry_msgs/Twist.h"
 
 #include "opencv2/opencv.hpp"
 #include <opencv2/highgui.hpp>
@@ -56,6 +57,8 @@ float pillarAngle[10];
 float X, Y, O;               // Odometry info
 bool odometryCalled = false;
 
+float angular_vel=0;
+
 Mat mapBall = cv::Mat::zeros(MAP_HEIGHT,MAP_WIDTH, CV_32S);
 Mat mapGoal = cv::Mat::zeros(MAP_HEIGHT,MAP_WIDTH, CV_32S);
 Mat mapPillar = cv::Mat::zeros(MAP_HEIGHT,MAP_WIDTH, CV_32S);
@@ -74,7 +77,14 @@ Mat mapPillarDebug;
 vector<int> reliableList;
 core_msgs::multiarray msg;
 
-float ALPHA = 0.5;
+
+int delivery_mode=0;
+void delivery_mode_Callback(const std_msgs::Int8::ConstPtr& delivery){
+  delivery_mode=delivery->data;
+}
+
+
+float ALPHA = 0.1;
 class Zones
 {
 public:
@@ -83,8 +93,8 @@ public:
   public:
     int type;
     int nPoints;
-    int cenRow; //(row,col)
-    int cenCol;
+    float cenRow; //(row,col)
+    float cenCol;
     int cnt;
     bool reliable;
     int zoneSize;
@@ -130,14 +140,20 @@ void Zones::addZone(int r, int c, int type)
 void Zones::removeZone(int r, int c, int type)
 {
   int n = zoneList.size();
+  float minDistsq = 9999999., tmpDistsq;
+  int minIdx;
   for (int i=0;i<n;i++){
-    if (zoneList[i].insideZone(r,c) && zoneList[i].reliable && zoneList[i].type == type ) {
+    if (zoneList[i].reliable && zoneList[i].type == type ) {
+      tmpDistsq = pow(r-zoneList[i].cenRow,2) + pow(c-zoneList[i].cenCol,2);
+      if (tmpDistsq < minDistsq){
+        minDistsq = tmpDistsq;
+        minIdx = i;
+      }
       cout << "Remove \n\ttype:" << zoneList[i].type <<
       "(x, y): " << zoneList[i].cenCol<< ", " << zoneList[i].cenRow << endl;
-      removeZone(i,type);
-      return;
     }
   }
+  removeZone(minIdx,type);
 }
 
 void Zones::removeZone(int i, int type)
@@ -162,7 +178,7 @@ void Zones::removeZone(int i, int type)
   cout << "RECTANGULAR: " << x << " and " << y << " DIFF " << delta << endl;
   Rect roi = Rect(Point(x-delta, y-delta),Point(x+delta, y+delta));
   map(roi) = Scalar(0);
-  circle(MAP, Point(zone.cenCol, zone.cenRow),2,Scalar(0,0,0), -1);
+  circle(MAP, Point(x, y),2,Scalar(0,0,0), -1);
   zoneList.erase(zoneList.begin()+i);
 }
 
@@ -170,11 +186,11 @@ Zones::Zone::Zone(int r, int c, int type):type(type),nPoints(1),cenRow(r),cenCol
 {
   switch(type){
     case BALL:
-      zoneSize = 40;
+      zoneSize = 35;
       threshold = 0.3;
       break;
     case PILLAR:
-      zoneSize = 20;
+      zoneSize = 50;
       threshold = 0.65;
       break;
     case GOAL:
@@ -206,7 +222,7 @@ void Zones::Zone::add(int r, int c, int type)
   }
   map.at<int>(r,c) += 1;
   // if (map.at<int>(r,c) > map.at<int>(cenRow,cenCol)){
-    circle(MAP, Point(cenCol, cenRow),2,Scalar(0,0,0), -1);
+    circle(MAP, Point(round(cenCol), round(cenRow)),2,Scalar(0,0,0), -1);
     cenRow = (cenRow == 0) ? r : ((1-ALPHA) * cenRow + ALPHA*r);
     cenCol = (cenCol == 0) ? c : ((1-ALPHA) * cenCol + ALPHA*c);
   // }
@@ -255,7 +271,7 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
       continue;
     }
 
-    zones.addZone(y,x,type);
+    if (fabs(angular_vel) < 0.5 || (delivery_mode!=1)) zones.addZone(y,x,type);
   }
 
   int zSize = zones.zoneList.size();
@@ -290,10 +306,12 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
 
   for (int i=0; i<repeat; i++){
     msg.data.push_back(type);
-    msg.data.push_back(zones.zoneList[reliableList[i]].cenCol);
-    msg.data.push_back(zones.zoneList[reliableList[i]].cenRow);
+    int x = zones.zoneList[reliableList[i]].cenCol;
+    int y = zones.zoneList[reliableList[i]].cenRow;
+    msg.data.push_back(x);
+    msg.data.push_back(y);
     nData += 1;
-    circle(MAP, Point(zones.zoneList[reliableList[i]].cenCol, zones.zoneList[reliableList[i]].cenRow),2,color, -1);
+    circle(MAP, Point(x, y),2,color, -1);
   }
 }
 
@@ -379,7 +397,7 @@ void ballPos_Callback(const core_msgs::ball_position::ConstPtr& pos)
 // void goalPos_Callback(const core_msgs::goal_position::ConstPtr& pos)
 // {
 //   nGoals = 1;
-//   goalAngle[0] = pos->angle;
+//   goalAngle[0] = (float)pos->angle;
 //   goalDist[0] = pos->dist;
 // }
 
@@ -413,17 +431,29 @@ void goalNum_Callback(const std_msgs::Int8 msg)
     }
 }
 
+
+void control_input_Callback(const geometry_msgs::Twist::ConstPtr& targetVel){
+  angular_vel = targetVel->angular.z;
+}
+
+
+
+
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "data_show_node");
     ros::NodeHandle n;
 
     ros::Publisher pub = n.advertise<core_msgs::multiarray>("/position", 1000); //odometry, 즉 robot의 위치를 Vector3로 발행한다.
+    ros::Subscriber commandVel = n.subscribe<geometry_msgs::Twist>("/command_vel", 10, control_input_Callback);
     ros::Subscriber subOdo = n.subscribe<geometry_msgs::Vector3>("/robot_pos", 1000, odometry_Callback);
     // ros::Subscriber subBall = n.subscribe<core_msgs::goal_position>("/goal_position", 1000, goalPos_Callback);
     ros::Subscriber subGoal = n.subscribe<core_msgs::ball_position>("/ball_position", 1000, ballPos_Callback);
     ros::Subscriber subPillar = n.subscribe<std_msgs::Float32MultiArray>("/obs_pos", 1000, pillarPos_Callback);
     ros::Subscriber subGoalNum = n.subscribe<std_msgs::Int8>("/ball_number", 10, goalNum_Callback);
+    ros::Subscriber delivery = n.subscribe<std_msgs::Int8>("/ball_delivery", 10, delivery_mode_Callback);
+
+
     ros::Rate loop_rate(10);
     line(MAP, Point(50, 50), Point(550, 50), Scalar(255,255,255), 1);
     line(MAP, Point(50, 50), Point(50, 250), Scalar(255,255,255), 1);

@@ -34,7 +34,7 @@
 /// MAP INFOS
 /// Belows are written in pixel unit. 1 pixel = 1 cm.
 /// MARGIN is similar to threshold.
-#define ROBOT_SIZE 23
+#define ROBOT_SIZE 30
 #define PILLAR_RADIUS 7.5
 #define	MARGIN 5
 #define	THRESHOLD 7
@@ -575,7 +575,6 @@ void visualize(int size, NodeMap* nodes, int goal_index, int targetX, int target
    	int cur_idx = goal_index;
    	if (cur_idx == -1){
 	    imshow("BALL HARVESTING MAP", missionmap);
-    	moveWindow("BALL HARVESTING MAP", 0, 0);
 		waitKey(10);
    		return;
    	}
@@ -591,7 +590,6 @@ void visualize(int size, NodeMap* nodes, int goal_index, int targetX, int target
 	}
 	// cout << "[Visualize] MAP CONFIGURATION DONE" << endl;
     imshow("BALL HARVESTING MAP", missionmap);
-    moveWindow("BALL HARVESTING MAP", 0, 0);
 	waitKey(10);
 
 }

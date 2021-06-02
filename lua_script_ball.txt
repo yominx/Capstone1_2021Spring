@@ -1,6 +1,6 @@
 function callback_cmdvel_sub(msg)
-    local Vl = msg.linear.x * 5
-    local Vr = msg.angular.z * 5
+    local Vl = msg.linear.x
+    local Vr = msg.angular.z
     local Vcollector = msg.angular.x
     
     sim.setJointMaxForce(joint11, 3.1)
@@ -55,10 +55,10 @@ function callback_ball_delivery_sub(msg)
             end
         end
     elseif delivery_mode==2 then
-        if(count2<300) then
+        if(count2<100) then
             sim.setJointTargetVelocity(joint01, -velocity2)
         end
-        if(count2>=300) then
+        if(count2>=100) then
             sim.setJointTargetVelocity(joint02, -velocity2)
         end
         count2=count2+1
@@ -105,3 +105,4 @@ function sysCall_cleanup()
     simROS.shutdownSubscriber(delvelSub)
         
 end
+
