@@ -387,6 +387,12 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
         pos_o=vectorMean(oridata);
         pos_x=vectorMean(xdata);
         pos_y=vectorMean(ydata);
+      }else if(pos_o==PI/2 || pos_o==PI || pos_o==1.5*PI || pos_o==2*PI){
+        pos_o=pos_o-0.01;
+        cout<<"oops!"<<endl;
+      }else if(pos_o==0){
+        pos_o=pos_o+0.01;
+        cout<<"oops!"<<endl;
       }else{
         pos_x=pos_x;
         pos_y=pos_y;
@@ -441,9 +447,9 @@ void control_input_Callback(const geometry_msgs::Twist::ConstPtr& targetVel){
   angular_vel_now = targetVel->angular.z;
 
   float lin_scaling=0.001;
-  float ang_scaling=0;
+  float ang_scaling=0.0001;
 
-  if (zone_info==2 && initial_step>=100 && delivery_mode==0){
+  if (zone_info==2 && initial_step>=1000 && delivery_mode==0){
 
     //cout<<"x "<<robot_pos.x<<"y "<<robot_pos.y<<"z "<<robot_pos.z<<endl;
 
@@ -605,7 +611,7 @@ int main(int argc, char **argv)
           robot_pos.y=50;
           robot_pos.z=2*PI-0.2;
           //cout<<"localization not yet"<<endl;
-        }else if (zone_info==2 && initial_step<100){
+        }else if (zone_info==2 && initial_step<=1000){
           rectangular_map(lines, 30, 0.3);
           initial_step++;
           if( robot_pos.x==-20 && robot_pos.y==50 && robot_pos.z==2*PI-0.2){

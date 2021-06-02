@@ -112,9 +112,9 @@ void lidar_Callback(const sensor_msgs::LaserScan::ConstPtr& scan)
 		control_entrance(&targetVel);
 		if (!DEBUG_HARVEST && !PASSED_STEP && meet_step()) {
 			int t = 15;
-			targetVel.linear.x  = 7;
+			targetVel.linear.x  = 7.01622;
 			targetVel.angular.z = 0;
-			targetVel.angular.x = 30; // collector velocity: angular.x
+			targetVel.angular.x = 7; // collector velocity: angular.x
 			ros::Time beginTime =ros::Time::now();
 			ros::Duration delta_t = ros::Duration(t);
 			ros::Time endTime=beginTime + delta_t;
@@ -252,7 +252,7 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 
 		prev_diff_points = diff;
 	}
-	targetVel->angular.x = -30;
+	targetVel->angular.x = -7;
 
 	map_mutex.unlock();
 }
@@ -260,7 +260,7 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 void control_ballharvesting(geometry_msgs::Twist *targetVel)
 {
 	float ANGLE_THRESHOLD = M_PI/100;
-	float BALL_DIST_THRESHOLD = 42;
+	float BALL_DIST_THRESHOLD = 38;
 	float PILLAR_DIST_THRESHOLD = 50;
 	float GOAL_DIST_THRESHOLD = 67;
 	float angle_sign = (diff_o > 0 ? 1 : -1);
@@ -395,7 +395,7 @@ void control_harvest(geometry_msgs::Twist* targetVel){
 
 	if(waytype==BALL){
 
-		int BALL_LIDAR_DIST = 40;
+		int BALL_LIDAR_DIST = 38;
 		bool close_enough = pow(pos_x-target_x, 2) + pow(pos_y-target_y,2) < pow(BALL_LIDAR_DIST, 2);
 		bool orientation_aligned = (fabs(diff_o) < M_PI/80);
 		
@@ -492,9 +492,15 @@ bool meet_step()
 		cout << "NO IMAGE!" << endl;
 		return false;
 	}
-	if (minValue<0.243 && minValue>0.15) {
-		cout << "THE ROBOT MEET THE STEP!!" << endl;
-		return true;
+	float targetL = buffer_depth.at<float>(479,30);
+	float targetR = buffer_depth.at<float>(479,610);
+	if (minValue<0.244 && minValue>0.15) {
+		float targetL = buffer_depth.at<float>(479,30);
+		float targetR = buffer_depth.at<float>(479,610);
+		if (fabs(targetL-targetR)<0.001) {
+			cout << "THE ROBOT MEET THE STEP!!" << endl;
+			return true;
+		}
 	}
 	cout << "NOT YET!" << endl;
 	return false;
@@ -507,7 +513,7 @@ void update_delivery_info(){
 	}
 
 
-	int th1=120;
+	int th1=50;
 	int th2=2000;
 	if(delivery_count>th1 && delivery==1){
 		delivery=0;
