@@ -477,7 +477,7 @@ bool meet_step()
 		cout << "NO IMAGE!" << endl;
 		return false;
 	}
-	if (minValue<0.239 && minValue>0.15) {
+	if (minValue<0.26 && minValue>0.15) {
 		cout << "THE ROBOT MEET THE STEP!!" << endl;
 		return true;
 	}
