@@ -74,7 +74,7 @@ Mat mapPillarDebug;
 vector<int> reliableList;
 core_msgs::multiarray msg;
 
-float ALPHA = 0.5;
+float ALPHA = 0.1;
 class Zones
 {
 public:
@@ -83,8 +83,8 @@ public:
   public:
     int type;
     int nPoints;
-    int cenRow; //(row,col)
-    int cenCol;
+    float cenRow; //(row,col)
+    float cenCol;
     int cnt;
     bool reliable;
     int zoneSize;
@@ -162,7 +162,7 @@ void Zones::removeZone(int i, int type)
   cout << "RECTANGULAR: " << x << " and " << y << " DIFF " << delta << endl;
   Rect roi = Rect(Point(x-delta, y-delta),Point(x+delta, y+delta));
   map(roi) = Scalar(0);
-  circle(MAP, Point(zone.cenCol, zone.cenRow),2,Scalar(0,0,0), -1);
+  circle(MAP, Point(x, y),2,Scalar(0,0,0), -1);
   zoneList.erase(zoneList.begin()+i);
 }
 
@@ -206,7 +206,7 @@ void Zones::Zone::add(int r, int c, int type)
   }
   map.at<int>(r,c) += 1;
   // if (map.at<int>(r,c) > map.at<int>(cenRow,cenCol)){
-    circle(MAP, Point(cenCol, cenRow),2,Scalar(0,0,0), -1);
+    circle(MAP, Point(round(cenCol), round(cenRow)),2,Scalar(0,0,0), -1);
     cenRow = (cenRow == 0) ? r : ((1-ALPHA) * cenRow + ALPHA*r);
     cenCol = (cenCol == 0) ? c : ((1-ALPHA) * cenCol + ALPHA*c);
   // }
@@ -290,10 +290,12 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
 
   for (int i=0; i<repeat; i++){
     msg.data.push_back(type);
-    msg.data.push_back(zones.zoneList[reliableList[i]].cenCol);
-    msg.data.push_back(zones.zoneList[reliableList[i]].cenRow);
+    int x = zones.zoneList[reliableList[i]].cenCol;
+    int y = zones.zoneList[reliableList[i]].cenRow;
+    msg.data.push_back(x);
+    msg.data.push_back(y);
     nData += 1;
-    circle(MAP, Point(zones.zoneList[reliableList[i]].cenCol, zones.zoneList[reliableList[i]].cenRow),2,color, -1);
+    circle(MAP, Point(x, y),2,color, -1);
   }
 }
 

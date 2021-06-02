@@ -80,7 +80,7 @@ int control_method = ENTRANCE;
 #define PILLAR 	2
 #define GOAL 	3
 
-#define DEBUG_HARVEST true
+#define DEBUG_HARVEST false
 
 using namespace std;
 
