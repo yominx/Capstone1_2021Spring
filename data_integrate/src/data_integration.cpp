@@ -234,13 +234,13 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 		// cout <<" OOR "<<out_of_range_pts<<endl;
 		int diff = left_points - right_points;
 		if (diff < -threshold) { // control to leftside
-			targetVel->linear.x  = 4;
-			targetVel->angular.z = -(diff+threshold)*0.04 + (diff-prev_diff_points)*2;  // TODO: change to PID control (Now P control)
+			targetVel->linear.x  = 4.7;
+			targetVel->angular.z = -(diff+threshold)*0.047 + (diff-prev_diff_points)*2.36;  // TODO: change to PID control (Now P control)
 		} else if (diff > threshold) { // control to rightside
-			targetVel->linear.x  = 4;
-			targetVel->angular.z = -(diff-threshold)*0.04 - (diff-prev_diff_points)*2;  // TODO: change to PID control (Now P control)
+			targetVel->linear.x  = 4.7;
+			targetVel->angular.z = -(diff-threshold)*0.047 - (diff-prev_diff_points)*2.36;  // TODO: change to PID control (Now P control)
 		} else { // Just move forward
-			targetVel->linear.x  = 5;
+			targetVel->linear.x  = 7;
 			targetVel->angular.z = 0;
 		}
 
@@ -477,7 +477,7 @@ bool meet_step()
 		cout << "NO IMAGE!" << endl;
 		return false;
 	}
-	if (minValue<0.257 && minValue>0.15) {
+	if (minValue<0.243 && minValue>0.15) {
 		cout << "THE ROBOT MEET THE STEP!!" << endl;
 		return true;
 	}
