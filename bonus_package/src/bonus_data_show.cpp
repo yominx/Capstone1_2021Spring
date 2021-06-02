@@ -58,15 +58,6 @@ Mat mapBall = cv::Mat::zeros(MAP_HEIGHT,MAP_WIDTH, CV_32S);
 Mat mapGoal = cv::Mat::zeros(MAP_HEIGHT,MAP_WIDTH, CV_32S);
 Mat MAP = cv::Mat::zeros(MAP_HEIGHT,MAP_WIDTH, CV_8UC3);     // final map
 
-#ifdef RAW
-Mat MAPRAW = cv::Mat::zeros(MAP_HEIGHT,MAP_WIDTH, CV_8UC3);
-#endif
-
-#ifdef DEBUG
-Mat mapBallDebug;
-Mat mapGoalDebug;
-#endif
-
 vector<int> reliableList;
 core_msgs::multiarray msg;
 
@@ -92,7 +83,6 @@ public:
     ~Zone();
     bool insideZone(int r, int c);
     void add(int r, int c, int type);
-    bool blocked();
   };
 
 public:
@@ -138,7 +128,7 @@ void Zones::removeZone(int r, int c, int type)
     if (zoneList[i].insideZone(r,c) && zoneList[i].reliable && zoneList[i].type == type ) {
       cout << "Remove \n\ttype:" << zoneList[i].type <<
       "(x, y): " << zoneList[i].cenCol<< ", " << zoneList[i].cenRow << endl;
-      removeZone(i,type);
+      this->removeZone(i,type);
       return;
     }
   }
@@ -173,7 +163,6 @@ void Zones::resetState()
     float theta = atan2(zoneList[i].cenRow-Y,zoneList[i].cenCol-X);
     if (theta < 0) theta += 2*M_PI;
     zoneList[i].inSight = (fabs(O-theta) < FOV) ? true : false;
-    if (zoneList[i].blocked()) zoneList[i].inSight = false;
     float dist = sqrt(pow(X-zoneList[i].cenCol,2) + pow(Y-zoneList[i].cenRow,2));
     if (dist > 50) zoneList[i].inSight = false;
     zoneList[i].checked = false;
@@ -235,16 +224,6 @@ void Zones::Zone::add(int r, int c, int type)
   ++nPoints;
 }
 
-bool cramer(float x1, float y1, float x2, float y2, float x3, float y3);
-bool Zones::Zone::blocked()
-{
-  // int pillarN = pillarZones.zoneList.size();
-  // // int ballN = ballZones.zoneList.size();
-  // for (int i=0; i<pillarN; i++){
-  //   if (cramer(X, Y, cenCol, cenRow, pillarZones.zoneList[i].cenCol, pillarZones.zoneList[i].cenRow)) return true;
-  // }
-  return false;
-}
 
 
 void sort(vector<int>& reliableList, const Zones& zones)
@@ -276,7 +255,7 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
     case GOAL:
       color = Scalar(0,255,0);
   }
-  if (type == BALL) zones.resetState(); // update whether the zone is visible and detected
+  // if (type == BALL) zones.resetState(); // update whether the zone is visible and detected
 
   for (int i=0; i<size; i++){ //ball_dist[i], ball_angle[i]
     int x = 350+(int)round(X+(DLC*cos(O)*100)+(dist[i]*cos(angle[i]+O)*100));
@@ -289,16 +268,16 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
   }
 
   int zSize;
-  zSize = zones.zoneList.size();
-  for (int i=0, j=0; i<zSize; i++,j++){
-    if (zones.zoneList[j].inSight && !(zones.zoneList[j].checked)){
-      zones.zoneList[j].disappearedCnt++;
-      if (zones.zoneList[j].disappearedCnt > 30){
-        zones.removeZone(j,type);
-        j--;
-      }
-    }
-  }
+  // zSize = zones.zoneList.size();
+  // for (int i=0, j=0; i<zSize; i++,j++){
+  //   if (zones.zoneList[j].inSight && !(zones.zoneList[j].checked)){
+  //     zones.zoneList[j].disappearedCnt++;
+  //     if (zones.zoneList[j].disappearedCnt > 30){
+  //       zones.removeZone(j,type);
+  //       j--;
+  //     }
+  //   }
+  // }
 
   zSize = zones.zoneList.size();
   reliableList.clear();
@@ -335,109 +314,6 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
   }
 }
 
-#ifdef DEBUG
-void showColoredMap(int type)
-{
-  // Mat map;
-  // Mat map_debug;
-  // double minVal, maxVal;
-  // Point minLoc, maxLoc;
-  // Point matchLoc;
-  switch(type){
-    case BALL:
-      mapBall.copyTo(mapBallDebug);
-      // minMaxLoc(mapBall, &minVal, &maxVal, &minLoc, &maxLoc, Mat());
-      mapBallDebug.convertTo(mapBallDebug,CV_8UC3);
-      imshow("colorMap", mapBallDebug);
-      break;
-    // case PILLAR:
-    //   mapPillar.copyTo(mapPillarDebug);
-    //   // minMaxLoc(mapPillar, &minVal, &maxVal, &minLoc, &maxLoc, Mat());
-    //   break;
-    // case GOAL:
-    //   mapGoal.copyTo(map);
-    //   color = Scalar(0,255,0);
-    //   minMaxLoc(mapGoal, &minVal, &maxVal, &minLoc, &maxLoc, Mat());
-  }
-}
-#endif
-
-#ifdef RAW
-void drawRawMap(int type, int n, float* dist, float* angle)
-{
-  Scalar color;
-  int x, y;
-  switch(type){
-    case BALL:
-      color = Scalar(0,0,255);
-      break;
-    case GOAL:
-      color = Scalar(0,255,0);
-      break;
-    case VEHICLE:
-      color = Scalar(255,0,0);
-  }
-  for (int i=0; i<n; i++){
-    int x, y;
-    switch(type){
-      case VEHICLE:
-      x = X;
-      y = Y;
-      break;
-      x = 350+(int)round(X+(DLC*cos(O)*100)+(dist[i]*cos(angle[i]+O)*100));
-      y = 650-(int)round(Y+(DLC*sin(O)*100)+(dist[i]*sin(angle[i]+O)*100));
-    }
-    circle(MAPRAW, Point(x,y), 5, color, -1);
-  }
-}
-#endif
-
-bool cramer(float x1, float y1, float x2, float y2, float x3, float y3)
-{
-	float x_perp, y_perp, distsq;
-	float x_min, x_max, y_min, y_max, det_a;
-	if (abs(x1-x2) < 0.01){
-		x_perp = x1;
-		y_perp = y3;
-	}
-	else if(abs(y1-y2)<0.01){
-		x_perp = x3;
-		y_perp = y1;
-	}
-	else {
-		float a11, a12, a13, a21, a22, a23;
-		a11 = y1-y2;
-		a12 = x2-x1;
-		a13 = y1*(x2-x1)-(y2-y1)*x1;
-		a21 = x2-x1;
-		a22 = y2-y1;
-		a23 = x3*(x2-x1)+y3*(y2-y1);
-		det_a = a11*a22-a12*a21;
-		x_perp = (a13*a22-a12*a23)/det_a;
-		y_perp = (a11*a23-a13*a21)/det_a;
-	}
-	if (x1 > x2) {
-		x_min = x2;
-		x_max = x1;
-	}
-	else {
-		x_min = x1;
-		x_max = x2;
-	}
-	if (y1 > y2) {
-		y_min = y2;
-		y_max = y1;
-	}
-	else {
-		y_min = y1;
-		y_max = y2;
-	}
-	if ( (x_perp > x_min) && (x_perp < x_max) && (y_perp > y_min) && (y_perp < y_max)){
-		distsq = pow(x_perp-x3, 2) + pow(y_perp-y3,2);
-		if(distsq < pow(PILLAR_RADIUS, 2)) return true;
-	}
-	return false;
-}
 
 void ballPos_Callback(const core_msgs::ball_position::ConstPtr& pos)
 {
@@ -494,12 +370,7 @@ int main(int argc, char **argv)
         msg.data.clear();
         msg.cols = 0;
         nData = 0;
-#ifdef RAW
-        drawRawMap(BALL, nBalls, ballDist, ballAngle);
-        drawRawMap(PILLAR, nGoals, goalDist, goalAngle);
-        imshow("raw map", MAPRAW);
-        waitKey(10);
-#endif
+
         filtering(ballZones, nBalls, ballDist, ballAngle, BALL, msg);
         filtering(goalZones, nGoals, goalDist, goalAngle, GOAL, msg);
         circle(MAP, Point(350+int(round(X)), 650-int(round(Y))), 5, cv::Scalar(255,0,0), -1);
@@ -507,9 +378,6 @@ int main(int argc, char **argv)
         msg.data.push_back(350+int(round(X)));
         msg.data.push_back(650-int(round(Y)));
         nData += 1;
-#ifdef DEBUG
-        showColoredMap(BALL);
-#endif
         //set the goal position
         pub.publish(msg);
         imshow("map", MAP);

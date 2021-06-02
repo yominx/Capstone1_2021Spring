@@ -34,8 +34,9 @@
 using namespace std;
 
 
-
-int delivery_mode=0;
+int cnt = 0;
+float sum = 0;
+int delivery_mode=1;
 void delivery_mode_Callback(const std_msgs::Int8::ConstPtr& delivery){
   delivery_mode=delivery->data;
 }
@@ -57,144 +58,118 @@ Eigen::Matrix4f transMtx_delta; //LiDAR 데이터를 이용한 ICP Dead Reckonin
 
 
 int first_step=1;
-void lidar_cb(const sensor_msgs::LaserScan::ConstPtr& scan){
 
-    if (delivery_mode !=0){
-        map_mutex.lock();
 
-        int i;
-        lidar_size = (scan->angle_max - scan->angle_min)/ scan->angle_increment+1;
-        for(i = 0; i < lidar_size; i++)
-        {
-            lidar_degree[i] = scan->angle_min + scan->angle_increment * i;
-            lidar_distance[i]=scan->ranges[i];
+void lidar_cb(sensor_msgs::LaserScan msg){
+
+    // angle in radian
+    float angle_min = msg.angle_min;
+    float angle_max = msg.angle_max;
+    float angle_increment = msg.angle_increment;
+    std::vector<float> range = msg.ranges;
+
+    // size of range vector
+    int len = range.size();
+    float angle_temp;
+
+    /// 1. LaserScan msg to PCL::PointXYZ
+
+    // initializae pointcloud
+    pcl::PointCloud<pcl::PointXYZ>::Ptr new_cloud (new::pcl::PointCloud<pcl::PointXYZ>);
+    pcl::ExtractIndices<pcl::PointXYZ> extract;
+    pcl::PointIndices::Ptr inf_points(new pcl::PointIndices());
+
+    new_cloud->is_dense = false;
+    new_cloud->width = len;
+    new_cloud->height = 1;
+    new_cloud->points.resize(len);
+
+    // fill the pointcloud
+    for(int i = 0; i < len; i++){
+        angle_temp =angle_min + angle_increment*i;
+        if (std::isinf(range[i])==false){
+            new_cloud->points[i].x = range[i] * cos(angle_temp);
+            new_cloud->points[i].y = range[i] * sin(angle_temp);
+            new_cloud->points[i].z = 1;
         }
-
-
-        vector<float> wall_distance, wall_degree;
-
-            int view_angle=0;
-            float sum=0;
-            float obstacle_avg_distance;
-            float obstacle_width;
-
-            if(lidar_distance[i] >0 && (std::isinf(lidar_distance[i])==false) ){
-                wall_distance.push_back(lidar_distance[0]);
-                wall_degree.push_back(lidar_degree[0]);
-            }
-
-            sum=sum+lidar_distance[0];
-
-            for(int i = 1; i < lidar_size; i++)
-            {
-            if(lidar_distance[i] >0 && (std::isinf(lidar_distance[i])==false) ){ //smaller than the maximum liDAR range(distance)
-                wall_distance.push_back(lidar_distance[i]);
-                wall_degree.push_back(lidar_degree[i]);
-                view_angle++;
-                sum=sum+lidar_distance[i];
-            }
-
-            if(abs(lidar_distance[i] - lidar_distance[i-1]) > 0.3){
-            //distance changed abruptly -> outermost wall or an another distant obstacle is detected.
-                view_angle=view_angle-1;
-                sum=sum-lidar_distance[i];
-                obstacle_avg_distance=sum/(view_angle+1);
-                obstacle_width=obstacle_avg_distance*(M_PI/180)*view_angle;
-    //Debugging:cout<<obstacle_width<<"/"<<view_angle<<endl;
-
-                if(0.07<obstacle_width && obstacle_width < 0.15 && view_angle>0 && abs(lidar_distance[i-1]-obstacle_avg_distance)<0.2 ){//threshold should be larger than the maximum width of the obstacle
-                //this means that formerly detected object has small width, which means it is likely to be an obstacle
-
-                for(int j=0; j<view_angle+2; j++){
-                    wall_distance.pop_back();
-                    wall_degree.pop_back();
-                } //remove the added lidar data as much as the view angle of the obstacle
-                wall_distance.push_back(lidar_distance[i]);
-                wall_degree.push_back(lidar_degree[i]);//This turn's LiDAR data is measuring new
-
-                }
-                view_angle=0; //Initiallization
-                sum=lidar_distance[i];
-            }
-            }
-
-
-
-        // initializae pointcloud
-        pcl::PointCloud<pcl::PointXYZ>::Ptr new_cloud (new::pcl::PointCloud<pcl::PointXYZ>);
-
-        new_cloud->is_dense = false;
-        new_cloud->width = wall_distance.size();
-        new_cloud->height = 1;
-        new_cloud->points.resize(wall_distance.size());
-
-        for(int i = 0; i < wall_distance.size(); i++){
-
-                new_cloud->points[i].x = wall_distance[i]*cos(wall_degree[i]);
-                new_cloud->points[i].y = -wall_distance[i]*sin(wall_degree[i]);
-                new_cloud->points[i].z = 0;
+        else {
+            inf_points->indices.push_back(i);
         }
-
-        // 2. Get transformation between previous pointcloud and current pointcloud
-
-        // transMtx_prev : transformation matrix at time (t-1)
-        // transMtx_now : transformation matrix at time (t)
-        // 4X4 transformation matrix (3X3: rotation matrix, 3X1: translation vector)
-
-        if(prev_cloud->width == 0){
-            // initialize transformation matrix. initial posiiton: x = 0, y = 0, theta = 0;
-            transMtx_prev << cos(0), -sin(0), 0, 0,
-                            sin(0), cos(0), 0, 0,
-                            0, 0, 1, 0,
-                            0, 0, 0, 1;
-        }
-
-        else{
-
-            // ICP algorithm
-            pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
-            icp.setInputSource(prev_cloud);
-            icp.setInputTarget(new_cloud);
-            pcl::PointCloud<pcl::PointXYZ> Final;
-            icp.align(Final);
-
-            transMtx_delta = icp.getFinalTransformation();
-
-        // 3. Get current transformation matrix using previous transformation and ICP result
-        //  (Odometry calculation)
-            transMtx_now =transMtx_prev*transMtx_delta;
-
-        // 4. Get current position from transformation matrix
-
-
-
-            robot_pos.x = transMtx_now(0, 3)*100;
-            robot_pos.y = transMtx_now(1,3)*100;
-            if(transMtx_now(0,0)>=0 && transMtx_now(1,0)>=0){
-                robot_pos.z=atan(transMtx_now(1,0)/transMtx_now(0,0));
-            }else if(transMtx_now(0,0)<=0 && transMtx_now(1,0)>=0){
-                robot_pos.z=M_PI+atan(transMtx_now(1,0)/transMtx_now(0,0));
-            }else if(transMtx_now(0,0)<=0 && transMtx_now(1,0)<=0){
-                robot_pos.z=M_PI+atan(transMtx_now(1,0)/transMtx_now(0,0));
-            }else if(transMtx_now(0,0)>=0 && transMtx_now(1,0)<=0){
-                robot_pos.z=2*M_PI+atan(transMtx_now(1,0)/transMtx_now(0,0));
-            }
-
-            transMtx_prev = transMtx_now; // Save current transformation matrix in transMtx_prev
-
-        }
-        // 5. Save new_cloud in prev_cloud
-
-        prev_cloud = new_cloud;
-
-        if(first_step==1){
-            initial_cloud=new_cloud;
-            first_step=first_step-1;
-        }
-        map_mutex.unlock();
     }
-}
 
+    // Remove infinite distance points from new_cloud
+    extract.setInputCloud(new_cloud);
+    extract.setIndices(inf_points);
+    extract.setNegative(true);
+    extract.filter(*new_cloud);
+
+    // 2. Get transformation between previous pointcloud and current pointcloud
+
+    // transMtx_prev : transformation matrix at time (t-1)
+    // transMtx_now : transformation matrix at time (t)
+    // 4X4 transformation matrix (3X3: rotation matrix, 3X1: translation vector)
+
+    if(prev_cloud->width == 0){
+
+        // initialize transformation matrix. initial posiiton: x = 0, y = 0, theta = 0;
+        transMtx_prev << cos(M_PI/2), -sin(M_PI/2), 0, 0,
+                        sin(M_PI/2), cos(M_PI/2), 0, 0,
+                        0, 0, 1, 0,
+                        0, 0, 0, 1;
+    }
+
+    else{
+
+        // ICP algorithm
+        // https://pcl.readthedocs.io/projects/tutorials/en/latest/iterative_closest_point.html#iterative-closest-point
+        // https://pcl.readthedocs.io/projects/tutorials/en/latest/interactive_icp.html#interactive-icp
+        pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
+        icp.setInputSource(prev_cloud);
+        icp.setInputTarget(new_cloud);
+        pcl::PointCloud<pcl::PointXYZ> Final;
+        icp.align(Final);
+        std::cout << "has converged:" << icp.hasConverged() << " score: " <<
+        icp.getFitnessScore() << std::endl;
+        std::cout << icp.getFinalTransformation() << std::endl;
+        sum += icp.getFitnessScore();
+        cnt++;
+        transMtx_delta = icp.getFinalTransformation();
+
+    // 3. Get current transformation matrix using previous transformation and ICP result
+    //  (Odometry calculation)
+
+        // TO DO START
+
+        transMtx_now = transMtx_prev * transMtx_delta;
+
+        // TO DO END
+
+    // 4. Get current position from transformation matrix
+
+        // TO DO START
+
+        robot_pos.x = transMtx_now(0, 3)*100;
+        robot_pos.y = transMtx_now(1,3)*100;
+        if(transMtx_now(0,0)>=0 && transMtx_now(1,0)>=0){
+            robot_pos.z=atan(transMtx_now(1,0)/transMtx_now(0,0));
+        }else if(transMtx_now(0,0)<=0 && transMtx_now(1,0)>=0){
+            robot_pos.z=M_PI+atan(transMtx_now(1,0)/transMtx_now(0,0));
+        }else if(transMtx_now(0,0)<=0 && transMtx_now(1,0)<=0){
+            robot_pos.z=M_PI+atan(transMtx_now(1,0)/transMtx_now(0,0));
+        }else if(transMtx_now(0,0)>=0 && transMtx_now(1,0)<=0){
+            robot_pos.z=2*M_PI+atan(transMtx_now(1,0)/transMtx_now(0,0));
+        }
+
+        // TO DO END
+
+        transMtx_prev = transMtx_now; // Save current transformation matrix in transMtx_prev
+
+    }
+    // 5. Save new_cloud in prev_cloud
+
+    prev_cloud = new_cloud;
+
+}
 
 int main(int argc, char **argv){
 
@@ -210,8 +185,6 @@ int main(int argc, char **argv){
 
 
     while(ros::ok()){
-
-
         ROS_INFO("pos : x = %f | y = %f | theta = %f", robot_pos.x, robot_pos.y, robot_pos.z);
 
         robot_pos_pub.publish(robot_pos);

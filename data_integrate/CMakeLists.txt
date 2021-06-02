@@ -36,7 +36,7 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
   include
 )
-add_executable(data_show_node src/data_show.cpp)
+add_executable(data_show_node src/data_showshowshow.cpp)
 add_dependencies(data_show_node core_msgs_generate_messages_cpp)
 
 
