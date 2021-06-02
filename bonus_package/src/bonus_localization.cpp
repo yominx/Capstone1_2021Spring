@@ -128,9 +128,9 @@ void lidar_cb(sensor_msgs::LaserScan msg){
         icp.setInputTarget(new_cloud);
         pcl::PointCloud<pcl::PointXYZ> Final;
         icp.align(Final);
-        std::cout << "has converged:" << icp.hasConverged() << " score: " <<
-        icp.getFitnessScore() << std::endl;
-        std::cout << icp.getFinalTransformation() << std::endl;
+        // std::cout << "has converged:" << icp.hasConverged() << " score: " <<
+        // icp.getFitnessScore() << std::endl;
+        // std::cout << icp.getFinalTransformation() << std::endl;
         sum += icp.getFitnessScore();
         cnt++;
         transMtx_delta = icp.getFinalTransformation();

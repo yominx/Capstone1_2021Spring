@@ -45,8 +45,8 @@
 #define GOAL 	3
 #define ROTATE  4
 
-#define MAP_WIDTH 	600
-#define MAP_HEIGHT 	400
+#define MAP_WIDTH 	700
+#define MAP_HEIGHT 	700
 
 
 boost::mutex node_lock;
@@ -349,7 +349,7 @@ void goal_control(int size, NodeMap* nodes){
 	}
 
 	if(goal_index == -1){ // GOAL not found...
-		cout << "[GOAL CONTROL] ERROR: GOAL IS NOT FOUND..." << endl;
+		// cout << "[GOAL CONTROL] ERROR: GOAL IS NOT FOUND..." << endl;
 		publish_wayp(0, 0, ROTATE);
 	} else if(pow(nodes[goal_index].x-robotX,2) + pow(nodes[goal_index].y-robotY,2) < pow(THRESHOLD,2)){ // close enough
 		END = true;
@@ -391,7 +391,7 @@ void positions_callback(const core_msgs::multiarray::ConstPtr& object)
 	// visualize(size, nodes, -1, 0, 0);
 
 	if (REMAINING_BALLS > 0){
-		cout << REMAINING_BALLS << " Balls are remaining..." << endl;
+		// cout << REMAINING_BALLS << " Balls are remaining..." << endl;
 		int target_ball_index = get_shortest_index(node_number, nodes);
 		if (target_ball_index == -1 || robotX < 50 ){ // No balls are found
 			cout << "No balls are detected..." << endl;
@@ -485,7 +485,7 @@ void update_visibility(int cur_idx, int goal_index, int size, NodeMap* node_list
 
 
 int Astar_plan(int size, int target_index, NodeMap* node_list){
-	cout << "[Astar] perform Astar" << endl;
+	// cout << "[Astar] perform Astar" << endl;
 	std::vector<int> visible_queue;
 	visible_queue.clear();
 	int cur_idx = -1, min_idx, start_idx;
@@ -504,7 +504,7 @@ int Astar_plan(int size, int target_index, NodeMap* node_list){
 
 	do{
 		if(cur_idx == -1){
-			cout << "[Astar] ERROR: Disconnected Nodes..." << endl;
+			// cout << "[Astar] ERROR: Disconnected Nodes..." << endl;
 			return -1;
 		}
 		// cout << "Now: "<< cur_idx << " Goal: " << target_index << endl;
@@ -520,7 +520,7 @@ int Astar_plan(int size, int target_index, NodeMap* node_list){
 	while (cur_node.prev_node_idx != start_idx) {
 		// cout << "Move " << cur_idx << " obj to " << cur_node.prev_node_idx << " obj." << endl;
 		if (cur_node.prev_node_idx == -1){
-			cout << "ERROR : No where to move for object " << cur_idx << endl;
+			// cout << "ERROR : No where to move for object " << cur_idx << endl;
 			return -1;
 		}
 		cur_idx = cur_node.prev_node_idx;

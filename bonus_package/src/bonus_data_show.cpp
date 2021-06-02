@@ -43,13 +43,13 @@ float FOV = 28.5*M_PI/180;
 int nData = 0;
 
 int nBalls=0;
-int remainBalls = 3;
+int remainBalls = 5;
 float ballDist[20];
 float ballAngle[20];         // Ball position info
 
 int nGoals=0;
-float goalDist[3];
-float goalAngle[3];   // Goal position info
+float goalDist[10];
+float goalAngle[10];   // Goal position info
 
 float X, Y, O;               // Odometry info
 bool odometryCalled = false;
@@ -76,9 +76,6 @@ public:
     bool reliable;
     int zoneSize;
     float threshold;
-    bool inSight;
-    bool checked;
-    int disappearedCnt;
     Zone(int r, int c, int type);
     ~Zone();
     bool insideZone(int r, int c);
@@ -94,7 +91,6 @@ public:
   void addZone(int r, int c, int type);
   void removeZone(int r, int c, int type);
   void removeZone(int i, int type);
-  void resetState();
 };
 
 Zones ballZones(5);
@@ -125,7 +121,7 @@ void Zones::removeZone(int r, int c, int type)
 {
   int n = zoneList.size();
   for (int i=0;i<n;i++){
-    if (zoneList[i].insideZone(r,c) && zoneList[i].reliable && zoneList[i].type == type ) {
+    if (zoneList[i].insideZone(r,c) && zoneList[i].reliable) {
       cout << "Remove \n\ttype:" << zoneList[i].type <<
       "(x, y): " << zoneList[i].cenCol<< ", " << zoneList[i].cenRow << endl;
       this->removeZone(i,type);
@@ -148,37 +144,20 @@ void Zones::removeZone(int i, int type)
   if(i >= zoneList.size()){
     cerr << "INVALID INDEX" << i << "is larger than " << zoneList.size() << endl;
   }
-  Zone zone = zoneList[i];
-  int x = zone.cenCol, y = zone.cenRow, delta=zone.zoneSize;
+  int x = zoneList[i].cenCol, y = zoneList[i].cenRow, delta=zoneList[i].zoneSize;
   cout << "RECTANGULAR: " << x << " and " << y << " DIFF " << delta << endl;
   Rect roi = Rect(Point(x-delta, y-delta),Point(x+delta, y+delta));
   map(roi) = Scalar(0);
-  circle(MAP, Point(zone.cenCol, zone.cenRow),5,Scalar(0,0,0), -1);
+  circle(MAP, Point(zoneList[i].cenCol, zoneList[i].cenRow),5,Scalar(0,0,0), -1);
   zoneList.erase(zoneList.begin()+i);
 }
 
-void Zones::resetState()
-{
-  for (int i = 0; i<zoneList.size(); i++){
-    float theta = atan2(zoneList[i].cenRow-Y,zoneList[i].cenCol-X);
-    if (theta < 0) theta += 2*M_PI;
-    zoneList[i].inSight = (fabs(O-theta) < FOV) ? true : false;
-    float dist = sqrt(pow(X-zoneList[i].cenCol,2) + pow(Y-zoneList[i].cenRow,2));
-    if (dist > 50) zoneList[i].inSight = false;
-    zoneList[i].checked = false;
-  }
-}
-
-Zones::Zone::Zone(int r, int c, int type):type(type),nPoints(1),cenRow(r),cenCol(c),cnt(1),reliable(false),inSight(true),checked(true),disappearedCnt(0)
+Zones::Zone::Zone(int r, int c, int type):type(type),nPoints(1),cenRow(r),cenCol(c),cnt(1),reliable(false)
 {
   switch(type){
     case BALL:
-      zoneSize = 40;
-      threshold = 0.3;
-      break;
-    case PILLAR:
-      zoneSize = 20;
-      threshold = 0.65;
+      zoneSize = 35;
+      threshold = 0.4;
       break;
     case GOAL:
       zoneSize = 50;
@@ -198,12 +177,15 @@ bool Zones::Zone::insideZone(int r, int c)
 void Zones::Zone::add(int r, int c, int type)
 {
   Mat map;
+  Scalar color;
   switch(type){
     case BALL:
       map = mapBall;
+      color = Scalar(0,0,255);
       break;
     case GOAL:
       map = mapGoal;
+      color = Scalar(0,255,0);
   }
   map.at<int>(r,c) += 1;
   circle(MAP, Point(cenCol, cenRow),5,Scalar(0,0,0), -1);
@@ -218,12 +200,9 @@ void Zones::Zone::add(int r, int c, int type)
     cenRow = (cenRow == 0) ? r : ((1-ALPHA) * cenRow + ALPHA*r);
     cenCol = (cenCol == 0) ? c : ((1-ALPHA) * cenCol + ALPHA*c);
   }
-  checked = true;
-  disappearedCnt = 0;
-  // }
+  circle(MAP, Point(cenCol, cenRow),5,color, -1);
   ++nPoints;
 }
-
 
 
 void sort(vector<int>& reliableList, const Zones& zones)
@@ -268,17 +247,6 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
   }
 
   int zSize;
-  // zSize = zones.zoneList.size();
-  // for (int i=0, j=0; i<zSize; i++,j++){
-  //   if (zones.zoneList[j].inSight && !(zones.zoneList[j].checked)){
-  //     zones.zoneList[j].disappearedCnt++;
-  //     if (zones.zoneList[j].disappearedCnt > 30){
-  //       zones.removeZone(j,type);
-  //       j--;
-  //     }
-  //   }
-  // }
-
   zSize = zones.zoneList.size();
   reliableList.clear();
   for (int i=0,j=0; i<zSize; i++, j++){
@@ -318,16 +286,18 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
 void ballPos_Callback(const core_msgs::ball_position::ConstPtr& pos)
 {
   nBalls = pos->size;
+  cout << "[NBALLS] " << nBalls << endl;
   if (nBalls > 20) nBalls = 20;
   for(int i = 0; i < nBalls; i++)
   {
-    ballAngle[i] = pos->angle[i];
+    ballAngle[i] = (float)pos->angle[i];
     ballDist[i] = pos->dist[i];
   }
 }
 void goalPos_Callback(const core_msgs::goal_position::ConstPtr& pos)
 {
   nGoals = pos->size;
+  cout << "[NGOALS] " << nGoals <<endl;
   if (nGoals > 10) nGoals = 10;
   for(int i = 0; i < nGoals; i++)
   {
@@ -337,8 +307,8 @@ void goalPos_Callback(const core_msgs::goal_position::ConstPtr& pos)
 }
 
 void odometry_Callback(const geometry_msgs::Vector3 odometry){
-  X = odometry.x;
-  Y = odometry.y;
+  Y = odometry.x;
+  X = odometry.y;
   O = odometry.z;
   odometryCalled = true;
 }
