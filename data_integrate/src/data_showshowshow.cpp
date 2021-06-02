@@ -84,7 +84,7 @@ void delivery_mode_Callback(const std_msgs::Int8::ConstPtr& delivery){
 }
 
 
-float ALPHA = 0.1;
+float ALPHA = 0.2;
 class Zones
 {
 public:

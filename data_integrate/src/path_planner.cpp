@@ -34,7 +34,7 @@
 /// MAP INFOS
 /// Belows are written in pixel unit. 1 pixel = 1 cm.
 /// MARGIN is similar to threshold.
-#define ROBOT_SIZE 30
+#define ROBOT_SIZE 23
 #define PILLAR_RADIUS 7.5
 #define	MARGIN 5
 #define	THRESHOLD 7
@@ -62,7 +62,7 @@ int robotX, 	robotY,
 	goalX,		goalY;
 
 int REMAINING_BALLS = 5;
-int GAP = 1.6*(ROBOT_SIZE + PILLAR_RADIUS + MARGIN);
+int GAP = 1.5*(ROBOT_SIZE + PILLAR_RADIUS + MARGIN);
 bool END = false;
 
 class NodeMap{
