@@ -260,7 +260,7 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 void control_ballharvesting(geometry_msgs::Twist *targetVel)
 {
 	float ANGLE_THRESHOLD = M_PI/100;
-	float BALL_DIST_THRESHOLD = 38;
+	float BALL_DIST_THRESHOLD = 42;
 	float PILLAR_DIST_THRESHOLD = 50;
 	float GOAL_DIST_THRESHOLD = 67;
 	float angle_sign = (diff_o > 0 ? 1 : -1);
@@ -311,7 +311,7 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 					targetVel->angular.z = angle_sign;
 				}
 			} else if (dist < BALL_DIST_THRESHOLD) {
-				if (!STOP_FLAG && ((targetVel->linear.x)+(targetVel->angular.z)) != 0) {
+				if (!STOP_FLAG && (targetVel->linear.x) >=40) {
 					targetVel->linear.x  = targetVel->linear.x/4;
 					targetVel->angular.z = targetVel->angular.z/4;
 					// STOP_FLAG = true;
@@ -395,7 +395,7 @@ void control_harvest(geometry_msgs::Twist* targetVel){
 
 	if(waytype==BALL){
 
-		int BALL_LIDAR_DIST = 38;
+		int BALL_LIDAR_DIST = 40;
 		bool close_enough = pow(pos_x-target_x, 2) + pow(pos_y-target_y,2) < pow(BALL_LIDAR_DIST, 2);
 		bool orientation_aligned = (fabs(diff_o) < M_PI/80);
 		
