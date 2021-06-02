@@ -489,12 +489,12 @@ void ballPos_Callback(const core_msgs::ball_position::ConstPtr& pos)
     ballDist[i] = pos->dist[i];
   }
 }
-void goalPos_Callback(const core_msgs::goal_position::ConstPtr& pos)
-{
-  nGoals = 1;
-  goalAngle[0] = pos->angle;
-  goalDist[0] = pos->dist;
-}
+// void goalPos_Callback(const core_msgs::goal_position::ConstPtr& pos)
+// {
+//   nGoals = 1;
+//   goalAngle[0] = pos->angle;
+//   goalDist[0] = pos->dist;
+// }
 
 void odometry_Callback(const geometry_msgs::Vector3 odometry){
   X = odometry.x;
@@ -533,7 +533,7 @@ int main(int argc, char **argv)
 
     ros::Publisher pub = n.advertise<core_msgs::multiarray>("/position", 1000); //odometry, 즉 robot의 위치를 Vector3로 발행한다.
     ros::Subscriber subOdo = n.subscribe<geometry_msgs::Vector3>("/robot_pos", 1000, odometry_Callback);
-    ros::Subscriber subBall = n.subscribe<core_msgs::goal_position>("/goal_position", 1000, goalPos_Callback);
+    // ros::Subscriber subBall = n.subscribe<core_msgs::goal_position>("/goal_position", 1000, goalPos_Callback);
     ros::Subscriber subGoal = n.subscribe<core_msgs::ball_position>("/ball_position", 1000, ballPos_Callback);
     ros::Subscriber subPillar = n.subscribe<std_msgs::Float32MultiArray>("/obs_pos", 1000, pillarPos_Callback);
     ros::Subscriber subGoalNum = n.subscribe<std_msgs::Int8>("/ball_number", 10, goalNum_Callback);

@@ -39,6 +39,10 @@ include_directories(
 add_executable(data_show_node src/data_show.cpp)
 add_dependencies(data_show_node core_msgs_generate_messages_cpp)
 
+add_executable(bonus_data_show_node src/data_show_bonus.cpp)
+add_dependencies(bonus_data_show_node core_msgs_generate_messages_cpp)
+
+
 add_executable(data_integration_node src/data_integration.cpp)
 add_dependencies(data_integration_node core_msgs_generate_messages_cpp)
 
@@ -46,6 +50,9 @@ add_executable(path_planner src/path_planner.cpp)
 add_dependencies(path_planner core_msgs_generate_messages_cpp)
 
 target_link_libraries(data_show_node
+  ${catkin_LIBRARIES} ${OpenCV_LIBS} ${cv_bridge_LIBRARIES}
+)
+target_link_libraries(bonus_data_show_node
   ${catkin_LIBRARIES} ${OpenCV_LIBS} ${cv_bridge_LIBRARIES}
 )
 target_link_libraries(data_integration_node
