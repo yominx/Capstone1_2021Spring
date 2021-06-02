@@ -111,9 +111,9 @@ void lidar_Callback(const sensor_msgs::LaserScan::ConstPtr& scan)
 		control_entrance(&targetVel);
 		if (!DEBUG_HARVEST && !PASSED_STEP && meet_step()) {
 			int t = 15;
-			targetVel.linear.x  = 5;
+			targetVel.linear.x  = 7;
 			targetVel.angular.z = 0;
-			targetVel.angular.x = 50; // collector velocity: angular.x
+			targetVel.angular.x = 30; // collector velocity: angular.x
 			ros::Time beginTime =ros::Time::now();
 			ros::Duration delta_t = ros::Duration(t);
 			ros::Time endTime=beginTime + delta_t;
@@ -478,7 +478,7 @@ bool meet_step()
 		cout << "NO IMAGE!" << endl;
 		return false;
 	}
-	if (minValue<0.21 && minValue>0.15) {
+	if (minValue<0.26 && minValue>0.15) {
 		cout << "THE ROBOT MEET THE STEP!!" << endl;
 		return true;
 	}
