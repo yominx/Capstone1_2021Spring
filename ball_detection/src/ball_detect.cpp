@@ -245,10 +245,10 @@ void ball_detect(){
          // cx = (0.002667*cy+0.0003)*cx-(0.9275*cy+0.114);
          if (k == goalIndex){
            circle(buffer,center,r,Scalar(0,255,0),3); //draw a circle on 'frame' based on the information given,   r = radius, Scalar(0,0,255) means color, 10 means lineWidth
-           msgGoal.angle = atan((c_c-319.5)/320*tan(FOV)); // [rad]
-           // msgGoal.angle = atan((2.5*(c_c-319.5)/320)/4.6621);
-           msgGoal.dist = params[3];
-           pubGoal.publish(msgGoal);
+           // msgGoal.angle = atan((c_c-319.5)/320*tan(FOV)); // [rad]
+           // // msgGoal.angle = atan((2.5*(c_c-319.5)/320)/4.6621);
+           // msgGoal.dist = params[3];
+           // pubGoal.publish(msgGoal);
 #ifdef DEBUG
            cout << "[Goal] Distance: " << msgGoal.dist << ", Angle= " << msgGoal.angle << endl;
 #endif

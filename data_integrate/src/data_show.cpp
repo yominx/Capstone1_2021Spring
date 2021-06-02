@@ -263,8 +263,9 @@ bool Zones::Zone::blocked()
 void sort(vector<int>& reliableList, const Zones& zones)
 {
   float keyVal, targetVal;
-  int j;
+  int j, tmp;
   for (int i=1; i<reliableList.size(); i++){
+    tmp = reliableList[i];
     keyVal = zones.zoneList[reliableList[i]].nPoints / zones.zoneList[reliableList[i]].cnt;
     j=i-1;
     targetVal = zones.zoneList[reliableList[j]].nPoints / zones.zoneList[reliableList[j]].cnt;
@@ -273,7 +274,7 @@ void sort(vector<int>& reliableList, const Zones& zones)
       j -= 1;
       targetVal = zones.zoneList[reliableList[j]].nPoints / zones.zoneList[reliableList[j]].cnt;
     }
-    reliableList[j] = reliableList[i];
+    reliableList[j] = tmp;
   }
 }
 
@@ -481,12 +482,12 @@ void ballPos_Callback(const core_msgs::ball_position::ConstPtr& pos)
     ballDist[i] = pos->dist[i];
   }
 }
-void goalPos_Callback(const core_msgs::goal_position::ConstPtr& pos)
-{
-  nGoals = 1;
-  goalAngle[0] = pos->angle;
-  goalDist[0] = pos->dist;
-}
+// void goalPos_Callback(const core_msgs::goal_position::ConstPtr& pos)
+// {
+//   nGoals = 1;
+//   goalAngle[0] = pos->angle;
+//   goalDist[0] = pos->dist;
+// }
 
 void odometry_Callback(const geometry_msgs::Vector3 odometry){
   X = odometry.x;
@@ -525,7 +526,7 @@ int main(int argc, char **argv)
 
     ros::Publisher pub = n.advertise<core_msgs::multiarray>("/position", 1000); //odometry, 즉 robot의 위치를 Vector3로 발행한다.
     ros::Subscriber subOdo = n.subscribe<geometry_msgs::Vector3>("/robot_pos", 1000, odometry_Callback);
-    ros::Subscriber subBall = n.subscribe<core_msgs::goal_position>("/goal_position", 1000, goalPos_Callback);
+    // ros::Subscriber subBall = n.subscribe<core_msgs::goal_position>("/goal_position", 1000, goalPos_Callback);
     ros::Subscriber subGoal = n.subscribe<core_msgs::ball_position>("/ball_position", 1000, ballPos_Callback);
     ros::Subscriber subPillar = n.subscribe<std_msgs::Float32MultiArray>("/obs_pos", 1000, pillarPos_Callback);
     ros::Subscriber subGoalNum = n.subscribe<std_msgs::Int8>("/ball_number", 10, goalNum_Callback);
