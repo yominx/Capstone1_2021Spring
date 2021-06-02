@@ -153,16 +153,16 @@ void lidar_cb(const sensor_msgs::LaserScan::ConstPtr& scan){
 
             // ICP algorithm
             pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
-            icp.setInputSource(initial_cloud);
+            icp.setInputSource(prev_cloud);
             icp.setInputTarget(new_cloud);
             pcl::PointCloud<pcl::PointXYZ> Final;
             icp.align(Final);
     
-            transMtx_now = icp.getFinalTransformation();
+            transMtx_delta = icp.getFinalTransformation();
 
         // 3. Get current transformation matrix using previous transformation and ICP result
         //  (Odometry calculation)
-            //transMtx_now =transMtx_prev*transMtx_delta;
+            transMtx_now =transMtx_prev*transMtx_delta;
 
         // 4. Get current position from transformation matrix
             
@@ -170,10 +170,14 @@ void lidar_cb(const sensor_msgs::LaserScan::ConstPtr& scan){
 
             robot_pos.x = transMtx_now(0, 3)*100;
             robot_pos.y = transMtx_now(1,3)*100;
-            if(transMtx_now(0,0)>=0){
+            if(transMtx_now(0,0)>=0 && transMtx_now(1,0)>=0){
                 robot_pos.z=atan(transMtx_now(1,0)/transMtx_now(0,0));
-            }else if(transMtx_now(0,0)<0){
-                robot_pos.z=6*atan(1)+atan(transMtx_now(1,0)/transMtx_now(0,0));
+            }else if(transMtx_now(0,0)<=0 && transMtx_now(1,0)>=0){
+                robot_pos.z=M_PI+atan(transMtx_now(1,0)/transMtx_now(0,0));
+            }else if(transMtx_now(0,0)<=0 && transMtx_now(1,0)<=0){
+                robot_pos.z=M_PI+atan(transMtx_now(1,0)/transMtx_now(0,0));
+            }else if(transMtx_now(0,0)>=0 && transMtx_now(1,0)<=0){
+                robot_pos.z=2*M_PI+atan(transMtx_now(1,0)/transMtx_now(0,0));
             }
 
             transMtx_prev = transMtx_now; // Save current transformation matrix in transMtx_prev
