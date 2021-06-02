@@ -52,10 +52,4 @@ target_link_libraries(ball_pos_test_node
   ${catkin_LIBRARIES} ${OpenCV_LIBS} 
 )
 
-add_executable(bonus_ball_detect_node src/ball_detect_bonus.cpp)
-add_dependencies(bonus_ball_detect_node core_msgs_generate_messages_cpp)
-target_link_libraries(bonus_ball_detect_node
-  ${catkin_LIBRARIES} ${OpenCV_LIBS} ${cv_bridge_LIBRARIES}
-)
-
 

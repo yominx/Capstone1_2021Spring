@@ -163,7 +163,7 @@ void Zones::removeZone(int i, int type)
   cout << "RECTANGULAR: " << x << " and " << y << " DIFF " << delta << endl;
   Rect roi = Rect(Point(x-delta, y-delta),Point(x+delta, y+delta));
   map(roi) = Scalar(0);
-  circle(MAP, Point(zone.cenCol, zone.cenRow),2,Scalar(0,0,0), -1);
+  circle(MAP, Point(zone.cenCol, zone.cenRow),5,Scalar(0,0,0), -1);
   zoneList.erase(zoneList.begin()+i);
 }
 
@@ -217,7 +217,7 @@ void Zones::Zone::add(int r, int c, int type)
       map = mapGoal;
   }
   map.at<int>(r,c) += 1;
-  circle(MAP, Point(cenCol, cenRow),2,Scalar(0,0,0), -1);
+  circle(MAP, Point(cenCol, cenRow),5,Scalar(0,0,0), -1);
   float dist = sqrt(pow(cenRow-r, 2) + pow(cenCol-c,2));
   if (dist > 100.) {
     if (map.at<int>(r,c)>map.at<int>(cenRow,cenCol)){
@@ -331,7 +331,7 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
     msg.data.push_back(zones.zoneList[reliableList[i]].cenCol);
     msg.data.push_back(zones.zoneList[reliableList[i]].cenRow);
     nData += 1;
-    circle(MAP, Point(zones.zoneList[reliableList[i]].cenCol, zones.zoneList[reliableList[i]].cenRow),2,color, -1);
+    circle(MAP, Point(zones.zoneList[reliableList[i]].cenCol, zones.zoneList[reliableList[i]].cenRow),5,color, -1);
   }
 }
 
@@ -387,7 +387,7 @@ void drawRawMap(int type, int n, float* dist, float* angle)
       x = 350+(int)round(X+(DLC*cos(O)*100)+(dist[i]*cos(angle[i]+O)*100));
       y = 650-(int)round(Y+(DLC*sin(O)*100)+(dist[i]*sin(angle[i]+O)*100));
     }
-    circle(MAPRAW, Point(x,y), 2, color, -1);
+    circle(MAPRAW, Point(x,y), 5, color, -1);
   }
 }
 #endif
@@ -480,7 +480,7 @@ void goalNum_Callback(const std_msgs::Int8 msg)
 
 int main(int argc, char **argv)
 {
-    ros::init(argc, argv, "bonus_data_show_node");
+    ros::init(argc, argv, "bonus_data_show");
     ros::NodeHandle n;
 
     ros::Publisher pub = n.advertise<core_msgs::multiarray>("/position", 1000); //odometry, 즉 robot의 위치를 Vector3로 발행한다.
@@ -489,14 +489,6 @@ int main(int argc, char **argv)
     ros::Subscriber subGoal = n.subscribe<core_msgs::ball_position>("/ball_position", 1000, ballPos_Callback);
     ros::Subscriber subGoalNum = n.subscribe<std_msgs::Int8>("/ball_number", 10, goalNum_Callback);
     ros::Rate loop_rate(10);
-    line(MAP, Point(50, 50), Point(550, 50), Scalar(255,255,255), 1);
-    line(MAP, Point(50, 50), Point(50, 250), Scalar(255,255,255), 1);
-    line(MAP, Point(550, 50), Point(550, 350), Scalar(255,255,255), 1);
-    line(MAP, Point(50, 350), Point(550, 350), Scalar(255,255,255), 1);
-    // X=60.;
-    // Y=150.;
-    // O=0.;
-
     while(ros::ok){
       if (odometryCalled){
         msg.data.clear();
@@ -510,7 +502,7 @@ int main(int argc, char **argv)
 #endif
         filtering(ballZones, nBalls, ballDist, ballAngle, BALL, msg);
         filtering(goalZones, nGoals, goalDist, goalAngle, GOAL, msg);
-        circle(MAP, Point(350+int(round(X)), 650-int(round(Y))), 2, cv::Scalar(255,0,0), -1);
+        circle(MAP, Point(350+int(round(X)), 650-int(round(Y))), 5, cv::Scalar(255,0,0), -1);
         msg.data.push_back(VEHICLE);
         msg.data.push_back(350+int(round(X)));
         msg.data.push_back(650-int(round(Y)));

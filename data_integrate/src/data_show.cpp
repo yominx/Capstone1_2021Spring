@@ -58,23 +58,23 @@ float pillarAngle[10];
 float X, Y, O;               // Odometry info
 bool odometryCalled = false;
 
-
+core_msgs::multiarray msg;
 
 Mat mapBall = cv::Mat::zeros(MAP_HEIGHT,MAP_WIDTH, CV_32S);
 Mat mapGoal = cv::Mat::zeros(MAP_HEIGHT,MAP_WIDTH, CV_32S);
 Mat mapPillar = cv::Mat::zeros(MAP_HEIGHT,MAP_WIDTH, CV_32S);
 Mat MAP = cv::Mat::zeros(MAP_HEIGHT,MAP_WIDTH, CV_8UC3);     // final map
 
-// #ifdef RAW
-// Mat MAPRAW = cv::Mat::zeros(MAP_HEIGHT,MAP_WIDTH, CV_8UC3);
-// #endif
+#ifdef RAW
+Mat MAPRAW = cv::Mat::zeros(MAP_HEIGHT,MAP_WIDTH, CV_8UC3);
+#endif
 
-// #ifdef DEBUG
-// Mat mapDebug = cv::Mat::zeros(MAP_HEIGHT, MAP_WIDTH, CV_8UC1);
-// Mat mapDebugShow;
-// int KERNELSIZE = 21;
-// Mat kernel = cv::Mat::zeros(KERNELSIZE,KERNELSIZE,CV_8UC1);
-// #endif
+#ifdef DEBUG
+Mat mapDebug = cv::Mat::zeros(MAP_HEIGHT, MAP_WIDTH, CV_8UC1);
+Mat mapDebugShow;
+int KERNELSIZE = 21;
+Mat kernel = cv::Mat::zeros(KERNELSIZE,KERNELSIZE,CV_8UC1);
+#endif
 
 vector<int> reliableList;
 
@@ -144,12 +144,11 @@ void Zones::addZone(int r, int c, int type)
 
 void Zones::removeZone(int r, int c, int type)
 {
-  cout << "[REMOVE ZONE1 START]" << endl; 
   int n = zoneList.size();
   for (int i=0;i<n;i++){
     if (zoneList[i].insideZone(r,c) && zoneList[i].reliable) {
-      cout << "[Remove \n\ttype]:" << zoneList[i].type 
-      << "(x, y, i): " << zoneList[i].cenCol<< ", " << zoneList[i].cenRow << "," << i << ")" << endl;
+      cout << "Remove \n\ttype:" << zoneList[i].type <<
+      "(x, y): " << zoneList[i].cenCol<< ", " << zoneList[i].cenRow << endl;
       removeZone(i,type);
       return;
     }
@@ -159,8 +158,7 @@ void Zones::removeZone(int r, int c, int type)
 void Zones::removeZone(int i, int type)
 {
   Mat map;
-  cout << "[Remove type(size=" << zoneList.size() << " )]:" << zoneList[i].type 
-      << "(x, y, i): " << zoneList[i].cenCol<< ", " << zoneList[i].cenRow << "," << i << ")" << endl;
+
   switch(type){
     case BALL:
       map = mapBall;
@@ -174,11 +172,12 @@ void Zones::removeZone(int i, int type)
   if(i >= zoneList.size()){
     cerr << "INVALID INDEX" << i << "is larger than " << zoneList.size() << endl;
   }
-  int x = zoneList[i].cenCol, y = zoneList[i].cenRow, delta=zoneList[i].zoneSize;
-  // cout << "RECTANGULAR: " << x << " and " << y << " DIFF " << delta << endl;
+  Zone zone = zoneList[i];
+  int x = zone.cenCol, y = zone.cenRow, delta=zone.zoneSize;
+  cout << "RECTANGULAR: " << x << " and " << y << " DIFF " << delta << endl;
   Rect roi = Rect(Point(x-delta, y-delta),Point(x+delta, y+delta));
   map(roi) = Scalar(0);
-  circle(MAP, Point(zoneList[i].cenCol, zoneList[i].cenRow),5,Scalar(0,0,0), -1);
+  circle(MAP, Point(zone.cenCol, zone.cenRow),5,Scalar(0,0,0), -1);
   zoneList.erase(zoneList.begin()+i);
 }
 
@@ -189,8 +188,8 @@ void Zones::resetState()
     theta = atan2(zoneList[i].cenRow-Y,zoneList[i].cenCol-X);
     if (theta < 0) theta += 2*M_PI;
     zoneList[i].inSight = (fabs(O-theta) < FOV) ? true : false;
-    dist = sqrt(pow((50+X)-zoneList[i].cenCol,2) + pow((350-Y)-zoneList[i].cenRow,2));
-    if ((zoneList[i].blocked()) || (dist < 50) || (delivery_mode==1)) {zoneList[i].inSight = false;}
+    dist = sqrt(pow(X-zoneList[i].cenCol,2) + pow(Y-zoneList[i].cenRow,2));
+    if ((zoneList[i].blocked()) || (dist < 200) || (delivery_mode==1)) zoneList[i].inSight = false;
     zoneList[i].checked = false;
   }
 }
@@ -245,8 +244,8 @@ void Zones::Zone::add(int r, int c, int type)
         for (int cf = step; cf < KERNELSIZE-step; cf++){
           kernel.at<uchar>(rf,cf) += 1;
         }
-      } 
-      step += 2; 
+      }
+      step += 2;
     }
     int halfKERNELSIZE = (KERNELSIZE-1)/2;
     for (int rf = 0; rf < KERNELSIZE; rf++){
@@ -322,7 +321,7 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
       color = Scalar(0,255,0);
   }
   if (type == BALL) zones.resetState(); // update whether the zone is visible and detected
-  // cout << "------[DATA ADD START]" << endl;
+  cout << "------[DATA ADD START]" << endl;
   for (int i=0; i<size; i++){ //ball_dist[i], ball_angle[i]
     int x = (type==PILLAR) ? 50+(int)round(X +(dist[i]*cos(angle[i]+O)*100)) : 50+(int)round(X+(DLC*cos(O)*100)+(dist[i]*cos(angle[i]+O)*100));
     int y = (type==PILLAR) ? 350-(int)round(Y+(dist[i]*sin(angle[i]+O)*100)) : 350-(int)round(Y+(DLC*sin(O)*100)+(dist[i]*sin(angle[i]+O)*100));
@@ -332,8 +331,8 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
 
     zones.addZone(y,x,type);
   }
-  // cout << "------[DATA ADD END]" << endl;
-  // cout << "------[BALL DISAPPEAR CHECK START]" << endl;
+  cout << "------[DATA ADD END]" << endl;
+  cout << "------[BALL DISAPPEAR CHECK START]" << endl;
   int zSize;
   if (type == BALL){
     zSize = zones.zoneList.size();
@@ -341,15 +340,15 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
       if (zones.zoneList[j].inSight && !(zones.zoneList[j].checked)){
         zones.zoneList[j].disappearedCnt++;
         if (zones.zoneList[j].disappearedCnt > 50){
-          // cout << "[REMOVE BALL]" << endl;
+          cout << "[REMOVE BALL]" << endl;
           zones.removeZone(j,type);
           j--;
         }
       }
     }
   }
-  // cout << "------[BALL DISAPPEAR CHECK END]" << endl;
-  // cout << "------[BALL RELIABLE CHECK START]" << endl;
+  cout << "------[BALL DISAPPEAR CHECK END]" << endl;
+  cout << "------[BALL RELIABLE CHECK START]" << endl;
   zSize = zones.zoneList.size();
   reliableList.clear();
   for (int i=0,j=0; i<zSize; i++, j++){
@@ -361,7 +360,7 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
       if (zones.zoneList[j].nPoints > zones.zoneList[j].cnt * zones.zoneList[j].threshold){
         zones.zoneList[j].reliable = true;
         // reliableList.push_back(j);
-        // cout << "(" << j << "-th zone) is reliable: " << zones.zoneList[j].cenCol << ", " << zones.zoneList[j].cenRow << endl;
+        cout << "(" << j << "-th zone) is reliable: " << zones.zoneList[j].cenCol << ", " << zones.zoneList[j].cenRow << endl;
       }
       else {
         zones.removeZone(j, type);
@@ -369,16 +368,16 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
       }
     }
   }
-  // cout << "------[BALL RELIABLE CHECK END]" << endl;
-  
+  cout << "------[BALL RELIABLE CHECK END]" << endl;
+
   zSize = zones.zoneList.size();
   for (int i=0; i<zSize; i++)
     if (zones.zoneList[i].reliable) reliableList.push_back(i);
-// cout << "------[BALL RELIABLE PUSH END]" << endl;
+cout << "------[BALL RELIABLE PUSH END]" << endl;
   if (reliableList.size() > zones.max){
     sort(reliableList, zones); // sorting by the value of (nPoints/cnt)
   }
-// cout << "------[BALL RELIABLE SORT END]" << endl;
+cout << "------[BALL RELIABLE SORT END]" << endl;
   int repeat = (reliableList.size()>zones.max) ? zones.max : reliableList.size();
 
   for (int i=0; i<repeat; i++){
@@ -388,12 +387,17 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
     nData += 1;
     circle(MAP, Point(zones.zoneList[reliableList[i]].cenCol, zones.zoneList[reliableList[i]].cenRow),5,color, -1);
   }
-  // cout << "------[BALL PUBLISH END]" << endl;
+  cout << "------[BALL PUBLISH END]" << endl;
 }
 
 #ifdef DEBUG
 void showColoredMap(int type)
 {
+  // Mat map;
+  // Mat map_debug;
+  // double minVal, maxVal;
+  // Point minLoc, maxLoc;
+  // Point matchLoc;
   switch(type){
     case BALL:
       applyColorMap(mapDebug,mapDebugShow,COLORMAP_JET);
@@ -504,17 +508,13 @@ void delivery_mode_Callback(const std_msgs::Int8::ConstPtr& delivery){
 
 void ballPos_Callback(const core_msgs::ball_position::ConstPtr& pos)
 {
-  // cout << "[Ball POS CALLBACK START]" << endl;
   nBalls = pos->size;
-  // cout << "[---------num of balls called back] : " << nBalls << endl;
   if (nBalls > 20) nBalls = 20;
   for(int i = 0; i < nBalls; i++)
   {
     ballAngle[i] = pos->angle[i];
     ballDist[i] = pos->dist[i];
   }
-  // cout << "[Ball POS CALLBACK End]" << endl;
-  
 }
 // void goalPos_Callback(const core_msgs::goal_position::ConstPtr& pos)
 // {
@@ -546,9 +546,8 @@ void goalNum_Callback(const std_msgs::Int8 msg)
 {
     int tmp = 5 - msg.data;
     if (remainBalls != tmp){
-      int xBall = (int)round(50 + X + DLB*cos(O)*100);
-      int yBall = (int)round(350 - Y + DLB*sin(O)*100);
-      
+      int xBall = 50 +(int)round(X + DLB*cos(O)*100);
+      int yBall = 350-(int)round(Y + DLB*sin(O)*100);
       ballZones.removeZone(yBall,xBall,BALL);
       remainBalls--;
     }
@@ -577,8 +576,7 @@ int main(int argc, char **argv)
 
     while(ros::ok){
       if (odometryCalled){
-        core_msgs::multiarray msg;
-        // msg.data.clear();
+        msg.data.clear();
         msg.cols = 0;
         nData = 0;
 #ifdef RAW

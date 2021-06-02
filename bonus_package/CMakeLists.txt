@@ -13,8 +13,9 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   std_msgs
   core_msgs
-      pcl_conversions
-    pcl_ros
+  pcl_conversions
+  pcl_ros
+  message_generation
 )
 
 find_package(OpenCV REQUIRED )
@@ -40,32 +41,41 @@ include_directories(
 )
 
 
-add_executable(bonus_data_show_node src/data_show_bonus.cpp)
-add_dependencies(bonus_data_show_node core_msgs_generate_messages_cpp)
 
-add_executable(bonus_path_planner src/path_planner.cpp)
-add_dependencies(bonus_path_planner core_msgs_generate_messages_cpp)
-
-add_executable(data_integration_bonus src/data_integration_bonus.cpp)
-add_dependencies(data_integration_bonus core_msgs_generate_messages_cpp)
-
-add_executable(localization_bonus src/localization_bonus.cpp)
-add_dependencies(localization_bonus core_msgs_generate_messages_cpp)
-
-#add_dependencies(imu_tutorial_node imu_tutorial_generate_messages_cpp)
-
-
-target_link_libraries(bonus_data_show_node
+add_executable(bonus_ball_detect src/bonus_ball_detect.cpp)
+add_dependencies(bonus_ball_detect core_msgs_generate_messages_cpp)
+target_link_libraries(bonus_ball_detect
   ${catkin_LIBRARIES} ${OpenCV_LIBS} ${cv_bridge_LIBRARIES}
 )
 
+
+
+add_executable(bonus_data_show src/bonus_data_show.cpp)
+add_dependencies(bonus_data_show core_msgs_generate_messages_cpp)
+target_link_libraries(bonus_data_show
+  ${catkin_LIBRARIES} ${OpenCV_LIBS} ${cv_bridge_LIBRARIES}
+)
+
+
+add_executable(bonus_path_planner src/bonus_path_planner.cpp)
+add_dependencies(bonus_path_planner core_msgs_generate_messages_cpp)
 target_link_libraries(bonus_path_planner
   ${catkin_LIBRARIES} ${OpenCV_LIBS} ${cv_bridge_LIBRARIES}
 )
-target_link_libraries(data_integration_bonus
+
+
+add_executable(bonus_data_integration src/bonus_data_integration.cpp)
+add_dependencies(bonus_data_integration core_msgs_generate_messages_cpp)
+target_link_libraries(bonus_data_integration
   ${catkin_LIBRARIES} ${OpenCV_LIBS} ${cv_bridge_LIBRARIES}
 )
 
-target_link_libraries(localization_bonus
-  ${catkin_LIBRARIES}
+
+add_executable(bonus_localization src/bonus_localization.cpp)
+add_dependencies(bonus_localization core_msgs_generate_messages_cpp)
+target_link_libraries(bonus_localization
+  ${catkin_LIBRARIES} ${OpenCV_LIBS}
 )
+#add_dependencies(imu_tutorial_node imu_tutorial_generate_messages_cpp)
+
+
