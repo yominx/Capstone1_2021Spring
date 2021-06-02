@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(data_integrate)
-
-## Compile as C++11, supported in ROS Kinetic and newer
+project(bonus_package)
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_compile_options(-std=c++11)
 
 ## Find catkin macros and libraries
@@ -13,6 +13,8 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   std_msgs
   core_msgs
+      pcl_conversions
+    pcl_ros
 )
 
 find_package(OpenCV REQUIRED )
@@ -36,24 +38,34 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
   include
 )
-add_executable(data_show_node src/data_show.cpp)
-add_dependencies(data_show_node core_msgs_generate_messages_cpp)
 
 
-add_executable(data_integration_node src/data_integration.cpp)
-add_dependencies(data_integration_node core_msgs_generate_messages_cpp)
+add_executable(bonus_data_show_node src/data_show_bonus.cpp)
+add_dependencies(bonus_data_show_node core_msgs_generate_messages_cpp)
 
-add_executable(path_planner src/path_planner.cpp)
-add_dependencies(path_planner core_msgs_generate_messages_cpp)
+add_executable(bonus_path_planner src/path_planner.cpp)
+add_dependencies(bonus_path_planner core_msgs_generate_messages_cpp)
 
-target_link_libraries(data_show_node
+add_executable(data_integration_bonus src/data_integration_bonus.cpp)
+add_dependencies(data_integration_bonus core_msgs_generate_messages_cpp)
+
+add_executable(localization_bonus src/localization_bonus.cpp)
+add_dependencies(localization_bonus core_msgs_generate_messages_cpp)
+
+#add_dependencies(imu_tutorial_node imu_tutorial_generate_messages_cpp)
+
+
+target_link_libraries(bonus_data_show_node
   ${catkin_LIBRARIES} ${OpenCV_LIBS} ${cv_bridge_LIBRARIES}
 )
 
-target_link_libraries(data_integration_node
+target_link_libraries(bonus_path_planner
   ${catkin_LIBRARIES} ${OpenCV_LIBS} ${cv_bridge_LIBRARIES}
 )
-target_link_libraries(path_planner
+target_link_libraries(data_integration_bonus
   ${catkin_LIBRARIES} ${OpenCV_LIBS} ${cv_bridge_LIBRARIES}
 )
 
+target_link_libraries(localization_bonus
+  ${catkin_LIBRARIES}
+)
