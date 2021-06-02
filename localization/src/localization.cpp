@@ -439,15 +439,15 @@ void control_input_Callback(const geometry_msgs::Twist::ConstPtr& targetVel){
   linear_vel_now = targetVel->linear.x;
   angular_vel_now = targetVel->angular.z;
 
-  lin_scaling=1;
-  ang_scaling=0.05;
+  float lin_scaling=1;
+  float ang_scaling=0.05;
 
   if (zone_info==2 && initial_step>10){
   robot_pos.x=robot_pos.x+linear_vel_prev*cos(robot_pos.z)*lin_scaling;
   robot_pos.y=robot_pos.y+linear_vel_prev*sin(robot_pos.z)*lin_scaling;
   robot_pos.z=robot_pos.z+angular_vel_prev*ang_scaling;
   }
-  cout<<"x should be increased by"<<linear_vel_prev*cos(robot_pos.z)*lin_scaling<<endl<<"y should be increased by "<<linear_vel_prev*sin(robot_pos.z)*lin_scaling<<endl<<"angle should be increased by"<<angular_vel_prev*ang_scaling<<endl;
+  // cout<<"x should be increased by"<<linear_vel_prev*cos(robot_pos.z)*lin_scaling<<endl<<"y should be increased by "<<linear_vel_prev*sin(robot_pos.z)*lin_scaling<<endl<<"angle should be increased by"<<angular_vel_prev*ang_scaling<<endl;
   linear_vel_prev=linear_vel_now;
   angular_vel_prev=angular_vel_now;
 }

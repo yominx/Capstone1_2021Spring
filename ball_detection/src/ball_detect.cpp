@@ -270,10 +270,6 @@ void ball_detect(){
 
      }
      pubBall.publish(msgBall);  //publish a message
-#ifdef DEBUG_IMG
-     cv::imshow("view", buffer);  //show the image with a window
-     cv::waitKey(1);
-#endif
 }
 
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)
@@ -318,6 +314,12 @@ int main(int argc, char **argv)
      if(!buffer.empty() && !buffer_depth.empty() && (delivery_mode != 1)){
        ball_detect();
      }
+#ifdef DEBUG_IMG
+     if (!buffer.empty()){
+       cv::imshow("view", buffer);  //show the image with a window
+       cv::waitKey(1);
+     }
+#endif
      loop_rate.sleep();
      ros::spinOnce();
    }

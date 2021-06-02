@@ -374,9 +374,9 @@ void control_harvest(geometry_msgs::Twist* targetVel){
 
 	if(waytype==BALL){
 
-		int BALL_LIDAR_DIST = 40;
+		int ball_LIDAR_DIST = 40;
 		//bool close_enough = pow(pos_x-target_x, 2) + pow(pos_y-target_y,2) < pow(BALL_LIDAR_DIST, 2);
-		bool close_enough = distance < BALL_LIDAR_DIST;
+		bool close_enough = (target_distance < ball_LIDAR_DIST);
 		
 		if(close_enough){
 			cout << "CLOSE ENOUGH! HARVEST BALL" << endl;
@@ -386,11 +386,11 @@ void control_harvest(geometry_msgs::Twist* targetVel){
 			targetVel->angular.z=0;
 		}
 	} else if(waytype==GOAL) {
-		int GOAL_SIZE = 80;
+		int goal_SIZE = 80;
 		//int goalX = 550, goalY = 200; // CHANGE THIS VALUE FROM /position
 
 		//bool close_enough = pow(pos_x-goalX, 2) + pow(pos_y-goalY,2) < pow(GOAL_SIZE, 2);
-		bool close_enough = distance < GOAL_SIZE;
+		bool close_enough = (target_distance < goal_SIZE);
 		if(close_enough){
 
 			float angle_sign = (diff_o > 0 ? 1 : -1);
@@ -410,8 +410,8 @@ void control_harvest(geometry_msgs::Twist* targetVel){
 				
 				if (pos_o<M_PI && is_initial_step==true){
 					float target_o = pos_o+M_PI;
-					is_initial_step=false
-				}else if(pos_o>=M_PI && is_initial_step==true)
+					is_initial_step=false;
+				}else if(pos_o>=M_PI && is_initial_step==true){
 					float target_o = pos_o-M_PI;
 					is_initial_step=false;
 				}else if(target_o>M_PI && abs(pos_o-target_o)>ANGLE_THRESHOLD ){
@@ -430,7 +430,7 @@ void control_harvest(geometry_msgs::Twist* targetVel){
 
 			
 		}
-	}
+}
 }
 
 // void select_control(){
@@ -457,7 +457,7 @@ void control_harvest(geometry_msgs::Twist* targetVel){
 
 int main(int argc, char **argv)
 {
-    ros::init(argc, argv, "data_integration");
+    ros::init(argc, argv, "data_integration_bonus");
     ros::NodeHandle n;
 	
 	// image_transport::ImageTransport it(n); //create image transport and connect it to node hnalder
