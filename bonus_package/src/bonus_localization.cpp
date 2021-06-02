@@ -44,7 +44,7 @@ void delivery_mode_Callback(const std_msgs::Int8::ConstPtr& delivery){
 geometry_msgs::Vector3 robot_pos;
 
 int lidar_size;
-float lidar_degree[400]; 
+float lidar_degree[400];
 float lidar_distance[400];
 
 boost::mutex map_mutex;
@@ -78,7 +78,7 @@ void lidar_cb(const sensor_msgs::LaserScan::ConstPtr& scan){
             float obstacle_avg_distance;
             float obstacle_width;
 
-            if(lidar_distance[i] >0 && (std::isinf(lidar_distance[i])==false) ){ 
+            if(lidar_distance[i] >0 && (std::isinf(lidar_distance[i])==false) ){
                 wall_distance.push_back(lidar_distance[0]);
                 wall_degree.push_back(lidar_degree[0]);
             }
@@ -127,12 +127,12 @@ void lidar_cb(const sensor_msgs::LaserScan::ConstPtr& scan){
         new_cloud->width = wall_distance.size();
         new_cloud->height = 1;
         new_cloud->points.resize(wall_distance.size());
-        
+
         for(int i = 0; i < wall_distance.size(); i++){
 
                 new_cloud->points[i].x = wall_distance[i]*cos(wall_degree[i]);
                 new_cloud->points[i].y = -wall_distance[i]*sin(wall_degree[i]);
-                new_cloud->points[i].z = 0; 
+                new_cloud->points[i].z = 0;
         }
 
         // 2. Get transformation between previous pointcloud and current pointcloud
@@ -153,27 +153,31 @@ void lidar_cb(const sensor_msgs::LaserScan::ConstPtr& scan){
 
             // ICP algorithm
             pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
-            icp.setInputSource(initial_cloud);
+            icp.setInputSource(prev_cloud);
             icp.setInputTarget(new_cloud);
             pcl::PointCloud<pcl::PointXYZ> Final;
             icp.align(Final);
-    
-            transMtx_now = icp.getFinalTransformation();
+
+            transMtx_delta = icp.getFinalTransformation();
 
         // 3. Get current transformation matrix using previous transformation and ICP result
         //  (Odometry calculation)
-            //transMtx_now =transMtx_prev*transMtx_delta;
+            transMtx_now =transMtx_prev*transMtx_delta;
 
         // 4. Get current position from transformation matrix
-            
+
 
 
             robot_pos.x = transMtx_now(0, 3)*100;
             robot_pos.y = transMtx_now(1,3)*100;
-            if(transMtx_now(0,0)>=0){
+            if(transMtx_now(0,0)>=0 && transMtx_now(1,0)>=0){
                 robot_pos.z=atan(transMtx_now(1,0)/transMtx_now(0,0));
-            }else if(transMtx_now(0,0)<0){
-                robot_pos.z=6*atan(1)+atan(transMtx_now(1,0)/transMtx_now(0,0));
+            }else if(transMtx_now(0,0)<=0 && transMtx_now(1,0)>=0){
+                robot_pos.z=M_PI+atan(transMtx_now(1,0)/transMtx_now(0,0));
+            }else if(transMtx_now(0,0)<=0 && transMtx_now(1,0)<=0){
+                robot_pos.z=M_PI+atan(transMtx_now(1,0)/transMtx_now(0,0));
+            }else if(transMtx_now(0,0)>=0 && transMtx_now(1,0)<=0){
+                robot_pos.z=2*M_PI+atan(transMtx_now(1,0)/transMtx_now(0,0));
             }
 
             transMtx_prev = transMtx_now; // Save current transformation matrix in transMtx_prev
@@ -194,7 +198,7 @@ void lidar_cb(const sensor_msgs::LaserScan::ConstPtr& scan){
 
 int main(int argc, char **argv){
 
-    ros::init(argc, argv, "lidar_homework_node");
+    ros::init(argc, argv, "bonus_localization");
     ros::NodeHandle nh;
     ros::Subscriber delivery_mode_info = nh.subscribe<std_msgs::Int8>("/ball_delivery", 10, delivery_mode_Callback);
     ros::Subscriber sub_lidar = nh.subscribe("/scan", 1, lidar_cb);

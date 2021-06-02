@@ -9,9 +9,9 @@
 #include <cv_bridge/cv_bridge.h>
 #include "opencv2/opencv.hpp"
 #include <vector>
-#include "std_msgs/Int8.h"
 #include "core_msgs/ball_position.h"
 #include "core_msgs/goal_position.h"
+#include "std_msgs/Float32MultiArray.h"
 #include <math.h>
 
 // #define DEBUG
@@ -20,9 +20,11 @@
 using namespace cv;
 using namespace std;
 
-Mat buffer, buffer_depth;
+Mat buffer, buffer_depth, original_img;
+Mat ball_img, goal_img;
 ros::Publisher pubBall;
 ros::Publisher pubGoal;
+ros::Publisher pubClosest;
 //ros::Publisher pub_markers;
 
 float FOCAL_LENGTH = 589.37;
@@ -34,19 +36,8 @@ float THRESHOLD = 3;
 float FOV = 28.5*M_PI/180;
 float dHeight = 0.178 - RADIUS;
 
-int delivery_mode=0;
-void delivery_mode_Callback(const std_msgs::Int8::ConstPtr& delivery){
-  delivery_mode=delivery->data;
-}
-
-
 bool isBlack(int row, int col, Mat img){
   return img.at<uchar>(row,col)<100;
-}
-
-bool goal_check(int row, int col, int r, Mat img){
-  // return (img.at<uchar>(row-r+1,col) > 45 && img.at<uchar>(row-r+1,col) < 75 && img.at<uchar>(row,col) > 45 && img.at<uchar>(row,col) < 75);
-  return (img.at<uchar>(row-r*0.7,col) > 40);
 }
 
 void print(int index, int row, int col, int phase, bool flag, float detect_r, float pred_r, float dist)
@@ -85,6 +76,20 @@ bool filtering2(int row, int col, float r, Mat img){
 
 bool filtering3(int row, int col){ // too close to detect
   return (buffer_depth.at<float>(row,col) < 0.4) ? true : false;
+}
+
+bool filtering4(int row, int col, Mat img)
+{
+  return (!isBlack(HEIGHT, WIDTH/2, img));
+}
+
+int findTop(int row, int col, Mat img)
+{
+  int r = row;
+  while (!isBlack(r-1,col,img)){
+    r -= 1;
+  }
+  return r;
 }
 
 vector<Vec4f> filtering(vector<Vec3f> circles, Mat img){
@@ -132,10 +137,8 @@ vector<Vec4f> filtering(vector<Vec3f> circles, Mat img){
         filtered.push_back(circle);
 #ifdef DEBUG
         print(i, row, col, 2, true, r, r_pred, targetPointDist);
-#endif
       }
       else {
-#ifdef DEBUG
         print(i, row, col, 2, false, r, r_pred, targetPointDist);
 #endif
       }
@@ -144,7 +147,16 @@ vector<Vec4f> filtering(vector<Vec3f> circles, Mat img){
     if (filtering3(row,col)){
       continue;
     }
-    if (abs(r_pred-r) < r/7){
+    if (filtering4(row,col,img)){
+      int r = findTop(row,col,img);
+      float dist = buffer_depth.at<float>(r,col);
+      circle[0] = col;
+      circle[1] = r;
+      circle[2] = RADIUS*f/dist;
+      circle[3] = dist;
+      filtered.push_back(circle);
+    }
+    if (abs(r_pred-r) < r/5){
       circle[0] = col;
       circle[1] = row;
       circle[2] = r;
@@ -158,118 +170,135 @@ vector<Vec4f> filtering(vector<Vec3f> circles, Mat img){
 #ifdef DEBUG
     print(i,row,col,3,false, r, r_pred, distance);
 #endif
-
-    // if (row >= HEIGHT-1){  // right before harvesting the ball
-    //   if (filtering3(row,col,cvFloor(circle[2]),img, distance)){
-    //     circle[0] = col;
-    //     circle[1] = row;
-    //     circle[2] = r;
-    //     circle[3] = distance;
-    //     filtered.push_back(circle);
-    //     continue;
-    //   }
-    // }
-    // cout << "(r,c): (" <<row << ", " << col << "), rad:" << r << ", f: " << f << ", dist: " << distance << endl;
-    // cout << "r_predictd: " << r_pred << ", r_pixel: " << r << endl;
-
   }
   return filtered;
 }
 
+void sort(vector<Vec4f>& circles)
+{
+  float keyVal, targetVal;
+  int j, tmp0, tmp1, tmp2, tmp3;
+  for (int i=1; i<circles.size(); i++){
+    tmp0 = circles[i][0];
+    tmp1 = circles[i][1];
+    tmp2 = circles[i][2];
+    tmp3 = circles[i][3];
+    keyVal = circles[i][3];
+    j=i-1;
+    targetVal = circles[j][3];
+    while (j >= 0 && targetVal < keyVal){
+      circles[j+1] = circles[j];
+      j -= 1;
+      targetVal = circles[j][3];
+    }
+    circles[j][0] = tmp0;
+    circles[j][1] = tmp1;
+    circles[j][2] = tmp2;
+    circles[j][3] = tmp3;
+  }
+}
 void ball_detect(){
-     Mat hsv, gray;  //assign a memory to save the edge images
+     Mat hsv;  //assign a memory to save the edge images
      Mat hsvCh[3];
      cvtColor(buffer, hsv, CV_BGR2HSV);
      split(hsv, hsvCh);
-// #ifdef DEBUG_IMG
-//      cv::imshow("h", hsvCh[0]);
-//      waitKey(10);
-//      cv::imshow("s", hsvCh[1]);
-//      waitKey(10);
-//      cv::imshow("v", hsvCh[2]);
-//      waitKey(10);
-// #endif
-     GaussianBlur(hsvCh[1],hsvCh[1], Size(5,5), 2.5, 2.5);
-     // cv::imshow("Gaussian Blurred", hsvCh[0]);
-     // waitKey(10);
-     threshold(hsvCh[1], gray, 100, 255, THRESH_BINARY);
-// #ifdef DEBUG_IMG
-//      cv::imshow("Binary", gray);
-//      waitKey(10);
-//      cv::imshow("h", hsvCh[0]);
-//      waitKey(10);
-// #endif
-     vector<Vec3f> circles; //assign a memory to save the result of circle detection
-     vector<Vec4f> filteredCircles; //<row,col,r,dist>
-     HoughCircles(gray,circles,HOUGH_GRADIENT, 1, gray.rows/30, 30, 10, 7, 200); //proceed circle detection
-     //Circles (Cx, Cy, r)
+     inRange(hsvCh[0], Scalar(55), Scalar(65), goal_img);
+     inRange(hsvCh[0], Scalar(0), Scalar(10), hsvCh[0]);
+     bitwise_and(hsvCh[0],hsvCh[1],hsvCh[0]);
+     GaussianBlur(hsvCh[0],hsvCh[0], Size(5,5), 2.5, 2.5);
+     threshold(hsvCh[0], ball_img, 100, 255, THRESH_BINARY);
+#ifdef DEBUG_IMG
+        imshow("buffer", buffer);
+        waitKey(10);
+        imshow("ball", ball_img);
+        waitKey(10);
+        imshow("goal", goal_img);
+        waitKey(10);
+#endif
+     vector<Vec3f> circlesB, circlesG; //assign a memory to save the result of circle detection
+     vector<Vec4f> filteredCirclesB, filteredCirclesG; //<row,col,r,dist>
+     HoughCircles(ball_img,circlesB,HOUGH_GRADIENT, 1, ball_img.rows/30, 30, 10, 7, 200); //proceed circle detection
+     HoughCircles(goal_img,circlesG,HOUGH_GRADIENT, 1, goal_img.rows/30, 30, 10, 7, 200); //proceed circle detection
 
-     //before Filtering
+     //Circles (Cx, Cy, r)
+     return;
 #ifdef DEBUG
-     for(int k=0,i=0;k<circles.size();k++){
-         Vec3f params = circles[k];  //the information of k-th circle
+     for(int k=0;k<circlesB.size();k++){
+         Vec3f params = circlesB[k];  //the information of k-th circle
          float c_c=cvRound(params[0]);  //x position of k-th circle
          float c_r=cvRound(params[1]);  //y position
          float r=cvRound(params[2]); //radius
-
          Point center(c_c,c_r);  //declare a Point Point(coloum, row)
-         circle(buffer,center,r,Scalar(255,0,255),1); //draw a circle on 'frame' based on the information given,   r = radius, Scalar(0,0,255) means color, 10 means lineWidth
+         circle(buffer,center,r,Scalar(255,0,255),2); //draw a circle on 'frame' based on the information given,   r = radius, Scalar(0,0,255) means color, 10 means lineWidth
+     }
+     for(int k=0;k<circlesG.size();k++){
+         Vec3f params = circlesG[k];  //the information of k-th circle
+         float c_c=cvRound(params[0]);  //x position of k-th circle
+         float c_r=cvRound(params[1]);  //y position
+         float r=cvRound(params[2]); //radius
+         Point center(c_c,c_r);  //declare a Point Point(coloum, row)
+         circle(buffer,center,r,Scalar(255,0,255),2); //draw a circle on 'frame' based on the information given,   r = radius, Scalar(0,0,255) means color, 10 means lineWidth
      }
 #endif
-     filteredCircles = filtering(circles, gray);
+     filteredCirclesB = filtering(circlesB, ball_img);
+     filteredCirclesG = filtering(circlesG, goal_img);
      Vec4f params; //assign a memory to save the information of circles
      int c_c,c_r,r;
-     int nBalls = filteredCircles.size();
-     int goalIndex = -1;
      core_msgs::ball_position msgBall;  //create a message for ball positions
      core_msgs::goal_position msgGoal;
-     for (int i=0; i<filteredCircles.size(); i++){
-        params = filteredCircles[i];
-        c_c = (int)cvRound(params[0]);
-        c_r = (int)cvRound(params[1]);
-        r = (int)cvFloor(params[2]);
-        if (goal_check(c_r,c_c,r, hsvCh[0])){
-          nBalls -= 1;
-        }
-     }
-
+     std_msgs::Float32MultiArray msgClosest;
+     int nBalls = filteredCirclesB.size();
      msgBall.size = nBalls; //adjust the size of message. (*the size of message is varying depending on how many circles are detected)
      msgBall.angle.resize(nBalls);  //adjust the size of array
      msgBall.dist.resize(nBalls);  //adjust the size of array
-
-     for(int k=0,i=0;k<filteredCircles.size();k++){
-         params = filteredCircles[k];  //the information of k-th circle
+     float minDist = 9999., minAngle = 0.;
+     for(int i=0;i<nBalls;i++){
+         params = filteredCirclesB[i];  //the information of k-th circle
          c_c=(int)cvRound(params[0]);  //x position of k-th circle
          c_r=(int)cvRound(params[1]);  //y position
          r=(int)cvRound(params[2]); //radius
-
-         // 원 출력을 위한 원 중심 생성
          Point center(c_c,c_r);  //declare a Point Point(coloum, row)
-         // cy = 3.839*(exp(-0.03284*cy))+1.245*(exp(-0.00554*cy));   //convert the position of the ball in camera coordinate to the position in base coordinate. It is related to the calibration process. You shoould modify this.
-         // cx = (0.002667*cy+0.0003)*cx-(0.9275*cy+0.114);
-         if (goal_check(c_r,c_c,r, hsvCh[0])){
-           circle(buffer,center,r,Scalar(0,255,0),3); //draw a circle on 'frame' based on the information given,   r = radius, Scalar(0,0,255) means color, 10 means lineWidth
-           // msgGoal.angle = atan((c_c-319.5)/320*tan(FOV)); // [rad]
-           // // msgGoal.angle = atan((2.5*(c_c-319.5)/320)/4.6621);
-           // msgGoal.dist = params[3];
-           // pubGoal.publish(msgGoal);
-#ifdef DEBUG
-           cout << "[Goal] Distance: " << msgGoal.dist << ", Angle= " << msgGoal.angle << endl;
-#endif
-           continue;
-         }
          circle(buffer,center,r,Scalar(0,0,255),2); //draw a circle on 'frame' based on the information given,   r = radius, Scalar(0,0,255) means color, 10 means lineWidth
-         msgBall.angle[i]=atan((c_c-319.5)/320*tan(FOV));  //[rad]
-         // msgBall.angle[i] = atan((2.5*(c_c-319.5)/320)/4.6621); // [rad]
+         msgBall.angle[i] = (float)atan((c_c-319.5)/320*tan(FOV));  //[rad]
          msgBall.dist[i]=params[3];   //[m]
+         if (params[3] < minDist) {
+           minDist = params[3];
+           minAngle = atan((c_c-319.5)/320*tan(FOV));
+         }
 #ifdef DEBUG
          cout << "[Ball] Distance" << msgBall.dist[i] << ", Angle= " << msgBall.angle[i] << endl;
          cout << endl;
 #endif
-         ++i;
-
      }
      pubBall.publish(msgBall);  //publish a message
+     msgClosest.data.clear();
+     msgClosest.data.push_back(minDist);
+     msgClosest.data.push_back(minAngle);
+     pubClosest.publish(msgClosest);
+
+     nBalls = filteredCirclesG.size();
+     msgGoal.size = nBalls; //adjust the size of message. (*the size of message is varying depending on how many circles are detected)
+     msgGoal.angle.resize(nBalls);  //adjust the size of array
+     msgGoal.dist.resize(nBalls);  //adjust the size of array
+     for(int i=0;i<nBalls;i++){
+         params = filteredCirclesG[i];  //the information of k-th circle
+         c_c=(int)cvRound(params[0]);  //x position of k-th circle
+         c_r=(int)cvRound(params[1]);  //y position
+         r=(int)cvRound(params[2]); //radius
+         Point center(c_c,c_r);  //declare a Point Point(coloum, row)
+         circle(buffer,center,r,Scalar(0,255,0),2); //draw a circle on 'frame' based on the information given,   r = radius, Scalar(0,0,255) means color, 10 means lineWidth
+         msgGoal.angle[i]=atan((c_c-319.5)/320*tan(FOV));  //[rad]
+         msgGoal.dist[i]=params[3];   //[m]
+#ifdef DEBUG
+         cout << "[Ball] Distance" << msgBall.dist[i] << ", Angle= " << msgBall.angle[i] << endl;
+         cout << endl;
+#endif
+     }
+     pubGoal.publish(msgBall);  //publish a message
+#ifdef DEBUG_IMG
+     cv::imshow("view", buffer);  //show the image with a window
+     cv::waitKey(1);
+#endif
 }
 
 void imageCallback(const sensor_msgs::ImageConstPtr& msg)
@@ -300,26 +329,20 @@ void depthCallback(const sensor_msgs::ImageConstPtr& msg)
 
 int main(int argc, char **argv)
 {
-   ros::init(argc, argv, "ball_detect_node"); //init ros nodd
+   ros::init(argc, argv, "bonus_ball_detect_node"); //init ros nodd
    ros::NodeHandle nh; //create node handler
    image_transport::ImageTransport it(nh); //create image transport and connect it to node hnalder
    image_transport::Subscriber sub_rgb = it.subscribe("/kinect_rgb", 1, imageCallback); //create subscriber
    image_transport::Subscriber sub_depth = it.subscribe("/kinect_depth", 1, depthCallback);
-   ros::Subscriber delivery = nh.subscribe<std_msgs::Int8>("/ball_delivery", 10, delivery_mode_Callback);
-
    pubBall = nh.advertise<core_msgs::ball_position>("/ball_position", 10); //setting publisher
    pubGoal = nh.advertise<core_msgs::goal_position>("/goal_position", 10); //setting publisher
+   pubClosest = nh.advertise<std_msgs::Float32MultiArray>("/closest_point", 1);
    ros::Rate loop_rate(10);
    while (ros::ok()){
-     if(!buffer.empty() && !buffer_depth.empty() && (delivery_mode != 1)){
+     cout << "here" << endl;
+     if(!buffer.empty() && !buffer_depth.empty()){
        ball_detect();
      }
-#ifdef DEBUG_IMG
-     if (!buffer.empty()){
-       cv::imshow("view", buffer);  //show the image with a window
-       cv::waitKey(1);
-     }
-#endif
      loop_rate.sleep();
      ros::spinOnce();
    }

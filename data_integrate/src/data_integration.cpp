@@ -140,8 +140,8 @@ void depth_Callback(const sensor_msgs::ImageConstPtr& msg)
 	    float target = buffer_depth.at<float>(479,320);
 		if (target < minValue && target > 0.15) minValue = buffer_depth.at<float>(479,320);
 		if (!DEBUG_HARVEST){
-			cout << buffer_depth.at<float>(479,320) << endl;
-			cout << "min val = " << minValue << endl;
+			// cout << buffer_depth.at<float>(479,320) << endl;
+			// cout << "min val = " << minValue << endl;
 		}
    }
    catch (cv_bridge::Exception& e)
@@ -249,7 +249,7 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 
 		prev_diff_points = diff;
 	}
-	targetVel->angular.x = -50;
+	targetVel->angular.x = -30;
 
 	map_mutex.unlock();
 }
@@ -264,8 +264,8 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 
 	// cout << "Ball Harvesting Control" << endl;
 	// cout << "[CONTROL] Angle difference is " << diff_o << endl;
-	cout << "DISTANCE IS " << dist << endl;
-	cout << "ANGLE DIFF IS " << diff_o << endl;
+	// cout << "DISTANCE IS " << dist << endl;
+	// cout << "ANGLE DIFF IS " << diff_o << endl;
 	
 	
 
@@ -380,7 +380,7 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 }
 
 void control_harvest(geometry_msgs::Twist* targetVel){
-	cout << "HARVEST TYPE: " << waytype << endl;
+	// cout << "HARVEST TYPE: " << waytype << endl;
 
 	if(waytype==BALL){
 
@@ -388,8 +388,7 @@ void control_harvest(geometry_msgs::Twist* targetVel){
 		bool close_enough = pow(pos_x-target_x, 2) + pow(pos_y-target_y,2) < pow(BALL_LIDAR_DIST, 2);
 		
 		if(close_enough){
-			cout << "CLOSE ENOUGH! HARVEST BALL" << endl;
-			// cout << "Delivery Count: " <<delivery_count << endl;
+			cout << "CLOSE ENOUGH! HARVEST BALL!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
 			delivery=1;
 			targetVel->linear.x=0;
 			targetVel->angular.z=0;
@@ -435,10 +434,10 @@ void select_control(){
 
 
 void showControlMethod(){
-	if(control_method == ENTRANCE)
-		cout << "[CONTROL] Entrance Control" << endl;
-	else
-		cout << "[CONTROL] Ball harvesting control" << endl;
+	// if(control_method == ENTRANCE)
+	// 	// cout << "[CONTROL] Entrance Control" << endl;
+	// else{
+	// 	// cout << "[CONTROL] Ball harvesting control" << endl;
 }
 
 
@@ -498,7 +497,7 @@ void update_delivery_info(){
 	if(delivery_count>th1 && delivery==1){
 		delivery=0;
 		delivery_count=0;
-		cout<<"delivery_count="<<delivery_count<<endl;
+		// cout<<"delivery_count="<<delivery_count<<endl;
 		ball_count++;
 
 	}else if(delivery_count>th2 && delivery==2){

@@ -49,7 +49,7 @@ add_executable(ball_pos_test_node src/ball_pos_test.cpp)
 add_dependencies(ball_pos_test_node core_msgs_generate_messages_cpp)
 
 target_link_libraries(ball_pos_test_node
-  ${catkin_LIBRARIES} ${OpenCV_LIBS}
+  ${catkin_LIBRARIES} ${OpenCV_LIBS} 
 )
 
 
