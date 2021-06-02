@@ -27,7 +27,7 @@
 using namespace std;
 using namespace cv;
 // #define RAW
-// #define DEBUG
+#define DEBUG
 
 #define VEHICLE 0
 #define BALL 1
@@ -69,7 +69,6 @@ Mat MAPRAW = cv::Mat::zeros(MAP_HEIGHT,MAP_WIDTH, CV_8UC3);
 
 #ifdef DEBUG
 Mat mapBallDebug;
-Mat mapGoalDebug;
 Mat mapPillarDebug;
 #endif
 
@@ -77,9 +76,6 @@ vector<int> reliableList;
 core_msgs::multiarray msg;
 
 int delivery_mode=0;
-void delivery_mode_Callback(const std_msgs::Int8::ConstPtr& delivery){
-  delivery_mode=delivery->data;
-}
 
 float ALPHA = 0.4;
 class Zones
@@ -374,8 +370,11 @@ void showColoredMap(int type)
     case BALL:
       mapBall.copyTo(mapBallDebug);
       // minMaxLoc(mapBall, &minVal, &maxVal, &minLoc, &maxLoc, Mat());
-      mapBallDebug.convertTo(mapBallDebug,CV_8UC3);
+      mapBallDebug.convertTo(mapBallDebug,CV_8UC1);
+      applyColorMap(mapBallDebug,mapBallDebug,COLORMAP_JET);
       imshow("colorMap", mapBallDebug);
+      waitKey(10);
+      cout << "print colored map" << endl;
       break;
     // case PILLAR:
     //   mapPillar.copyTo(mapPillarDebug);
@@ -477,6 +476,10 @@ bool cramer(float x1, float y1, float x2, float y2, float x3, float y3)
 		if(distsq < pow(PILLAR_RADIUS, 2)) return true;
 	}
 	return false;
+}
+
+void delivery_mode_Callback(const std_msgs::Int8::ConstPtr& delivery){
+  delivery_mode=delivery->data;
 }
 
 void ballPos_Callback(const core_msgs::ball_position::ConstPtr& pos)
