@@ -375,18 +375,22 @@ vector<float> lineAnalysis(Vec4i l){ //들어온 line detection으로부터 line
         }
 
 
-      }else if(xdata.size()<2){
+      }else if(xdata.size()<2 && ydata.size()>2){
           pos_x=pos_x;
           pos_y=vectorMean(ydata);
           pos_o=vectorMean(oridata);
-      }else if(ydata.size()<3){
+      }else if(ydata.size()<3 && xdata.size()>1){
           pos_y=pos_y;
           pos_x=vectorMean(xdata);
           pos_o=vectorMean(oridata);
-      }else{
+      }else if(xdata.size()>1 && ydata.size()>2){
         pos_o=vectorMean(oridata);
         pos_x=vectorMean(xdata);
         pos_y=vectorMean(ydata);
+      }else{
+        pos_x=pos_x;
+        pos_y=pos_y;
+        pos_o=pos_o;
       }
     }
 
@@ -435,13 +439,15 @@ void control_input_Callback(const geometry_msgs::Twist::ConstPtr& targetVel){
   linear_vel_now = targetVel->linear.x;
   angular_vel_now = targetVel->angular.z;
 
-  Ts=0.5;
+  lin_scaling=1;
+  ang_scaling=0.05;
+
   if (zone_info==2 && initial_step>10){
-  robot_pos.x=robot_pos.x+linear_vel_prev*cos(robot_pos.z)*Ts;
-  robot_pos.y=robot_pos.y+linear_vel_prev*sin(robot_pos.z)*Ts;
-  robot_pos.z=robot_pos.z+angular_vel_prev*Ts;
+  robot_pos.x=robot_pos.x+linear_vel_prev*cos(robot_pos.z)*lin_scaling;
+  robot_pos.y=robot_pos.y+linear_vel_prev*sin(robot_pos.z)*lin_scaling;
+  robot_pos.z=robot_pos.z+angular_vel_prev*ang_scaling;
   }
-  cout<<"x should be increased by"<<linear_vel_prev*cos(robot_pos.z)*Ts<<endl<<"y should be increased by "<<linear_vel_prev*sin(robot_pos.z)*Ts<<endl<<"angle should be increased by"<<angular_vel_prev*Ts<<endl;
+  cout<<"x should be increased by"<<linear_vel_prev*cos(robot_pos.z)*lin_scaling<<endl<<"y should be increased by "<<linear_vel_prev*sin(robot_pos.z)*lin_scaling<<endl<<"angle should be increased by"<<angular_vel_prev*ang_scaling<<endl;
   linear_vel_prev=linear_vel_now;
   angular_vel_prev=angular_vel_now;
 }
@@ -587,22 +593,22 @@ int main(int argc, char **argv)
 
     if( delivery_mode != 1){
         if (zone_info==1){
-          robot_pos.x=-10;
+          robot_pos.x=-20;
           robot_pos.y=50;
           robot_pos.z=2*PI-0.2;
           //cout<<"localization not yet"<<endl;
         }else if (zone_info==2 && initial_step<10){
           rectangular_map(lines, 30, 0.3);
           initial_step++;
-          if( robot_pos.x==-10 && robot_pos.y==50 && robot_pos.z==2*PI-0.2){
-            robot_pos.x=-10;
+          if( robot_pos.x==-20 && robot_pos.y==50 && robot_pos.z==2*PI-0.2){
+            robot_pos.x=-20;
             robot_pos.y=50;
             robot_pos.z=2*PI-0.09;
             rectangular_map(lines, 30, 0.3);
           }
 
-          if( robot_pos.x==-10 && robot_pos.y==50 && robot_pos.z==2*PI-0.09){
-            robot_pos.x=-10;
+          if( robot_pos.x==-20 && robot_pos.y==50 && robot_pos.z==2*PI-0.09){
+            robot_pos.x=-20;
             robot_pos.y=50;
             robot_pos.z=2*PI-0.2;
             rectangular_map(lines, 30, 0.3);

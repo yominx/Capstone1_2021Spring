@@ -269,8 +269,9 @@ bool Zones::Zone::blocked()
 void sort(vector<int>& reliableList, const Zones& zones)
 {
   float keyVal, targetVal;
-  int j;
+  int j, tmp;
   for (int i=1; i<reliableList.size(); i++){
+    tmp = reliableList[i];
     keyVal = zones.zoneList[reliableList[i]].nPoints / zones.zoneList[reliableList[i]].cnt;
     j=i-1;
     targetVal = zones.zoneList[reliableList[j]].nPoints / zones.zoneList[reliableList[j]].cnt;
@@ -279,7 +280,7 @@ void sort(vector<int>& reliableList, const Zones& zones)
       j -= 1;
       targetVal = zones.zoneList[reliableList[j]].nPoints / zones.zoneList[reliableList[j]].cnt;
     }
-    reliableList[j] = reliableList[i];
+    reliableList[j] = tmp;
   }
 }
 
@@ -329,7 +330,7 @@ void filtering(Zones& zones, int size, float* dist, float* angle, int type, core
     // cout << "(" << j << "-th zone) nPoints: " << zones.zoneList[j].nPoints << ", cnt: "<< zones.zoneList[j].cnt << endl;
     // cout << "(" << j << "-th zone) is reliable : " << zones.zoneList[j].reliable << endl;
     // cout << "(" << j << "-th zone) cnt*threshold = " << zones.zoneList[j].cnt << " * " << zones.zoneList[j].threshold << " = " << zones.zoneList[j].cnt * zones.zoneList[j].threshold <<endl;
-    if ((zones.zoneList[j].cnt % 10) == 0 && zones.zoneList[j].cnt < 100){
+    if ((zones.zoneList[j].cnt % 10) == 0 && zones.zoneList[j].cnt < 50){
       if (zones.zoneList[j].nPoints > zones.zoneList[j].cnt * zones.zoneList[j].threshold){
         zones.zoneList[j].reliable = true;
         // reliableList.push_back(j);
