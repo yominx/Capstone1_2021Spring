@@ -80,7 +80,7 @@ int control_method = ENTRANCE;
 #define PILLAR 	2
 #define GOAL 	3
 
-#define DEBUG_HARVEST false
+#define DEBUG_HARVEST true
 
 using namespace std;
 
@@ -229,7 +229,7 @@ void control_entrance(geometry_msgs::Twist *targetVel)
 			out_of_range_pts++;
 		}
 
-		cout << "LEFT " << left_points << " RIGHT " << right_points << endl;
+		// cout << "LEFT " << left_points << " RIGHT " << right_points << endl;
 		// cout <<" LB "<<left_back_pts<<" RB "<<right_back_pts<<endl;
 		// cout <<" OOR "<<out_of_range_pts<<endl;
 		int diff = left_points - right_points;
@@ -259,7 +259,7 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 	float ANGLE_THRESHOLD = M_PI/100;
 	float BALL_DIST_THRESHOLD = 43;
 	float PILLAR_DIST_THRESHOLD = 50;
-	float GOAL_DIST_THRESHOLD = 83;
+	float GOAL_DIST_THRESHOLD = 67;
 	float angle_sign = (diff_o > 0 ? 1 : -1);
 
 	// cout << "Ball Harvesting Control" << endl;
@@ -270,6 +270,27 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 	
 
 	switch (waytype) {
+		case -1: 
+			if (fabs(diff_o) > ANGLE_THRESHOLD) {
+				/* in place rotation ->should be modified*/
+				if (fabs(diff_o) < ANGLE_THRESHOLD*2) {
+					targetVel->linear.x  = 0;
+					targetVel->angular.z = angle_sign/2;
+				} else {
+					targetVel->linear.x  = 0;
+					targetVel->angular.z = angle_sign*2/3;
+				}
+			} else {
+				if (dist > PILLAR_DIST_THRESHOLD) {
+					targetVel->linear.x  = 5;
+					targetVel->angular.z = 0;
+				} else {
+					targetVel->linear.x  = 1+4*(dist/PILLAR_DIST_THRESHOLD);
+					targetVel->angular.z = 0;
+				}
+			}
+			break;
+
 		case BALL:
 			if (fabs(diff_o) > ANGLE_THRESHOLD) {
 				/* in place rotation ->should be modified*/
@@ -291,7 +312,7 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 				}
 			} else {
 				/* move forward ->should be modified*/
-				if (dist > 100) {
+				if (dist > 150) {
 					targetVel->linear.x  = 5;
 					targetVel->angular.z = 0;
 				} else {
@@ -306,10 +327,10 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 				/* in place rotation ->should be modified*/
 				if (fabs(diff_o) < ANGLE_THRESHOLD*2) {
 					targetVel->linear.x  = 0;
-					targetVel->angular.z = angle_sign*2/3;
+					targetVel->angular.z = angle_sign/2;
 				} else {
 					targetVel->linear.x  = 0;
-					targetVel->angular.z = angle_sign;
+					targetVel->angular.z = angle_sign*2/3;
 				}
 			} else {
 				if (dist > PILLAR_DIST_THRESHOLD) {
@@ -327,10 +348,10 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 				/* in place rotation ->should be modified*/
 				if (fabs(diff_o) < ANGLE_THRESHOLD*2) {
 					targetVel->linear.x  = 0;
-					targetVel->angular.z = angle_sign*2/3;
+					targetVel->angular.z = angle_sign/2.5;
 				} else {
 					targetVel->linear.x  = 0;
-					targetVel->angular.z = angle_sign;
+					targetVel->angular.z = angle_sign*2/3;
 				}
 			} else {
 				if (dist > GOAL_DIST_THRESHOLD*3) {
@@ -350,6 +371,9 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 				}
 			}
 			break;
+		case 4:
+			targetVel->linear.x  = 0;
+			targetVel->angular.z = 0.5;
 	}
 
 	return;
@@ -371,7 +395,7 @@ void control_harvest(geometry_msgs::Twist* targetVel){
 			targetVel->angular.z=0;
 		}
 	} else if(waytype==GOAL) {
-		int GOAL_SIZE = 80;
+		int GOAL_SIZE = 67;
 		int goalX = 550, goalY = 200; // CHANGE THIS VALUE FROM /position
 
 		bool close_enough = pow(pos_x-goalX, 2) + pow(pos_y-goalY,2) < pow(GOAL_SIZE, 2);

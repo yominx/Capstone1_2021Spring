@@ -13,6 +13,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <boost/thread.hpp>
+#include <random>
 
 
 #include <ros/ros.h>
@@ -61,6 +62,7 @@ int robotX, 	robotY,
 	goalX,		goalY;
 
 int REMAINING_BALLS = 5;
+int GAP = 1.414*(ROBOT_SIZE + PILLAR_RADIUS + MARGIN);
 bool END = false;
 
 class NodeMap{
@@ -225,7 +227,6 @@ int get_shortest_index(int size, NodeMap* node_list){ // '-1' means 'No balls ar
 
 int buildMap(int size, NodeMap* nodes, const core_msgs::multiarray::ConstPtr& object){
 	int node_number = 0;
-	int GAP = ROBOT_SIZE + PILLAR_RADIUS + MARGIN;
 	// reset prev data
 	pillarCount = 0; ballCount = 0;
 
@@ -249,10 +250,10 @@ int buildMap(int size, NodeMap* nodes, const core_msgs::multiarray::ConstPtr& ob
 				break;
 			case PILLAR:
 				// cout << "[MAP] PILLAR POS: " << x << ", " << y << endl;
-				nodes[node_number++] = NodeMap(PILLAR, x + 1.414*GAP, y);
-				nodes[node_number++] = NodeMap(PILLAR, x - 1.414*GAP, y);
-				nodes[node_number++] = NodeMap(PILLAR, x, y + 1.414*GAP);
-				nodes[node_number++] = NodeMap(PILLAR, x, y - 1.414*GAP);
+				nodes[node_number++] = NodeMap(PILLAR, x + GAP, y);
+				nodes[node_number++] = NodeMap(PILLAR, x - GAP, y);
+				nodes[node_number++] = NodeMap(PILLAR, x, y + GAP);
+				nodes[node_number++] = NodeMap(PILLAR, x, y - GAP);
 				pillarX[pillarCount] = x;
 				pillarY[pillarCount] = y;
 				pillarCount++;
@@ -271,9 +272,35 @@ int buildMap(int size, NodeMap* nodes, const core_msgs::multiarray::ConstPtr& ob
 
 void unknown_map_control(int node_number){
 	// cout << "Robot Position:" << robotX << ", " << robotY << endl;
-	if (visible_arbitrary(robotX, robotY, robotX + 15, robotY - 15)) {
-		publish_wayp(robotX + 15, robotY - 15, -1);
-		visualize(node_number, nodes, -1, robotX + 15, robotY - 15);
+	int THR = 80;
+	for(int i=0; i<pillarCount; i++){
+		if( pow(pillarX[i]+GAP-robotX, 2) + pow(pillarY[i]-robotY, 2) > pow(THR, 2) 
+			&& visible_arbitrary(robotX, robotY, pillarX[i]+GAP, pillarY[i])) {
+			publish_wayp(pillarX[i]+GAP, pillarY[i], -1);
+			visualize(node_number, nodes, -1, pillarX[i]+GAP, pillarY[i]);
+			return;
+		} else if(pow(pillarX[i]-GAP-robotX, 2) + pow(pillarY[i]-robotY, 2) > pow(THR, 2) 
+			&& visible_arbitrary(robotX, robotY, pillarX[i]-GAP, pillarY[i])) {
+			publish_wayp(pillarX[i]+GAP, pillarY[i], -1);
+			visualize(node_number, nodes, -1, pillarX[i]-GAP, pillarY[i]);
+			return;
+		} else if(pow(pillarX[i]-robotX, 2) + pow(pillarY[i]+GAP-robotY, 2) > pow(THR, 2) 
+			&& visible_arbitrary(robotX, robotY, pillarX[i], pillarY[i]+GAP)) {
+			publish_wayp(pillarX[i]+GAP, pillarY[i], -1);
+			visualize(node_number, nodes, -1, pillarX[i], pillarY[i]+GAP);
+			return;
+		} else if(pow(pillarX[i]-robotX, 2) + pow(pillarY[i]-GAP-robotY, 2) > pow(THR, 2) 
+			&& visible_arbitrary(robotX, robotY, pillarX[i], pillarY[i]-GAP)) {
+			publish_wayp(pillarX[i]+GAP, pillarY[i], -1);
+			visualize(node_number, nodes, -1, pillarX[i], pillarY[i]-GAP);
+			return;
+		}
+	}
+
+
+	if (visible_arbitrary(robotX, robotY, robotX + 30, robotY - 15)) {
+		publish_wayp(robotX + 30, robotY - 15, -1);
+		visualize(node_number, nodes, -1, robotX + 30, robotY - 15);
 	} else if(visible_arbitrary(robotX, robotY, robotX + 30, robotY)) {
 		publish_wayp(robotX + 30, robotY, -1);
 		visualize(node_number, nodes, -1, robotX + 30, robotY);
