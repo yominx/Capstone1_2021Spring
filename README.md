@@ -2,7 +2,7 @@
 
 ## Starting command
 
-For main mission, type a command below on the terminal. our model is **coppeliasim_models/teamE_robot_final.ttm**. Use environment setting as **Vortex, very accurate, dt = 50ms**. 
+For main mission, type a command below on the terminal. our model is **coppeliasim_models/teamE_robot_ver6_final.ttm**. Use environment setting as **Vortex, very accurate, dt = 50ms**. 
 
 ```bash
 roslaunch data_integrate capstone_launch.launch
