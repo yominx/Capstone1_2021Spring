@@ -11,7 +11,7 @@ roslaunch data_integrate capstone_launch.launch
 For bonus mission, type below command. Both mission share same environment settings.
 
 ```bash
-roslaunch data_integrate capstone_launch_bonus.launch
+roslaunch data_integrate bonus_launch.launch
 ```
 
 ## Instructions regarding manual transition
