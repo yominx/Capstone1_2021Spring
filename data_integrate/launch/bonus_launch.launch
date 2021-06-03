@@ -1,7 +1,7 @@
 <launch>
-  <node name="data_integration_bonus" pkg="data_integrate"  type="data_integration_bonus" output="screen"/>
-  <node name="bonus+data_show_node" pkg="data_integrate"  type="bonus_data_show_node"/>
-  <node name="path_planner" pkg="data_integrate"  type="path_planner" output="screen"/>
+  <node name="data_integration_bonus" pkg="data_integrate"  type="data_integration_bonus"/>
+  <node name="bonus_data_show_node" pkg="data_integrate"  type="bonus_data_show_node"/>
+  <node name="path_planner" pkg="data_integrate"  type="path_planner"/>
   <node name="bonus_ball_detect_node" pkg="ball_detection"  type="bonus_ball_detect_node"/>
-  <node name="localization_bonus" pkg="localization_bonus"  type="localization_bonus_node" output="screen"/>
+  <node name="localization_bonus" pkg="localization_bonus"  type="localization_bonus_node"/>
 </launch>

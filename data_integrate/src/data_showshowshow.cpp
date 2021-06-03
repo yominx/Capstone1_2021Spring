@@ -328,7 +328,7 @@ void showColoredMap(int type)
       mapBall.copyTo(mapBallDebug);
       // minMaxLoc(mapBall, &minVal, &maxVal, &minLoc, &maxLoc, Mat());
       mapBallDebug.convertTo(mapBallDebug,CV_8UC3);
-      imshow("colorMap", mapBallDebug);
+      // imshow("colorMap", mapBallDebug);
       break;
     // case PILLAR:
     //   mapPillar.copyTo(mapPillarDebug);
@@ -473,7 +473,7 @@ int main(int argc, char **argv)
 #ifdef RAW
         drawRawMap(BALL, nBalls, ballDist, ballAngle);
         drawRawMap(PILLAR, nPillars, pillarDist, pillarAngle);
-        imshow("raw map", MAPRAW);
+        // imshow("raw map", MAPRAW);
         waitKey(10);
 #endif
         filtering(ballZones, nBalls, ballDist, ballAngle, BALL, msg);
@@ -494,7 +494,7 @@ int main(int argc, char **argv)
         nData += 1;
         msg.cols = nData;
         pub.publish(msg);
-        imshow("map", MAP);
+        // imshow("map", MAP);
         // destroyAllWindows();
         waitKey(1);
       }

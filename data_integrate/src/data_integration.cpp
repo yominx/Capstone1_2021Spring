@@ -494,7 +494,7 @@ bool meet_step()
 	}
 	float targetL = buffer_depth.at<float>(479,30);
 	float targetR = buffer_depth.at<float>(479,610);
-	if (minValue<0.244 && minValue>0.15) {
+	if (minValue<0.245 && minValue>0.15) {
 		float targetL = buffer_depth.at<float>(479,30);
 		float targetR = buffer_depth.at<float>(479,610);
 		if (fabs(targetL-targetR)<0.001) {

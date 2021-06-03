@@ -287,7 +287,7 @@ void arbit_pos_control(int node_number){
 
 void unknown_map_control(int node_number){
 	// cout << "Robot Position:" << robotX << ", " << robotY << endl;
-	int THR = 130;
+	int THR = 100;
 	for(int i=0; i<pillarCount; i++){
 		if( pow(pillarX[i]+GAP-robotX, 2) + pow(pillarY[i]-robotY, 2) > pow(THR, 2) 
 			&& visible_arbitrary(robotX, robotY, pillarX[i]+GAP, pillarY[i])) {
@@ -574,8 +574,8 @@ void visualize(int size, NodeMap* nodes, int goal_index, int targetX, int target
 
    	int cur_idx = goal_index;
    	if (cur_idx == -1){
-	    imshow("BALL HARVESTING MAP", missionmap);
-		waitKey(10);
+	    // imshow("BALL HARVESTING MAP", missionmap);
+		// waitKey(10);
    		return;
    	}
    	NodeMap cur_node = nodes[goal_index];
@@ -589,7 +589,7 @@ void visualize(int size, NodeMap* nodes, int goal_index, int targetX, int target
 		cur_node = nodes[cur_idx];
 	}
 	// cout << "[Visualize] MAP CONFIGURATION DONE" << endl;
-    imshow("BALL HARVESTING MAP", missionmap);
-	waitKey(10);
+    // imshow("BALL HARVESTING MAP", missionmap);
+	// waitKey(10);
 
 }

@@ -401,7 +401,7 @@ void showColoredMap(int type)
   switch(type){
     case BALL:
       applyColorMap(mapDebug,mapDebugShow,COLORMAP_JET);
-      imshow("colorMap", mapDebugShow);
+      // imshow("colorMap", mapDebugShow);
       waitKey(10);
       break;
     // case PILLAR:
@@ -582,7 +582,7 @@ int main(int argc, char **argv)
 #ifdef RAW
         drawRawMap(BALL, nBalls, ballDist, ballAngle);
         drawRawMap(PILLAR, nPillars, pillarDist, pillarAngle);
-        imshow("raw map", MAPRAW);
+        // imshow("raw map", MAPRAW);
         waitKey(10);
 #endif
         filtering(ballZones, nBalls, ballDist, ballAngle, BALL, msg);
@@ -603,7 +603,7 @@ int main(int argc, char **argv)
         nData += 1;
         msg.cols = nData;
         pub.publish(msg);
-        imshow("map", MAP);
+        // imshow("map", MAP);
         waitKey(1);
       }
       loop_rate.sleep();

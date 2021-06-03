@@ -350,7 +350,7 @@ int main(int argc, char **argv)
         nData += 1;
         //set the goal position
         pub.publish(msg);
-        imshow("map", MAP);
+        // imshow("map", MAP);
         // destroyAllWindows();
         waitKey(1);
       }
