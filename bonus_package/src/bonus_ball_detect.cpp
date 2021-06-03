@@ -75,7 +75,7 @@ bool filtering2(int row, int col, float r, Mat img){
 }
 
 bool filtering3(int row, int col){ // too close to detect
-  return (buffer_depth.at<float>(row,col) < 0.4) ? true : false;
+  return (buffer_depth.at<float>(row,col) < 0.5) ? true : false;
 }
 
 bool filtering4(int row, int col, Mat img)
@@ -155,8 +155,9 @@ vector<Vec4f> filtering(vector<Vec3f> circles, Mat img){
       circle[2] = RADIUS*f/dist;
       circle[3] = dist;
       filtered.push_back(circle);
+      continue;
     }
-    if (abs(r_pred-r) < r/7){
+    if (abs(r_pred-r) < r/5){
       circle[0] = col;
       circle[1] = row;
       circle[2] = r;
@@ -272,7 +273,7 @@ void ball_detect(){
      }
      pubBall.publish(msgBall);  //publish a message
      msgClosest.data.clear();
-     if (waytype != 2 && (!fabs(minDist-9999)<10)){
+     if (waytype != 2 && (!fabs(minDist-9999)<1000)){
      msgClosest.data.push_back(minDist);
      msgClosest.data.push_back(minAngle);
      pubClosest.publish(msgClosest);
@@ -303,7 +304,7 @@ void ball_detect(){
      }
      pubGoal.publish(msgGoal);  //publish a message
      msgClosest.data.clear();
-     if (waytype == 2 && (!fabs(minDist-9999))<10){
+     if (waytype == 2 && (!fabs(minDist-9999))<1000){
      msgClosest.data.push_back(minDist);
      msgClosest.data.push_back(minAngle);
      pubClosest.publish(msgClosest);

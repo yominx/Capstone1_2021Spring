@@ -17,6 +17,7 @@
 #include <ros/ros.h>
 #include <ros/package.h>
 #include "core_msgs/ball_position.h"
+#include "core_msgs/goal_position.h"
 
 #include "ros/ros.h"
 #include "sensor_msgs/LaserScan.h"
@@ -55,8 +56,10 @@ float dist;
 
 bool is_initial_step=true;
 
-float target_distance;
-float target_orientation;
+float target_distance=0;
+float target_orientation=0;
+float target_dist_prev=0;
+float target_ori_prev=0;
 
 int waytype;
 
@@ -103,85 +106,176 @@ void position_Callback(const geometry_msgs::Vector3::ConstPtr& robot_pos) {
 	pos_o = robot_pos->z;
 }
 
+int flag=0;
+int COUNT=0;
+
+
+int turn=0;
+
+int initial_step=1;
+
+int count2=0;
+
+bool nosee= false;
+
 void closest_Callback(const std_msgs::Float32MultiArray::ConstPtr& closest){
-	target_distance = closest->data[0]*100;
-	target_orientation = closest->data[1];
+	
+
+
+
+		target_distance = closest->data[0]*100;
+		target_orientation = closest->data[1];
+		initial_step++;
+
+	if (target_distance>9000){
+		nosee=true;
+	}else{
+		turn=0;
+		nosee=false;
+	}
+	
+	if(nosee || (initial_step>10 && fabs(target_distance-target_dist_prev)>35 && fabs(target_orientation-target_ori_prev)>0.1 ) ){
+		target_distance = target_dist_prev;
+		target_orientation = target_ori_prev;
+	}
+
+
+
+
+
+	if(target_distance>0 && target_distance < 60){
+		
+		flag=1;
+
+	}
+	
+	cout<<"dist "<<target_distance<<" ori "<<target_orientation<<endl;
+
+	if(~nosee){
+		target_dist_prev=target_distance;
+		target_ori_prev=target_orientation;
+	}
 
 	diff_o = target_orientation;
-}
-
-void target_Callback(const geometry_msgs::Vector3::ConstPtr& waypoint) {
-	waytype = waypoint->z;
 	dist = target_distance;
+
+
 	control_ballharvesting(&targetVel);
-	 control_harvest(&targetVel);
+	control_harvest(&targetVel);
 	update_delivery_info();
 	publish_delivery_info();
 	commandVel.publish(targetVel);
 }
 
 
+
+float goal_distance=0;
+float goal_orientation=0;
+
+float goal_dist_prev=0;
+float goal_ori_prev=0;
+
+bool noseegoal;
+int turn2=0;
+
+float distg;
+float diff_og;
+
+int goalsize;
+
+void goal_Callback(const core_msgs::goal_position::ConstPtr& goal_position){
+
+
+  goalsize = goal_position->size;
+
+  if (goalsize>=1){
+  for(int i = 0; i < goalsize; i++)
+  {
+	goal_distance = goal_position->dist[0];
+	goal_orientation = goal_position->angle[0];
+  }
+}
+
+
+
+	initial_step++;
+
+	if (goal_distance>9000){
+		noseegoal=true;
+		goal_distance = goal_dist_prev;
+		goal_orientation = goal_ori_prev;
+	}else{
+		turn2=0;
+		noseegoal=false;
+	}
+	
+
+
+	if(~noseegoal){
+		goal_dist_prev=goal_distance;
+		goal_ori_prev=goal_orientation;
+	}
+
+	diff_og = goal_orientation;
+	distg = goal_distance;
+}
+
+
+
+
+
+
+
+
+
+
+
+bool close_enough = false;
+
 void control_ballharvesting(geometry_msgs::Twist *targetVel)
 {
-	float ANGLE_THRESHOLD = M_PI/100;
-	float angle_sign = (diff_o > 0 ? 1 : -1);
+	float ANGLE_THRESHOLD = M_PI/80;
+
 	float BALL_DIST_THRESHOLD = 42;
 	float PILLAR_DIST_THRESHOLD = 50;
 	float GOAL_DIST_THRESHOLD = 67;
+
+	float angle_sign=diff_o/fabs(diff_o);
+	float angle_signg=diff_og/fabs(diff_og);
 
 	// cout << "Ball Harvesting Control" << endl;
 	// cout << "[CONTROL] Angle difference is " << diff_o << endl;
 	// cout << "DISTANCE IS " << dist << endl;
 	// cout << "ANGLE DIFF IS " << diff_o << endl;
 
-	cout<<"diff_o is!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! "<<diff_o<<endl;
+	cout<<"turn is "<<turn<<"nosee is "<<nosee<<" ball_count "<<ball_count<< " flag " <<flag<<" istrue "<< (fabs(diff_o) > ANGLE_THRESHOLD) <<endl;
 
-	switch (waytype) {
-		case -1:
-			if (fabs(diff_o) > ANGLE_THRESHOLD) {
-				/* in place rotation ->should be modified*/
-				if (fabs(diff_o) < ANGLE_THRESHOLD*2) {
-					targetVel->linear.x  = 0;
-					targetVel->angular.z = angle_sign/2;
-				} else {
-					targetVel->linear.x  = 0;
-					targetVel->angular.z = angle_sign*2/3;
+	cout<<"diff_o is"<<diff_o<<endl;
+
+
+
+		if (ball_count<3){
+			waytype=BALL;
+			
+			if(nosee && turn==1){
+				targetVel->linear.x  = 0;
+				targetVel->angular.z = 1;
+			}else if(flag) {
+				targetVel->linear.x  = 2;
+				COUNT++;
+				cout<<"COUNT is                        "<<COUNT<<endl;
+				if(COUNT>130){
+					close_enough=true;
 				}
-			} else {
-				if (dist > PILLAR_DIST_THRESHOLD) {
-					targetVel->linear.x  = 3;
-					targetVel->angular.z = 0;
-				} else {
-					targetVel->linear.x  = 1+4*(dist/PILLAR_DIST_THRESHOLD);
-					targetVel->angular.z = 0;
-				}
-			}
-			break;
-
-		case BALL:
-
-
-			if(fabs(diff_o) > M_PI/60 && dist < 60 ){
-				targetVel->linear.x  = -1;
-				targetVel->angular.z  = 0;
 
 			}else if (fabs(diff_o) > ANGLE_THRESHOLD) {
 				/* in place rotation ->should be modified*/
 				if (fabs(diff_o) < ANGLE_THRESHOLD*2) {
 					targetVel->linear.x  = 0;
-					targetVel->angular.z = angle_sign*0.2;
+					targetVel->angular.z = angle_sign;
 				} else {
 					targetVel->linear.x  = 0;
-					targetVel->angular.z = angle_sign*0.4;
-				}
-			} else if (dist < BALL_DIST_THRESHOLD) {
-				if (!STOP_FLAG && (targetVel->linear.x) >=40) {
-					targetVel->linear.x  = targetVel->linear.x/6;
-					targetVel->angular.z = targetVel->angular.z/6;
-					// STOP_FLAG = true;
-				} else {
-					targetVel->linear.x  = 0;
-					targetVel->angular.z = 0;
+					targetVel->angular.z =angle_sign;
 				}
 
 			} else{
@@ -195,27 +289,30 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 				}
 			}
 
-			break;
+		}else{
+		waytype=GOAL;
 
-		case PILLAR:
-			break;
+			if(noseegoal && turn2==1){
+				targetVel->linear.x  = 0;
+				targetVel->angular.z = 1;
 
-		case GOAL:
-			if (fabs(diff_o) > ANGLE_THRESHOLD) {
+			}else if (fabs(diff_og) > ANGLE_THRESHOLD) {
 				/* in place rotation ->should be modified*/
-				if (fabs(diff_o) < ANGLE_THRESHOLD*2) {
+				if (fabs(diff_og) < ANGLE_THRESHOLD*2) {
 					targetVel->linear.x  = 0;
-					targetVel->angular.z = angle_sign/2.5;
+					targetVel->angular.z = angle_signg/2.5;
 				} else {
 					targetVel->linear.x  = 0;
-					targetVel->angular.z = angle_sign*2/3;
+					targetVel->angular.z = angle_signg*2/3;
 				}
-			} else {
-				if (dist > GOAL_DIST_THRESHOLD*3) {
+
+
+			}else {
+				if (distg > GOAL_DIST_THRESHOLD*3) {
 					targetVel->linear.x  = 3;
 					targetVel->angular.z = 0;
-				} else if (dist > GOAL_DIST_THRESHOLD) {
-					targetVel->linear.x  = 0.5 + (dist/GOAL_DIST_THRESHOLD - 1);
+				} else if (distg > GOAL_DIST_THRESHOLD) {
+					targetVel->linear.x  = 0.5 + (distg/GOAL_DIST_THRESHOLD - 1);
 				} else {
 					if (!STOP_FLAG && ((targetVel->linear.x)+(targetVel->angular.z)) != 0) {
 						targetVel->linear.x  = targetVel->linear.x/4;
@@ -227,14 +324,17 @@ void control_ballharvesting(geometry_msgs::Twist *targetVel)
 					}
 				}
 			}
-			break;
-		case 4:
-			targetVel->linear.x  = 0;
-			targetVel->angular.z = 0.5;
-	}
+
+		}
+
 
 	return;
 }
+
+
+
+
+
 
 void control_harvest(geometry_msgs::Twist* targetVel){
 	// cout << "HARVEST TYPE: " << waytype << endl;
@@ -246,34 +346,27 @@ void control_harvest(geometry_msgs::Twist* targetVel){
 		targetVel->angular.z=0;
 	}
 	else if(waytype==BALL){
-		int ball_LIDAR_DIST = 42;
-		bool close_enough = dist < ball_LIDAR_DIST;
-		bool orientation_aligned = (fabs(diff_o) < M_PI/80);
-
-
-		cout << "I'm Alive!!!!!!!!!!!!!!!!!!!!!! / " <<close_enough<<orientation_aligned<<endl<<"dist"<<dist<<endl<<"target_o "<<target_o<<" pos_o "<<pos_o<<endl;
-
-		if(close_enough  && orientation_aligned){
-			cout << "CLOSE ENOUGH! HARVEST BALL!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
+		if(close_enough){
+			cout << "CLOSE ENOUGH! HARVEST BALL!!!!!!!!!!!!!!!!" << endl;
 			delivery=1;
 			targetVel->linear.x=0;
 			targetVel->angular.z=0;
 		}
 	}
 	else if(waytype == GOAL) {
-		if(is_initial_step){
-			if (fabs(diff_o) < ANGLE_THRESHOLD){
-				targetVel->linear.x  = 0;
-				targetVel->angular.z = 0;
-			}
-			else if (fabs(diff_o) < ANGLE_THRESHOLD*30) {
-				targetVel->linear.x  = 0;
-				targetVel->angular.z = angle_sign*0.4;
-			} else {
-				targetVel->linear.x  = 0;
-				targetVel->angular.z = angle_sign*0.6;
-			}
-		}
+	// 	if(is_initial_step){
+	// 		if (fabs(diff_o) < ANGLE_THRESHOLD){
+	// 			targetVel->linear.x  = 0;
+	// 			targetVel->angular.z = 0;
+	// 		}
+	// 		else if (fabs(diff_o) < ANGLE_THRESHOLD*30) {
+	// 			targetVel->linear.x  = 0;
+	// 			targetVel->angular.z = angle_sign*0.4;
+	// 		} else {
+	// 			targetVel->linear.x  = 0;
+	// 			targetVel->angular.z = angle_sign*0.6;
+	// 		}
+	// 	}
 		int goal_SIZE = 80;
 		if(dist < goal_SIZE){
 			targetVel->linear.x  = 0;
@@ -378,7 +471,7 @@ void control_harvest(geometry_msgs::Twist* targetVel){
 // 					targetVel->angular.z = angle_sign*0.6;
 // 				}
 // 			}
-// 			if(dist < 40){
+// 			if(dist <0){ 4
 // 				cout << "CLOSE ENOUGH! HARVEST BALL" << endl;
 // 				delivery=1;
 // 				targetVel->linear.x=0;
@@ -444,6 +537,7 @@ void control_harvest(geometry_msgs::Twist* targetVel){
 // 	}
 // }
 
+
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "bonus_data_integration");
@@ -456,7 +550,9 @@ int main(int argc, char **argv)
     // ros::Subscriber sub1 = n.subscribe<core_msgs::ball_position>("/position", 1000, camera_Callback);
 	ros::Subscriber sub = n.subscribe<std_msgs::Float32MultiArray>("/closest_point", 1000, closest_Callback);
 	ros::Subscriber sub_pos = n.subscribe<geometry_msgs::Vector3>("/robot_pos", 1000, position_Callback);
-	ros::Subscriber sub_target = n.subscribe<geometry_msgs::Vector3>("/waypoint", 1000, target_Callback);
+	ros::Subscriber sub_goal = n.subscribe<core_msgs::goal_position>("/goal_position", 1000, goal_Callback);
+
+
 
 	// ros::Subscriber cur_vel = n.subscribe<std_msgs::Float32MultiArray>("/current_vel", 1000, vel_Callback); // for stop control
 
@@ -479,13 +575,23 @@ void update_delivery_info(){
 	if(delivery!=0){
 		delivery_count++;
 	}
-	int th1=350;
+
+	int th1=120;
 	int th2=2000;
+	cout<<"delivery_countt is            "<<delivery_count<<endl;
+
 	if(delivery_count>th1 && delivery==1){
 		delivery=0;
 		delivery_count=0;
 		cout<<"delivery_count="<<delivery_count<<endl;
 		ball_count++;
+		COUNT=0;
+		close_enough=false;
+		flag=0;
+		turn=1;
+		turn2=1;
+		initial_step=1;
+
 
 	}else if(delivery_count>th2 && delivery==2){
 		delivery=0;
